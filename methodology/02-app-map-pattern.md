@@ -26,12 +26,37 @@ docs/app-map/
 ├── 05-permissions-and-gates.md     # Roles, journey gates
 ├── 06-user-flows.md                # End-to-end flows
 ├── 07-auto-vs-manual.md            # Auto-trigger vs user action
-├── 08-app-structure-real.md        # Actual folder layout
+├── 08-app-structure-real.md        # RULE kiến trúc code + actual folder layout
 ├── 09-empty-and-inline-states.md   # Empty states, inline hints
 └── 10-design-system.md             # Colors, typo, copy tone
 ```
 
 Tuỳ project có thể có thêm 11+, gap số OK (vd 11 đã merge vào 03).
+
+---
+
+## 08 chứa gì — QUY TẮC kiến trúc code, không chỉ mô tả
+
+`08-app-structure-real.md` KHÔNG phải tấm gương thụ động chép lại folder. Nó chứa TRƯỚC HẾT **quy tắc quyết định** kiến trúc code (phần phán đoán — invariant), rồi mới tới layout thực tế (mirror). Thiếu quy tắc thành văn → mỗi session AI tự chọn một layout "hợp lý" khác nhau (feature-sliced vs layer-based…) → drift. Đúng bệnh NT12 sinh ra để chặn: agent giỏi vẫn lệch nếu invariant không được viết. Kiến trúc code là một invariant nữa, đừng để trống.
+
+**Rule mặc định — feature-sliced, mirror domain app-map** (đổi được nếu project cần khác — vd library/DDD nặng — nhưng phải CHỐT 1 lần, không để mỗi session tự quyết):
+
+- Gom theo **business entity**, KHÔNG theo technical layer. Code domain mirror domain app-map.
+- Cùng entity chính → cùng `features/<entity>/`
+- Wrapper/view trên entity khác → nằm trong domain entity ĐÓ, không tạo folder riêng
+- Dùng bởi ≥2 domain → `common/` (BE) hoặc `shared/` (FE)
+- Hạ tầng (auth, config, middleware, storage, guards) → `common/`
+
+Bảng tra theo stack (để agent khỏi đoán tên folder):
+
+| Stack | `features/<entity>/` chứa | dùng-chung |
+|---|---|---|
+| NestJS BE | `*.controller.ts`, `*.service.ts`, `*.module.ts`, `*.entity.ts`, `dto/`, `interface/` | `common/`: decorators, guards, filters, interceptors, config, middleware, utils |
+| React FE | `api.ts`, `hooks.ts`, `pages/` | `shared/`: api, components, hooks, store, types, utils |
+
+- Module mới → thuộc entity nào thì vào `features/<entity đó>/`.
+- `08` khai `covers: src/` (hoặc `be/src`, `fe/src`) → cổng ghi NT12 tự chặn commit đổi cấu trúc code mà không cập nhật `08` → rule tự bảo trì.
+- Việc cơ học (`git mv` giữ history, fix import, build verify) là năng lực nền của agent — KHÔNG cần viết vào doc, KHÔNG cần skill `/restructure` riêng.
 
 ---
 

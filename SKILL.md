@@ -20,7 +20,7 @@ description: Methodology for organizing software projects to be AI-agent-friendl
 
 **Nền tảng (mọi project):**
 1. **Hierarchical Context** — root `CLAUDE.md` < 6000 tokens, point sang module-level `CLAUDE.md`
-2. **App-map Pattern** — `docs/app-map/01-*.md`, `02-*.md`… mỗi file 1 chủ đề canonical; > 20 file → cây 2 tầng theo domain
+2. **App-map Pattern** — `docs/app-map/01-*.md`, `02-*.md`… mỗi file 1 chủ đề canonical; > 20 file → cây 2 tầng theo domain; `08` giữ RULE kiến trúc code (feature-sliced, mirror domain — xem `methodology/02`)
 3. **Context Routing** — `/fl <task>` slash + `context-router` sub-agent → ordered file list + risk tier; skip cho task trivial
 4. **Doc + Test Sync Invariant** — code change BẮT BUỘC pair với doc + test cùng commit
 5. **LOGIC vs REQUEST** — phân loại utterance: hỏi (LOGIC) → docs/memory; yêu cầu (REQUEST) → commit

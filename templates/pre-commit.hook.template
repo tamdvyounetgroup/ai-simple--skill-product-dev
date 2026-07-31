@@ -19,6 +19,7 @@
 MIGRATIONS_PATTERN='supabase/migrations/.*\.sql$'         # prisma/migrations/.* | db/migrate/.* ...
 DB_DOC_PATTERN='docs/.*(database|db|schema).*\.md$'       # doc nào được tính là "doc database"
 CLAUDE_MD_CHAR_BUDGET=24000                               # ~6K tokens (EN ~4 chars/token; VN-heavy có thể hạ 20000)
+CLAIMS_CHECK=auto                                         # auto | off — NT13 claim gate: auto = chỉ chạy khi registry tồn tại
 # Sample paths cho --self-test — đổi CÙNG LÚC với 2 pattern trên:
 SELF_TEST_MIGRATION_SAMPLE='supabase/migrations/0001_sample.sql'
 SELF_TEST_DOC_SAMPLE='docs/app-map/03-database-and-automation.md'
@@ -62,6 +63,29 @@ if [ "$1" = "--self-test" ]; then
     echo "FAIL: gate warn khong dung (exit=$RCW)"; RC=1
   fi
   cd "$OPW" && rm -rf "$TW"
+  # Fixture claim gate (NT13): claim cua BRANCH KHAC giu src/c -> commit dung vao bi BLOCK;
+  # commit tu CHINH branch cua lot -> di qua.
+  TC=$(mktemp -d); cd "$TC" && git init -q . && git config user.email t@t.t && git config user.name t
+  mkdir -p .githooks src/c
+  cp "$HOOK_SELF" .githooks/pre-commit && git config core.hooksPath .githooks
+  echo x > src/c/h.ts && git add -A && git commit -qm setup >/dev/null 2>&1
+  CDT="$(git rev-parse --git-common-dir)/ai-simple/claims"; mkdir -p "$CDT"
+  printf '{\n  "run": "r1",\n  "lot": "other",\n  "branch": "lot/r1/other",\n  "status": "ACTIVE",\n  "write_paths": [\n    "src/c"\n  ]\n}\n' > "$CDT/r1--other.json"
+  echo y >> src/c/h.ts && git add src/c/h.ts
+  OUTC=$(git commit -m claimtest 2>&1); RCC=$?
+  if [ "$RCC" -ne 0 ] && echo "$OUTC" | grep -q "write-set cua claim khac"; then
+    echo "PASS: claim gate chan staged path thuoc lot khac (NT13)"
+  else
+    echo "FAIL: claim gate khong chan (exit=$RCC)"; RC=1
+  fi
+  git checkout -qb lot/r1/other 2>/dev/null
+  OUTC2=$(git commit -m ownlot 2>&1); RCC2=$?
+  if [ "$RCC2" -eq 0 ]; then
+    echo "PASS: claim gate cho phep chinh branch cua lot"
+  else
+    echo "FAIL: claim gate chan oan chinh lot (exit=$RCC2)"; RC=1
+  fi
+  cd "$OPW" && rm -rf "$TC"
   exit $RC
 fi
 
@@ -108,6 +132,36 @@ for doc in $(git ls-files 'docs/app-map/*.md' 'docs/app-map/**/*.md' 2>/dev/null
     fi
   fi
 done
+
+# ── 1c. Claim conflict gate — NT13 fast gate (lease không fencing = lời hứa) ──
+# Chỉ chạy khi registry <git-common-dir>/ai-simple/claims tồn tại (tức đang có run song song).
+# Rule: staged path ∩ write_paths của claim thuộc BRANCH KHÁC → BLOCK (kể cả STALE —
+# không silent takeover; lease-expiry math để cho doctor/CLI, hook chỉ so path cho nhanh).
+# Giới hạn nêu tên: path có space không hỗ trợ ở gate sh này — và CLI normPath REJECT
+# space/quote/control từ lúc claim (kiểm chứng bằng `parallel self-test`), nên không có
+# claim hợp lệ nào chứa path như vậy để lọt.
+if [ "$CLAIMS_CHECK" != "off" ]; then
+  CDIR="$(git rev-parse --git-common-dir 2>/dev/null)/ai-simple/claims"
+  if [ -d "$CDIR" ]; then
+    CURBR=$(git symbolic-ref --short -q HEAD)
+    for cf in "$CDIR"/*.json; do
+      [ -f "$cf" ] || continue
+      case "$cf" in *tmp-*|*run-lease--*) continue;; esac
+      CBR=$(grep '"branch"' "$cf" | head -1 | sed 's/.*: *"//; s/".*//')
+      { [ -n "$CBR" ] && [ "$CBR" != "$CURBR" ]; } || continue
+      CPATHS=$(sed -n '/"write_paths"/,/\]/p' "$cf" | grep '^[[:space:]]*"' | grep -v write_paths | sed 's/^[[:space:]]*"//; s/",*$//')
+      for p in $CPATHS; do
+        H=$(echo "$CHANGED" | while read -r c; do case "$c" in "$p"|"$p"/*) echo 1; break;; esac; done)
+        if [ -n "$H" ]; then
+          CLOT=$(grep '"lot"' "$cf" | head -1 | sed 's/.*: *"//; s/".*//')
+          echo "BLOCK: staged path trong write-set cua claim khac — '$p' thuoc lot '$CLOT' (branch $CBR)."
+          echo "  -> NT13: doi lot kia merge / parallel extend / hoi orchestrator. Xem: npx ai-simple parallel status"
+          FAIL=1
+        fi
+      done
+    done
+  fi
+fi
 
 # ── 2. Root CLAUDE.md token budget ─────────────────────────────────────
 # Ratchet: chỉ check khi CLAUDE.md nằm trong commit — vi phạm tồn đọng được "ân hạn"

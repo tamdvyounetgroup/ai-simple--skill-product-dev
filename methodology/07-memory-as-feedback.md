@@ -2,6 +2,8 @@
 
 > Khi user feedback lặp lại 2 lần ("đừng commit khi tôi chỉ hỏi", "không touch DB prod") → persist vào memory file, không re-explain mỗi session.
 
+**v2 — 2026-07-28 (hợp nhất vào NT12 v3 vòng B):** NT07 không còn là pipeline học độc lập — nó là **fast-path `explicit-instruction`** của vòng B (nguyên tắc 12 §Vòng B): user nói thẳng/lặp ≥ 2 lần = bằng chứng mạnh nhất, nhảy thẳng mức PROJECT RULE không cần chờ thêm case. Một ladder, một destination table, một nơi ghi — hết cảnh hai pipeline hai ngưỡng cùng ghi một đích. NT07 giữ nguyên vai trò: **format entry, index MEMORY.md, lifecycle** (phần dưới). Khi bản ghi explicit (NT07) và learned-rule inferred (vòng B) cùng scope mâu thuẫn → **explicit thắng**.
+
 ---
 
 ## Vấn đề / The problem
@@ -40,6 +42,8 @@ Trigger persist:
 2. **Behavioral preference** — không phải technical decision (tech decision → ADR)
 3. **Cross-task safety rail** — áp dụng cho mọi task, không chỉ task hiện tại
 4. **User explicit request** — "ghi nhớ giúp tôi: ..."
+
+Preference suy ra từ **diff được chấp nhận** (user không nói thành lời) KHÔNG đi đường này — đó là vòng B thường (nguyên tắc 12): cần bằng chứng tích lũy (2–3 case độc lập / survival) trước khi thành rule. Đường NT07 chỉ dành cho explicit.
 
 KHÔNG persist:
 - Task-specific decision ("commit này dùng feat type") — vì task đã xong

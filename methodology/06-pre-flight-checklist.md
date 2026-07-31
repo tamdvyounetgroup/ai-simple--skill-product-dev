@@ -3,7 +3,7 @@
 > Flag risk trước khi code — nhưng **tự chạy với mặc định an toàn**, chỉ dừng hỏi tại điểm không thể quay đầu. Confirm là ngoại lệ đắt giá, không phải nghi thức.
 > *(EN: Flag risks before coding — but auto-proceed with safe defaults; stop to ask only at the point of no return. Confirmation is an expensive exception, not a ritual.)*
 
-**v3 — 2026-06-11**: bỏ quy tắc "≥1 cờ đỏ → STOP hỏi user" của bản cũ. Thực tế vận hành cho thấy nó biến user thành nút bấm OK lặt vặt và giảm tốc độ code mà không tăng an toàn — vì 90% "cờ đỏ DB" là thao tác additive đảo ngược được.
+**v3 — 2026-06-11**: bỏ quy tắc "≥1 cờ đỏ → STOP hỏi user" của bản cũ. Thực tế vận hành cho thấy nó biến user thành nút bấm OK lặt vặt và giảm tốc độ code mà không tăng an toàn — vì phần lớn "cờ đỏ DB" trong thực tế là thao tác additive đảo ngược được.
 
 ---
 
@@ -49,12 +49,16 @@ Vẫn quét 6 ô như cũ, nhưng output gọn và chỉ hiện khi có YELLOW/R
 
 ```
 ## Pre-flight
+- Git state: 🟢 branch main sạch, không worktree/claim lạ (13 §tầng-0)
 - DB: 🟡 thêm bảng `hp_rewards` + cột nullable — additive, có down migration → tự làm
 - Auth: 🟢 không đổi
 - Cross-module: 🟡 2 module (shop, scoring) → tự làm
+- Claims: 🟢 không session song song / ⛔ CONFLICT: `src/shop` thuộc lot khác → dừng theo NT13
 - Doc+Test: update 03-database.md + unit test scoring — đã plan
 → Tier: YELLOW → ĐI TIẾP, assumptions báo cuối task.
 ```
+
+**Ranh giới với NT13**: đụng độ song song (CONFLICT/STALE/PROTECTED) **không phải RED** — RED chỉ dành cho không-thể-quay-đầu (data/prod). Conflict xử theo trạng thái phối hợp của nguyên tắc 13 (đợi / đổi ranh giới lot / recovery), không đốt lượt confirm của user; riêng dirty work của user là PROTECTED — bất khả xâm phạm, hỏi user.
 
 Khi RED:
 

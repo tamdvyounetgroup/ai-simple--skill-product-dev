@@ -1,6 +1,8 @@
 # 04 — Doc + Test Sync Invariant
 
-> Code change BẮT BUỘC pair với doc update + test cùng commit. Không thoả hiệp. Đây là invariant cứng nhất của phương pháp.
+> **Behavior change ↔ test. Documented change ↔ doc. Cùng commit.** Code đổi HÀNH VI mà không có test = future bug; code đổi thứ ĐƯỢC DOCUMENT (nằm trong `covers:` của doc nào đó) mà không sửa/re-verify doc = doc sai ngay commit sau. Code ngoài cả hai vùng (pure UI tweak, config nhỏ) đi tự do — invariant cứng nhưng có ranh giới, không phải "mọi commit phải kèm đủ bộ ba".
+
+**v2 — 2026-07-28 (ADR-001 Phase 1):** phát biểu lại invariant từ "mọi code change bắt buộc doc + test" thành cặp điều kiện behavior↔test / documented↔doc như trên — hợp thức hóa đúng cách hook đã enforce từ trước (covers-based, xem §Cách enforce). **Parallel mode (NT13):** doc + test của entity đi CÙNG LOT với code; riêng doc thuộc shared zone (`docs/contracts/`, app-map README) worker không được commit → **deferred-doc-at-integration**: integrator commit phần doc đó ở bước merge queue, cùng lần regenerate global outputs.
 
 ---
 
@@ -97,4 +99,4 @@ Phải note rõ trong commit message: `style(ui): đổi padding card — skip t
 
 ## Câu khẩu hiệu / Slogan
 
-> "Code without doc = bug. Code without test = future bug. Both = task chưa xong."
+> "Behavior without test = future bug. Documented change without doc update = lie in the making. Cả hai trong CÙNG commit — hoặc task chưa xong."

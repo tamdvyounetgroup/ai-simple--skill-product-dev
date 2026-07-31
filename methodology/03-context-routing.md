@@ -46,6 +46,8 @@ Main agent:
 
 Chi phí routing: 1 lần spawn sub-agent ≈ 1-2K tokens (model rẻ). **Skip `/fl` cho task trivial** (1 file, đã biết đường, < 5 phút) — routing chỉ đáng giá khi task chạm nhiều domain hoặc session mới chưa có context.
 
+**Deterministic trước, LLM sau (ADR-001):** phần nào của routing máy làm được thì không tốn model call — keyword→domain map tra bảng, doc-status đọc từ `_generated/` (nguyên tắc 12), claim overlap so path (nguyên tắc 13). LLM chỉ dùng cho phần thật sự cần hiểu ngữ nghĩa task. Router cũng gánh 2 cổng đọc: **cổng doc-status** (gắn cờ SUSPECT — 12 §cổng đọc) và **cổng conflict** (nếu registry claims tồn tại: task paths ∩ active claims → CLEAR/CONFLICT/PROTECTED, output ≤ 100 token, CLEAR thì omit — 13 §tầng 2).
+
 ---
 
 ## Tại sao tách sub-agent / Why a separate sub-agent

@@ -89,6 +89,7 @@ const FILES = [
   { tpl: 'doc-health-report.sh.template',    dest: 'scripts/doc-health-report.sh',           stackable: false },
   { tpl: 'fl.command.md.template',           dest: '.claude/commands/fl.md',                 stackable: false },
   { tpl: 'audit.command.md.template',        dest: '.claude/commands/audit.md',              stackable: false },
+  { tpl: 'learn.command.md.template',        dest: '.claude/commands/learn.md',              stackable: false },
   { tpl: 'context-router.agent.md.template', dest: '.claude/agents/context-router.md',       stackable: false },
   { tpl: 'doc-health.workflow.yml.template', dest: '.github/workflows/doc-health.yml',       stackable: false, optionalFlag: 'no-workflow' },
   // Bộ template viết-doc để dành trong repo (copy khi cần viết doc mới)
@@ -119,7 +120,31 @@ function cmdInit(args) {
   if (!inGitRepo()) { console.error('FAIL: không phải git repo. Chạy `git init` trước — toàn bộ enforcement sống trên git.'); process.exit(1); }
   const stack = (args.stack || 'supabase').toLowerCase();
   if (!(stack in STACKS)) { console.error(`FAIL: --stack phải là ${Object.keys(STACKS).join('|')}`); process.exit(1); }
-  console.log(`ai-simple v${PKG.version} — init (stack: ${stack})\n`);
+  // M7: nhận ĐỦ các tên profile trong SKILL.md — về bộ file, mọi profile ≠ tiny cài như core
+  // (khác biệt giữa scale/contracts/ops/optimization/parallel nằm ở NGUYÊN TẮC KÍCH HOẠT
+  // trong SKILL.md/methodology, không phải ở file cài — in note cho rõ, đừng FAIL người dùng).
+  const PROFILES = ['tiny', 'core', 'full', 'scale', 'contracts', 'ops', 'optimization', 'parallel'];
+  const profile = (args.profile || '').toLowerCase();
+  if (profile && !PROFILES.includes(profile)) { console.error(`FAIL: --profile phải là ${PROFILES.join('|')}`); process.exit(1); }
+  if (profile && !['tiny', 'core', 'full', ''].includes(profile))
+    console.log(`Profile '${profile}': bộ file cài giống core — khác biệt là nguyên tắc nào BẬT (xem SKILL.md §Bước 0 + methodology tương ứng).\n`);
+
+  // R18 — auto-detect: gợi ý profile theo tải thật, không theo đức tin
+  const tracked = git(['ls-files']);
+  const fileCount = tracked.status === 0 && tracked.stdout ? tracked.stdout.split('\n').length : 0;
+  if (!profile && fileCount > 0 && fileCount < 10)
+    console.log(`GỢI Ý (R19): repo chỉ ${fileCount} file — cân nhắc \`ai-simple init --profile tiny\` (chỉ CLAUDE.md + risk tier, chi phí ≈ 0; scale-up sau qua doctor).\n`);
+
+  console.log(`ai-simple v${PKG.version} — init (stack: ${stack}${profile ? `, profile: ${profile}` : ''})\n`);
+
+  // R19 — profile tiny: chỉ CLAUDE.md bản TINY (01 + 06, KHÔNG tham chiếu /fl, hook,
+  // app-map — những thứ tiny cố ý không cài; M8: template full ở đây = AI gọi lệnh ma).
+  if (profile === 'tiny') {
+    const r = copyTemplate(TPL('CLAUDE.tiny.md.template'), 'CLAUDE.md', { force: !!args.force });
+    console.log(`  ${r.action === 'OK' ? 'OK   ' : 'SKIP '} CLAUDE.md (bản tiny)`);
+    console.log('\nProfile tiny: xong. Khi repo lớn (≥ 30 file / có DB / nhiều flow) chạy lại `ai-simple init` để lên core — doctor sẽ nhắc.');
+    process.exit(0);
+  }
 
   for (const f of FILES) {
     if (f.optionalFlag && args[f.optionalFlag]) { console.log(`  SKIP  ${f.dest} (--${f.optionalFlag})`); continue; }
@@ -149,6 +174,28 @@ function cmdDoctor() {
   const add = (name, status, note = '') => checks.push({ name, status, note });
 
   add('git repo', inGitRepo() ? 'PASS' : 'FAIL', inGitRepo() ? '' : 'chạy git init');
+
+  // Profile tiny (R19): CLAUDE.md có + không hook + repo nhỏ = setup tiny HỢP LỆ —
+  // không được phán "hỏng" vì thiếu những thứ tiny cố ý không cài (lời hứa trong SKILL.md).
+  // N1 vòng 2: tiny chỉ hợp lệ khi KHÔNG có dấu vết core nào — repo đã init core mà mất
+  // .githooks (hook đang im lặng không chạy!) tuyệt đối không được false-PASS thành "tiny".
+  const trackedR = git(['ls-files']);
+  const trackedCount = trackedR.status === 0 && trackedR.stdout ? trackedR.stdout.split('\n').length : 0;
+  const coreTraces = fs.existsSync('scripts/doc-health-report.sh') || fs.existsSync('docs/app-map')
+    || fs.existsSync('.claude/commands/fl.md') || git(['config', 'core.hooksPath']).stdout === '.githooks';
+  const isTiny = fs.existsSync('CLAUDE.md') && !fs.existsSync('.githooks/pre-commit') && !coreTraces && trackedCount > 0 && trackedCount < 30;
+  if (!isTiny && coreTraces && !fs.existsSync('.githooks/pre-commit'))
+    add('HOOK MẤT nhưng repo có dấu vết core', 'FAIL', 'core.hooksPath/app-map/scripts tồn tại mà .githooks/pre-commit biến mất — hook đang KHÔNG chạy im lặng; `ai-simple init --force` hoặc `update` để cài lại');
+  if (isTiny) {
+    const size = fs.statSync('CLAUDE.md').size;
+    add(`profile tiny (${trackedCount} file tracked)`, 'PASS', 'CLAUDE.md + risk tier — đúng thiết kế, không thiếu gì');
+    add(`CLAUDE.md ${size} chars`, size <= 24000 ? 'PASS' : 'WARN', size > 24000 ? 'vượt budget — root diet (01)' : '');
+    console.log('  Trigger scale-up (khi chạm → `ai-simple init` để lên core):');
+    console.log('    ≥ 30 file / có DB+migrations / nhiều flow / ≥ 2 người-agent cùng sửa / process chạy nền');
+    for (const c of checks) console.log(`  ${c.status.padEnd(5)} ${c.name}${c.note ? ' — ' + c.note : ''}`);
+    console.log('\nOK: setup tiny lành mạnh.');
+    process.exit(0);
+  }
   const hp = git(['config', 'core.hooksPath']);
   add('core.hooksPath = .githooks', hp.stdout === '.githooks' ? 'PASS' : 'FAIL', hp.stdout ? `đang là '${hp.stdout}'` : 'chưa set — hook KHÔNG chạy; `git config core.hooksPath .githooks`');
 
@@ -174,6 +221,33 @@ function cmdDoctor() {
     add(`app-map: ${docs.length} docs, ${withCovers.length} có covers`, withCovers.length > 0 || docs.length <= 1 ? 'PASS' : 'WARN', withCovers.length === 0 && docs.length > 1 ? 'doc gắn code chưa khai covers: — nằm ngoài 2 cổng bảo vệ (nguyên tắc 12)' : '');
     add('doc-status.md', fs.existsSync('docs/app-map/_generated/doc-status.md') ? 'PASS' : 'WARN', fs.existsSync('docs/app-map/_generated/doc-status.md') ? '' : 'chưa sinh — chạy `ai-simple doc-status` (cổng đọc cần file này)');
   } else add('docs/app-map', 'WARN', 'chưa có — chạy `ai-simple init`');
+
+  // NT13 — claims registry (guarded: chỉ khi tồn tại, repo không parallel thì im lặng)
+  const common = git(['rev-parse', '--git-common-dir']);
+  if (common.status === 0) {
+    const cdir = path.join(path.resolve(process.cwd(), common.stdout), 'ai-simple', 'claims');
+    if (fs.existsSync(cdir)) {
+      const cfiles = fs.readdirSync(cdir).filter((f) => f.endsWith('.json') && !f.includes('.tmp-'));
+      let stale = 0, orphan = 0;
+      for (const f of cfiles) {
+        try {
+          const c = JSON.parse(fs.readFileSync(path.join(cdir, f), 'utf8'));
+          if (c.type === 'run-lease') continue;
+          if (c.lease_until_epoch && Date.now() / 1000 > c.lease_until_epoch) stale++;
+          if (c.branch && git(['rev-parse', '--verify', '--quiet', c.branch]).status !== 0) orphan++;
+        } catch { orphan++; } // file tay/hỏng cũng là orphan — WARN, không crash
+      }
+      add(`claims registry: ${cfiles.length} claim (NT13)`, stale + orphan === 0 ? 'PASS' : 'WARN',
+        [stale ? `${stale} STALE — \`ai-simple parallel recover\` (không silent takeover)` : '',
+         orphan ? `${orphan} orphan/hỏng (branch không còn hoặc JSON tay) — \`ai-simple parallel release\`` : ''].filter(Boolean).join('; '));
+      // Journal mồ côi (m4): crash sau release-claim nhưng trước dọn journal
+      const jdir = path.join(path.resolve(process.cwd(), common.stdout), 'ai-simple', 'journal');
+      if (fs.existsSync(jdir)) {
+        const orphanJ = fs.readdirSync(jdir).filter((f) => f.endsWith('.json') && !fs.existsSync(path.join(cdir, f.replace(/^merging-/, ''))));
+        if (orphanJ.length) add(`journal mồ côi: ${orphanJ.length}`, 'WARN', `claim tương ứng đã release — xóa được: ${orphanJ.join(', ')}`);
+      }
+    }
+  }
 
   let fail = 0;
   for (const c of checks) {
@@ -242,7 +316,7 @@ function parse(argv) {
     const a = argv[i];
     if (a.startsWith('--')) {
       const key = a.slice(2);
-      if (i + 1 < argv.length && !argv[i + 1].startsWith('--') && ['stack'].includes(key)) args[key] = argv[++i];
+      if (i + 1 < argv.length && !argv[i + 1].startsWith('--') && ['stack', 'profile'].includes(key)) args[key] = argv[++i];
       else args[key] = true;
     } else args._.push(a);
   }
@@ -253,8 +327,11 @@ const HELP = `ai-simple v${PKG.version} — lớp máy của phương pháp ai-s
 (não — /fl, /audit, verify-on-use — sống trong Claude Code skill cùng repo)
 
 Usage:
-  npx ai-simple init [--stack supabase|prisma|custom] [--force] [--no-workflow]
-      Cài hook + doc-health + templates + workflow vào repo hiện tại, set hooksPath, chạy self-test.
+  npx ai-simple init [--stack supabase|prisma|custom] [--profile tiny|core|full] [--force] [--no-workflow]
+      Cài hook + doc-health + templates + workflow, set hooksPath, chạy self-test.
+      --profile tiny: chỉ CLAUDE.md + risk tier (project < 10 file); repo nhỏ được tự gợi ý.
+  npx ai-simple parallel <plan|claim|extend|renew|status|ready|merge|recover|release|self-test>
+      Nguyên tắc 13 — chia lot MECE, claim atomic có lease, worktree per lot, merge queue.
   npx ai-simple doctor
       Khám setup: hooksPath, version drift, self-tests, budget CLAUDE.md, covers coverage.
   npx ai-simple update [--workflow]
@@ -271,6 +348,7 @@ commit → hook chặn sai; PR → CI fail nếu doc-lag; AI đọc doc → cổ
 const args = parse(process.argv.slice(2));
 const cmd = args._[0] || 'help';
 switch (cmd) {
+  case 'parallel': require('../lib/parallel.js').main(process.argv.slice(3)); break;
   case 'init': cmdInit(args); break;
   case 'doctor': cmdDoctor(); break;
   case 'update': cmdUpdate(args); break;

@@ -44,7 +44,7 @@ start/stop/restart · health check (lệnh + output mong đợi) · log ở đâ
 
 1. **≥ 1 process chạy nền = phải có `ops/`** — web app thuần request/response thì không cần
 2. **Runbook viết cho người đang cuống** — mỗi lệnh copy-paste được ngay, không "xem thêm phần X"; output mong đợi ghi kèm để biết lệnh chạy đúng hay sai
-3. **State registry là canonical** — AI không bao giờ được đoán schema state file; không có trong registry = coi như không tồn tại
+3. **State registry là canonical** — AI không bao giờ được đoán schema state file; không có trong registry = coi như không tồn tại. Quy tắc "1 writer / 1 state" của registry mở rộng cho session song song thành "1 writer / 1 write-set" (nguyên tắc 13); phân loại state đầy đủ (canonical/generated/telemetry/ephemeral/learned/evidence) xem nguyên tắc 12 v3 §State taxonomy
 4. **Lỗi gặp ≥ 2 lần phải có mục trong runbook** — gặp lại lần 3 mà vẫn diagnose từ đầu là bug quy trình
 5. **Sự cố là LOGIC trước, REQUEST sau** (nguyên tắc 05): diagnose bằng runbook → báo nguyên nhân → mới fix. Không "sửa mò" trên hệ thống đang chạy
 

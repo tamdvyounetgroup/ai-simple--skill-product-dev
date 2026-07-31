@@ -5,7 +5,7 @@
 - **Giải lỗi gì?** AI hallucinate tên hàm/file, đọc lan man tốn token, doc lệch code rồi AI tin doc cũ, hỏi confirm lặt vặt, không ai biết restart con bot.
 - **Cài thế nào?** Copy 3 template (CLAUDE.md, app-map, hook) + `git config core.hooksPath .githooks` — 5 phút, có `--self-test` xác nhận chạy đúng.
 - **Được gì?** Session AI mới onboard < 1 phút; mọi doc gắn code có trạng thái VERIFIED/SUSPECT máy tính từ git — doc sai **không lọt vào suy luận của AI mà chưa qua đối chiếu**; commit đổi code mà quên doc bị chặn tại chỗ.
-- **4 lớp:** Core (context + routing + sync) → Scale (enforcement + generated docs + contract) → Ops (runbook + registry) → Optimization (coupling map + 2 cổng verify + /audit). Versions: xem [CHANGELOG.md](CHANGELOG.md).
+- **5 lớp:** Core (context + routing + sync) → Scale (enforcement + generated docs + contract) → Ops (runbook + registry) → Optimization & Learning (coupling map + 2 cổng verify + học từ accepted diffs + /audit) → Collaboration (lot MECE + claim + worktree + merge queue cho nhiều session song song). Versions: xem [CHANGELOG.md](CHANGELOG.md).
 
 > **VI**: Phương pháp đơn giản để tổ chức một dự án phần mềm khi đồng hành cùng AI coding agent (Claude Code, Cursor, Aider, …). Không phải framework, không phải tool — là **bộ nguyên tắc + template + script đã test** giúp AI hiểu codebase nhanh, không hallucination, không bloat context.
 >
@@ -33,8 +33,11 @@ Phương pháp này giải 3 vấn đề trên bằng:
 - **Generated vs authored docs** — schema/route/inventory máy sinh, người chỉ viết "tại sao"
 - **Cross-repo contract** — schema dùng chung giữa nhiều repo có contract đánh version
 
-**Lớp Optimization** (vấn đề thứ 5: *hệ chỉ biết phát hiện mà không biết tự chữa thì điểm chỉ đi xuống theo thời gian*):
-- **Self-optimization loop** — coupling map (`covers`/`last_verified`/`ttl_days`) + 2 cổng: cổng GHI (hook chặn code-đổi-mà-doc-không-re-verify cùng commit) và cổng ĐỌC (doc SUSPECT phải được đối chiếu với code trước khi AI tin) + doc-lag/hotspot + `/audit` neo metric → backlog tối ưu xếp hạng
+**Lớp Optimization & Learning** (vấn đề thứ 5: *hệ chỉ biết phát hiện mà không biết tự chữa thì điểm chỉ đi xuống theo thời gian*):
+- **Evidence-driven self-evolution** — vòng A: coupling map (`covers`/`last_verified`/`ttl_days`) + 2 cổng: cổng GHI (hook chặn code-đổi-mà-doc-không-re-verify cùng commit) và cổng ĐỌC (doc SUSPECT phải được đối chiếu với code trước khi AI tin) + doc-lag/hotspot + `/audit` neo metric; vòng B: học từ **diff được user chấp nhận** (SHA là evidence — hết cảnh sửa AI cùng một kiểu mãi); vòng C: nâng skill qua branch + regression test + rollback
+
+**Lớp Collaboration** (vấn đề thứ 6: *hai session song song giẫm chân nhau — merge conflict, lost work, không ai biết ai đang sửa gì*):
+- **Git-native parallel sessions** — chia lot MECE theo business entity + DAG/waves, claim atomic có lease (CLI `ai-simple parallel`), worktree per lot, integration branch + merge queue tuần tự có journal/crash-recovery; dirty work của user là bất khả xâm phạm. Kèm bộ test nghiệm thu chạy được (`ai-simple parallel self-test` — race atomic 100 lượt, concurrent-merge không silent-loss, crash-resume, dirty-protection; số test hiện hành: CHANGELOG) + claim gate trong pre-commit hook.
 
 ### EN
 When pair-programming with an AI agent, 3 common pain points:
@@ -54,10 +57,13 @@ This methodology solves all 3 with:
 - **Generated vs authored docs** — schemas/routes/inventories are machine-generated; humans only write the "why"
 - **Cross-repo contract** — schemas shared across repos get a versioned contract file
 
-**Optimization layer** (pain point #5: *a system that only detects but never heals itself trends downward*):
-- **Self-optimization loop** — a doc↔code coupling map (`covers`/`last_verified`/`ttl_days`) + two gates: WRITE (hook blocks code-changed-without-doc-reverify in the same commit) and READ (SUSPECT docs must be checked against real code before the AI relies on them) + doc-lag/hotspot metrics + a metric-anchored `/audit` → ranked optimization backlog
+**Optimization & Learning layer** (pain point #5: *a system that only detects but never heals itself trends downward*):
+- **Evidence-driven self-evolution** — loop A: a doc↔code coupling map (`covers`/`last_verified`/`ttl_days`) + two gates: WRITE (hook blocks code-changed-without-doc-reverify in the same commit) and READ (SUSPECT docs must be checked against real code before the AI relies on them) + doc-lag/hotspot metrics + a metric-anchored `/audit`; loop B: learning from **user-accepted diffs** (SHAs are the evidence); loop C: skill evolution via branches + regression tests + rollback
 
-**Roadmap** (đang cân nhắc / under consideration): `npx ai-simple init|doctor|audit` CLI đóng gói toàn bộ template+script; `examples/` repo before/after (Next.js+Supabase, Python agent) với số đo onboard-time và doc-lag thật.
+**Collaboration layer** (pain point #6: *parallel sessions stepping on each other — merge conflicts, lost work, nobody knows who's editing what*):
+- **Git-native parallel sessions** — MECE lots by business entity + DAG/waves, atomic leased claims (`ai-simple parallel` CLI), worktree per lot, integration branch + serial merge queue with journal/crash-recovery; the user's dirty work is inviolable. Ships with a runnable acceptance suite (`ai-simple parallel self-test` — 100-attempt atomic race, concurrent-merge no-silent-loss, crash-resume, dirty-protection; current count: CHANGELOG) + a claim gate in the pre-commit hook.
+
+**Roadmap** (đang cân nhắc / under consideration): `examples/` repo before/after (Next.js+Supabase, Python agent) với số đo onboard-time và doc-lag thật; parallel benchmark đo speedup/overhead ex-post; scripts Phase 4–5 (decision-extract/compile tự động — xem `docs/adr/001`).
 
 ---
 
@@ -67,10 +73,12 @@ This methodology solves all 3 with:
 
 ```bash
 npx ai-simple init                  # cài hook + doc-health + templates + workflow, set hooksPath, chạy self-test
+npx ai-simple init --profile tiny   # project < 10 file: chỉ CLAUDE.md + risk tier, chi phí ≈ 0
 npx ai-simple init --stack prisma   # default: supabase; còn có: custom
-npx ai-simple doctor                # khám setup: version drift, self-tests, budget, covers coverage
+npx ai-simple doctor                # khám setup: version drift, self-tests, budget, covers, claims
 npx ai-simple update                # nâng hook/script lên bản mới, GIỮ NGUYÊN config (backup .bak)
 npx ai-simple doc-health --ci       # gate fail PR; doc-status: regenerate trạng thái doc
+npx ai-simple parallel plan|claim|ready|merge|recover   # ≥ 2 session song song (nguyên tắc 13)
 ```
 
 Sau `init`, hệ chạy theo **sự kiện** — không có lệnh nào phải nhớ: commit → hook chặn sai;
@@ -85,7 +93,7 @@ verify-on-use) dùng qua Claude Code skill — CLI chỉ đóng gói phần máy
 3. Tạo `.claude/commands/fl.md` từ `templates/fl.command.md.template`
 4. Tạo `.claude/agents/context-router.md` từ `templates/context-router.agent.md.template`
 5. Cài hook versioned: `mkdir .githooks` → copy `templates/pre-commit.hook.template` vào `.githooks/pre-commit` → `git config core.hooksPath .githooks` → commit folder `.githooks` (sửa 3 biến CONFIG nếu không phải Supabase; verify: `sh .githooks/pre-commit --self-test`)
-6. Đọc `methodology/README.md` để hiểu 12 nguyên tắc
+6. Đọc `methodology/README.md` để hiểu 13 nguyên tắc
 
 ### EN
 1. Copy `templates/CLAUDE.md.template` → project root, rename to `CLAUDE.md`
@@ -93,7 +101,7 @@ verify-on-use) dùng qua Claude Code skill — CLI chỉ đóng gói phần máy
 3. Create `.claude/commands/fl.md` from `templates/fl.command.md.template`
 4. Create `.claude/agents/context-router.md` from `templates/context-router.agent.md.template`
 5. Install the versioned hook: `mkdir .githooks` → copy `templates/pre-commit.hook.template` to `.githooks/pre-commit` → `git config core.hooksPath .githooks` → commit `.githooks` (edit the 3 CONFIG vars if not Supabase; verify: `sh .githooks/pre-commit --self-test`)
-6. Read `methodology/README.md` to grasp the 12 principles
+6. Read `methodology/README.md` to grasp the 13 principles
 
 ---
 
@@ -104,7 +112,11 @@ ai-simple--skill-product-dev/
 ├── README.md                    # This file
 ├── CHANGELOG.md                 # Lịch sử version (README chỉ dùng tên lớp)
 ├── SKILL.md                     # Claude Code skill manifest (auto-discoverable)
-├── methodology/                 # 12 principles, deep-dive
+├── bin/ai-simple.js             # CLI zero-dependency: init/doctor/update/doc-status/doc-health/parallel
+├── lib/parallel.js              # Nguyên tắc 13: claim atomic + merge queue CAS + test nghiệm thu (số: CHANGELOG)
+├── docs/adr/                    # ADR-001: thiết kế vNext (Git-native parallel + learning) + roadmap 5 phase
+├── skills/                      # 3 skill con: ba-flow-logic, ui-design-logic, ui-ux-triage
+├── methodology/                 # 13 principles, deep-dive
 │   ├── README.md                # Principles index
 │   ├── 01-hierarchical-context.md
 │   ├── 02-app-map-pattern.md
@@ -117,7 +129,8 @@ ai-simple--skill-product-dev/
 │   ├── 09-generated-vs-authored-docs.md # v2 — máy sinh "cái gì", người viết "tại sao"
 │   ├── 10-cross-repo-contract.md        # v2 — schema chung = contract đánh version
 │   ├── 11-ops-layer.md                  # v2.2 — runbook, state registry, routing sự cố
-│   └── 12-self-optimization.md          # v2(4.x) — coupling map covers/last_verified, 2 cổng verify, doc-lag, /audit
+│   ├── 12-self-optimization.md          # v3 — 3 vòng: coupling map + 2 cổng; học từ accepted diffs; skill evolution
+│   └── 13-parallel-sessions.md          # v1 shipped — lot MECE, claim atomic, worktree, merge queue CAS + test suite (số: CHANGELOG)
 └── templates/                   # Drop-in files. Quy ước placeholder: {{TÊN_HOA}} = trường BẮT BUỘC
                                  # điền khi copy; <chữ-thường> = ví dụ minh họa hoặc biến — thay bằng
                                  # nội dung thật khi viết, giữ nguyên nếu là pattern runtime (src/<module>/).
@@ -133,7 +146,8 @@ ai-simple--skill-product-dev/
     ├── state-registry.md.template       # v2.2 — registry canonical cho state files
     ├── ops-schedules.md.template        # v3.0 — registry mọi cron/scheduled job
     ├── ops-external-services.md.template# v3.0 — registry API ngoài (token, rate limit, khi chết)
-    ├── audit.command.md.template        # /audit: tự chấm 12 nguyên tắc → backlog tối ưu
+    ├── audit.command.md.template        # /audit: chấm 13 nguyên tắc theo applicability → backlog tối ưu
+    ├── learn.command.md.template        # /learn: learning event từ accepted diff (12 v3 vòng B)
     ├── doc-health.workflow.yml.template # GitHub Actions: self-test + --status + --ci gate + artifact
     └── contract-doc.md.template         # cross-repo contract
 ```

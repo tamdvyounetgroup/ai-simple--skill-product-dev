@@ -2,6 +2,15 @@
 
 Toàn bộ lịch sử tiến hóa của phương pháp. README/methodology dùng tên LỚP (Core / Scale / Ops / Optimization & Learning / Collaboration); version chỉ sống ở đây.
 
+## v1.4.1 — 2026-08-04 (npm publish blocker + redesign 4-case + zero-command routing)
+
+Hai đề xuất mới (Redesign mode riêng + "Principle 14 Intent Router") qua hội đồng 2 reviewer: cùng 3/10 — ~70% tái phát minh cái đã có (06 §3, bảng route 08, triage handoff, description-routing native của Claude Code), router agent trung tâm chạy-trước-mọi-message là cơ chế không tồn tại trên platform, mode "incident/sentry-fix" trong bảng intent là bịa, và cả hai tái xuất thư mục `commands/` đã bác từ v1.4.0. Chỉ ship phần lõi sống sót (~45 dòng docs, 0 nguyên tắc mới, 0 command mới):
+
+- **FIX npm publish blocker**: `package.json` mục `files` thiếu `lib/` → tarball publish sẽ thiếu `lib/parallel.js`, lệnh `ai-simple parallel` chết ngay khi cài từ npm. Đã thêm + xác nhận `npm pack --dry-run` (38 file, có lib) + `parallel self-test` 42 PASS. Package `ai-simple` trên npm hiện còn trống — chưa publish.
+- **ui-design-logic 06 §3 — phân loại 4-case trước khi sửa UI "xấu"**: (A) nghiệp vụ đúng, giao diện rối → chạy ngược checklist; (B) nhìn AI/slop → gate anti-slop/contract 08; (C) "xấu" vì thiếu hành vi → KHÔNG sửa UI, handoff BA; (D) app lỗi chức năng → ui-ux-triage. Kèm **guardrail redesign**: đổi HOW nhìn giữ WHAT chạy — không tự đổi AC/permission/flow/dữ liệu; token toàn cục/nav giữa chừng vẫn RED theo 07 §4; đổi wording = sync ba-spec cùng commit.
+- **Bảng route 08 §1 thêm hàng handoff BA** — vá lỗ bảng route không có đường về BA khi "xấu" hoá ra là spec sai/thiếu.
+- **Zero-command routing (docs, không cơ chế mới)**: mục Routing SKILL.md root thành bảng pointer triệu chứng→đích (thêm 2 route thiếu: sự cố production → NT11 runbook-trước-code; "UI nhìn như AI" → 06 §3); description root thêm trigger tiếng Việt tự nhiên; README thêm mục "Không cần nhớ lệnh / You don't need to remember commands" (bảng câu nói → skill, song ngữ); CLAUDE.md.template thêm 2 dòng "skill tự kích hoạt, không hỏi user chọn".
+
 ## v1.4.0 — 2026-08-04 (ui-design-logic: anti-slop layer + contract Hallmark — qua hội đồng 3 reviewer)
 
 Đề xuất ban đầu (fork nội dung Hallmark thành 4 references + 4 command) bị hội đồng 3 reviewer độc lập chấm 4/3/3 trên 10 — finding hội tụ: theme catalog chứa font bị cấm đích danh (Hum = Plus Jakarta Sans), diversification rule nghịch triết lý nhất quán của admin app (chính Hallmark tự đảo rule khi có design.md — DESIGN-SPEC chính là design.md), fork-tóm-tắt dựng lại monolith Hallmark v1.1 vừa refactor bỏ, và claim "Hallmark build trước hỏi sau" sai 180° so với nguồn. Bản ship theo kiến trúc thay thế của hội đồng — contract thay vì copy (đúng nguyên tắc 10):

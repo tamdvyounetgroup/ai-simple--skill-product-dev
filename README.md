@@ -154,6 +154,27 @@ ai-simple--skill-product-dev/
 
 ---
 
+## Không cần nhớ lệnh / You don't need to remember commands
+
+### VI
+Cài xong, cứ **nói tự nhiên** — skill tự kích hoạt theo tình huống, không cần nhớ tên skill hay command:
+
+| Bạn nói | Hệ tự route |
+|---|---|
+| "Tôi muốn làm app quản lý đơn hàng" (còn mơ hồ) | `ba-flow-logic` — phân tích nghiệp vụ → ba-spec |
+| "Thiết kế dashboard cho phần này" | `ui-design-logic` — pipeline 7 bước → design-spec |
+| "Màn này xấu quá / nhìn như AI" | `ui-design-logic` diagnose 4-case (xấu vì gì → sửa đúng cửa) |
+| "Bấm nút duyệt bị lỗi" + screenshot | `ui-ux-triage` — test như user thật, fix qua cổng risk |
+| "Bot chết lúc 2h sáng / cron không chạy" | Nguyên tắc 11 — runbook trước code |
+| "Repo này nhiều AI session cùng sửa" | Nguyên tắc 13 — `ai-simple parallel` |
+
+Slash command chỉ là đường tắt cho 3 quy trình máy: `/fl` (routing log), `/audit` (verify quý), `/learn` (học từ diff đã accept).
+
+### EN
+After install, just **speak naturally** — skills self-activate from context; no command names to memorize. "Design a dashboard" → design skill; "this screen looks AI-generated" → 4-case diagnose; "the approve button errors" + screenshot → triage; "the bot died at 2am" → runbook-first. Slash commands are shortcuts for the 3 machine workflows only (`/fl`, `/audit`, `/learn`).
+
+---
+
 ## Khi nào dùng / When to use
 
 ### VI — Phù hợp khi

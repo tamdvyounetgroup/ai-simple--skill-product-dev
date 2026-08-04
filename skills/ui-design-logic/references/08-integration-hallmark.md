@@ -17,6 +17,7 @@ Cài khi cần: `npx skills add nutlope/hallmark`. Hallmark chưa cài → chỉ
 | UI có sẵn nhìn "AI/slop" | 06 §3 diagnose trước; nếu là landing và cần chấm sâu → `hallmark audit` (read-only) | Audit only |
 | "Redesign màn này" | Màn admin → ui-ux-triage/06 §3. Landing giữ copy/IA → `hallmark redesign`, ranh giới mục 2 | Landing only |
 | User đưa screenshot/URL tham khảo | `hallmark study` (trích DNA, không pixel-clone) — chỉ khi đang làm landing | Study only |
+| UI "xấu" nhưng nguyên nhân là flow/nghiệp vụ sai/thiếu | Không phải việc design — handoff BA (06 §3 case C) | **KHÔNG** |
 
 Phân loại lấy từ **screen map trong DESIGN-SPEC**: màn hình phải khai `type: marketing-public`
 thì Hallmark mới được vào. Không khai = mặc định product UI = Hallmark đứng ngoài.

@@ -1,6 +1,6 @@
 ---
 name: ai-simple-product-dev
-description: Methodology for organizing software projects to be AI-agent-friendly — an operating layer for codebases. Use when bootstrapping a new project, retrofitting docs for AI pair-programming, onboarding an AI agent to an existing codebase, or on symptoms like "AI hallucinates", "context too long", "docs out of sync with code", "schema change broke another repo", "AI asks me to confirm every little thing", "nobody knows how to restart the bot", "two AI sessions stepping on each other", "AI repeats mistakes I already corrected", "what should we optimize next". Provides 13 composable principles in 5 layers — hierarchical context, app-map, context routing, doc+test sync, LOGIC vs REQUEST, risk-tiered pre-flight, memory, enforcement hooks, generated-vs-authored docs, cross-repo contracts, ops runbooks, evidence-driven self-evolution (learning from accepted diffs), and Git-native parallel sessions (MECE lots, leased claims, worktrees, merge queue) — profile-gated so small projects pay near zero.
+description: Methodology for organizing software projects to be AI-agent-friendly — an operating layer for codebases. Use when bootstrapping a new project, retrofitting docs for AI pair-programming, onboarding an AI agent to an existing codebase, or on symptoms like "AI hallucinates", "context too long", "docs out of sync with code", "schema change broke another repo", "AI asks me to confirm every little thing", "nobody knows how to restart the bot", "two AI sessions stepping on each other", "AI repeats mistakes I already corrected", "what should we optimize next", "dự án mới bắt đầu làm với AI", "AI đọc sai file/bịa tên hàm", "docs cũ không biết còn đúng không", "nhiều AI session cùng sửa repo", "bot/cron chết không ai biết restart". Provides 13 composable principles in 5 layers — hierarchical context, app-map, context routing, doc+test sync, LOGIC vs REQUEST, risk-tiered pre-flight, memory, enforcement hooks, generated-vs-authored docs, cross-repo contracts, ops runbooks, evidence-driven self-evolution (learning from accepted diffs), and Git-native parallel sessions (MECE lots, leased claims, worktrees, merge queue) — profile-gated so small projects pay near zero.
 ---
 
 # AI-Simple Product Dev
@@ -61,4 +61,12 @@ description: Methodology for organizing software projects to be AI-agent-friendl
 
 - Index nguyên tắc + templates + anti-patterns + triggers scale-up: `methodology/README.md`
 - Thiết kế vNext, amendments hội đồng phản biện, roadmap 5 phase: `docs/adr/001-vnext-git-native-parallel-self-evolving.md`
-- Skill chuyên môn: UI → `ui-design-logic`; BA → `ba-flow-logic`; triage defect → `ui-ux-triage`. Điểm móc 2 chiều định nghĩa tại file `references/*-integration*.md` của TỪNG skill — nguồn sự thật duy nhất, không lặp ở đây.
+- **Zero-command**: user nói tự nhiên là đủ — skill tự kích hoạt theo description, KHÔNG bắt user
+  chọn skill/command. Bảng pointer triệu chứng → đích (chỉ trỏ, nguồn sự thật ở references TỪNG skill):
+  - Nhu cầu/tính năng mới còn mơ hồ, "phân tích nghiệp vụ" → `ba-flow-logic`
+  - Build/design UI, "thêm màn hình", "make it pretty" → `ui-design-logic`
+  - UI "xấu/rối/nhìn như AI" → `ui-design-logic` 06 §3 (phân loại 4-case, có đường handoff BA)
+  - "Màn này sai/lệch", screenshot + câu than, app thật lỗi → `ui-ux-triage`
+  - Sự cố production/process nền, "bot chết", cron/log → nguyên tắc 11: runbook TRƯỚC code (`methodology/11`)
+  - Nhiều session cùng sửa repo → NT13 `ai-simple parallel`; docs nghi ngờ cũ → doc-status/`/audit`
+- Điểm móc 2 chiều định nghĩa tại file `references/*-integration*.md` của TỪNG skill — nguồn sự thật duy nhất, không lặp ở đây.

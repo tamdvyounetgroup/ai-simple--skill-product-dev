@@ -66,6 +66,21 @@ Task mới cả app: đủ ma trận màn hình × viewport.
 
 ## 3. Diagnose UI có sẵn (user chê "xấu", "rối", "chỏi")
 
+**Phân loại NGUYÊN NHÂN trước khi sửa — "xấu" có 4 loại, mỗi loại một cửa:**
+
+| Xấu vì gì | Dấu hiệu | Đi đâu |
+|---|---|---|
+| (A) Nghiệp vụ đúng, giao diện rối | Flow/AC chạy đúng; rối layout, density, component, title | Chạy ngược checklist §2 — chính mục này |
+| (B) Nhìn như AI/slop/template | Metric bịa, fake chrome, hero+3-card generic, gradient vô cớ | §2 gate anti-slop; landing cần chấm sâu → contract 08 |
+| (C) "Xấu" nhưng thật ra THIẾU hành vi | Màn thiếu trạng thái/nghiệp vụ mà spec cũng không có | KHÔNG sửa UI — handoff BA (ba-flow-logic), spec sai/thiếu |
+| (D) App thật đang lỗi chức năng | Button không bấm được, sai dữ liệu, sai role, treo | ui-ux-triage (test như user thật, phân bucket) |
+
+**Guardrail redesign (case A/B): đổi HOW nhìn, giữ WHAT chạy.** Được đổi: layout, spacing,
+component, hierarchy, density, mobile adaptation. KHÔNG tự đổi: AC, permission, flow, dữ liệu,
+trạng thái nghiệp vụ — muốn đổi là việc BA, handoff ngược. Đổi token toàn cục / tái cấu trúc nav
+giữa chừng redesign vẫn là RED theo 07 §4 (1 câu confirm), không nằm trong "phạm vi redesign".
+Đổi wording = sync ba-spec cùng commit (oracle text là ba-spec).
+
 Chạy ngược checklist: screenshot hiện trạng → đánh dấu vi phạm theo 3 mức → báo cáo
 "X BLOCK, Y MAJOR" kèm ảnh → đề xuất thứ tự sửa: BLOCK → căn hàng/spacing (mục MAJOR
 hình học — rẻ mà hiệu quả nhất) → text/title → màu. Kinh nghiệm: 80% cảm giác "rối"

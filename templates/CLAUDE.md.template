@@ -105,6 +105,9 @@ Trước khi sửa/dev (task chạm nhiều domain hoặc session mới) → g�
 
 Agent: `.claude/agents/context-router.md`. Slash: `.claude/commands/fl.md`.
 
+Skill chuyên môn (BA/design/triage nếu đã cài) tự kích hoạt theo mô tả tình huống —
+KHÔNG hỏi user chọn skill/command; command chỉ là đường tắt cho quy trình máy.
+
 ## Workflow trọng yếu
 - Feature mới → `docs/app-map/21-feature-workflow.md`
 - Test → `docs/app-map/22-test-organization.md`

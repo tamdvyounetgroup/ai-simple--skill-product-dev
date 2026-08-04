@@ -41,7 +41,7 @@ TẦNG 3 — report định kỳ (MEASURE)
 
 Template hook sẵn dùng: `templates/pre-commit.hook.template`
 
-**Fast vs Heavy (ADR-001 Phase 1 — nguyên tắc thiết kế gate):** pre-commit CHỈ chạy fast hard gates — staged paths, migration↔doc, covers overlap, claim conflict (NT13, khi registry tồn tại), encoding/token budget — mục tiêu p95 ≤ 500ms trên Windows. Mọi việc nặng (symbol-scan, full doc report, semantic check, learning review) dồn về pre-push / merge queue / CI / doctor / audit. Hook chậm = dev `--no-verify` = toàn bộ cơ chế chết. `covers:` khai quá rộng → hạ xuống **warn** (`gate: warn`), không block oan — block oan cũng dẫn tới `--no-verify`.
+**Fast vs Heavy (ADR-001 Phase 1 — nguyên tắc thiết kế gate):** pre-commit CHỈ chạy fast hard gates — staged paths, migration↔doc, covers overlap, claim conflict (NT13, khi registry tồn tại), encoding/token budget — mục tiêu p95 ≤ 500ms trên POSIX; trên Windows đo thật ~3s/commit (chi phí spawn `sh` + regen doc-status mục 5 — hướng tối ưu: chuyển regen sang pre-push). Mọi việc nặng (symbol-scan, full doc report, semantic check, learning review) dồn về pre-push / merge queue / CI / doctor / audit. Hook chậm = dev `--no-verify` = toàn bộ cơ chế chết. `covers:` khai quá rộng → hạ xuống **warn** (`gate: warn`), không block oan — block oan cũng dẫn tới `--no-verify`.
 
 **Claim fast gate (hạng mục Phase 2 ưu tiên cao nhất của NT13):** staged file ∩ write_paths của claim ACTIVE thuộc branch KHÁC → BLOCK. Chỉ là đọc JSON + so path — nằm gọn trong budget 500ms, không cần CLI đầy đủ. Lease không có fencing tại commit-time chỉ là lời hứa.
 

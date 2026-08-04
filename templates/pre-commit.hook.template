@@ -20,6 +20,7 @@ MIGRATIONS_PATTERN='supabase/migrations/.*\.sql$'         # prisma/migrations/.*
 DB_DOC_PATTERN='docs/.*(database|db|schema).*\.md$'       # doc nào được tính là "doc database"
 CLAUDE_MD_CHAR_BUDGET=24000                               # ~6K tokens (EN ~4 chars/token; VN-heavy có thể hạ 20000)
 CLAIMS_CHECK=auto                                         # auto | off — NT13 claim gate: auto = chỉ chạy khi registry tồn tại
+UI_CHECKS=auto                                            # auto | on | off — anti-slop UI gate (ui-design-logic 07 §5): auto = chỉ chạy khi repo có tailwind.config.*/globals.css
 # Sample paths cho --self-test — đổi CÙNG LÚC với 2 pattern trên:
 SELF_TEST_MIGRATION_SAMPLE='supabase/migrations/0001_sample.sql'
 SELF_TEST_DOC_SAMPLE='docs/app-map/03-database-and-automation.md'
@@ -47,7 +48,7 @@ if [ "$1" = "--self-test" ]; then
   M=$(echo "src/lib/x.ts" | while read -r c; do case "$c" in "src/lib"|"src/lib"/*) echo 1;; esac; done)
   [ -n "$M" ] && echo "PASS: matcher contract — child (src/lib/x) khop" || { echo "FAIL: matcher miss child"; RC=1; }
   # Fixture gate: warn — chạy flow thật trong temp repo, WARN nhưng KHÔNG chặn
-  HOOK_SELF="$0"; case "$HOOK_SELF" in /*) ;; *) HOOK_SELF="$(pwd)/$HOOK_SELF";; esac
+  HOOK_SELF="$0"; case "$HOOK_SELF" in /*|[A-Za-z]:*) ;; *) HOOK_SELF="$(pwd)/$HOOK_SELF";; esac
   TW=$(mktemp -d); OPW=$(pwd)
   cd "$TW" && git init -q . && git config user.email t@t.t && git config user.name t
   mkdir -p .githooks src/w docs/app-map
@@ -86,6 +87,25 @@ if [ "$1" = "--self-test" ]; then
     echo "FAIL: claim gate chan oan chinh lot (exit=$RCC2)"; RC=1
   fi
   cd "$OPW" && rm -rf "$TC"
+  # Fixture UI anti-slop gate (1d): mau hard-code -> BLOCK; mau token -> qua
+  TU=$(mktemp -d); cd "$TU" && git init -q . && git config user.email t@t.t && git config user.name t
+  mkdir -p .githooks src/ui
+  cp "$HOOK_SELF" .githooks/pre-commit && git config core.hooksPath .githooks
+  echo "module.exports={}" > tailwind.config.js
+  git add -A && git commit -qm setup >/dev/null 2>&1
+  printf 'export const A = () => <div className="text-[#ff0000]">x</div>\n' > src/ui/Bad.tsx
+  git add src/ui/Bad.tsx
+  OUTU=$(git commit -m uitest 2>&1); RCU=$?
+  if [ "$RCU" -ne 0 ] && echo "$OUTU" | grep -q "mau hard-code"; then
+    echo "PASS: UI gate chan mau hard-code (text-[#...])"
+  else
+    echo "FAIL: UI gate khong chan mau hard-code (exit=$RCU)"; RC=1
+  fi
+  printf 'export const A = () => <div className="text-primary">x</div>\n' > src/ui/Bad.tsx
+  git add src/ui/Bad.tsx
+  OUTU2=$(git commit -m uiok 2>&1); RCU2=$?
+  [ "$RCU2" -eq 0 ] && echo "PASS: UI gate cho qua mau token" || { echo "FAIL: UI gate chan oan mau token (exit=$RCU2)"; RC=1; }
+  cd "$OPW" && rm -rf "$TU"
   exit $RC
 fi
 
@@ -159,6 +179,28 @@ if [ "$CLAIMS_CHECK" != "off" ]; then
           FAIL=1
         fi
       done
+    done
+  fi
+fi
+
+# ── 1d. UI anti-slop gate (ui-design-logic 07 §5; nguồn: Hallmark gate 48/34) ──
+# auto: chỉ chạy khi repo có dấu hiệu UI (tailwind.config.* / globals.css). on/off để ép.
+if [ "$UI_CHECKS" != "off" ]; then
+  UI_ACTIVE=0
+  if [ "$UI_CHECKS" = "on" ]; then UI_ACTIVE=1
+  elif ls tailwind.config.* >/dev/null 2>&1 || [ -f src/app/globals.css ] || [ -f app/globals.css ]; then UI_ACTIVE=1; fi
+  if [ "$UI_ACTIVE" -eq 1 ]; then
+    for f in $(echo "$CHANGED" | grep -E '\.(tsx|jsx|css|vue|svelte)$' || true); do
+      UC=$(git show ":$f" 2>/dev/null) || continue
+      if echo "$UC" | grep -qE '(text|bg|border|from|to|via)-\[#[0-9a-fA-F]'; then
+        echo "BLOCK: mau hard-code ngoai token trong $f (vd text-[#...]) — can mau moi thi lift vao theme/globals.css truoc (ui-design-logic 04 §5, Hallmark gate 48)."
+        FAIL=1
+      fi
+      case "$f" in
+        *globals.css|*token*.css) ;;
+        *) echo "$UC" | grep -qE 'font-family:' && echo "WARN: font-family trong $f (ngoai globals/tokens) — font song o 1 cho duy nhat (ui-design-logic 07 §5)." ;;
+      esac
+      echo "$UC" | grep -qE 'overflow-x:[[:space:]]*hidden' && echo "WARN: overflow-x: hidden trong $f — che trieu chung tran ngang thay vi sua; neu buoc phai chan dung 'clip' (Hallmark gate 34)."
     done
   fi
 fi

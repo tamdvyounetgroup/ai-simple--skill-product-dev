@@ -15,7 +15,7 @@ Cài khi cần: `npx skills add nutlope/hallmark`. Hallmark chưa cài → chỉ
 | Admin / internal / dashboard / form / report | ui-design-logic 100% (pipeline 7 bước) | **KHÔNG** — kể cả khi user nói "làm đẹp" |
 | Landing / marketing / public page cần visual craft | ui-design-logic bước 0–3 (IA, screen map, budget) → Hallmark lo visual (macrostructure, theme, hero) → quay lại bước 6 QA | Có, trong ranh giới mục 2 |
 | UI có sẵn nhìn "AI/slop" | 06 §3 diagnose trước; nếu là landing và cần chấm sâu → `hallmark audit` (read-only) | Audit only |
-| "Redesign màn này" | Màn admin → ui-ux-triage/06 §3. Landing giữ copy/IA → `hallmark redesign`, ranh giới mục 2 | Landing only |
+| "Redesign màn này" | Màn admin → 06 §3 case A (đổi HOW nhìn, giữ WHAT chạy; chỉ khi app LỖI chức năng mới là ui-ux-triage). Landing giữ copy/IA → `hallmark redesign`, ranh giới mục 2 | Landing only |
 | User đưa screenshot/URL tham khảo | `hallmark study` (trích DNA, không pixel-clone) — chỉ khi đang làm landing | Study only |
 | UI "xấu" nhưng nguyên nhân là flow/nghiệp vụ sai/thiếu | Không phải việc design — handoff BA (06 §3 case C) | **KHÔNG** |
 
@@ -67,6 +67,7 @@ loop 06 — slop-test của Hallmark không thay thế nghiệm thu của skill 
 
 Các gate phổ quát đúng cho MỌI UI đã được cherry-pick (ghi nguồn gate để tra lại):
 checklist 06 §2 (invented metrics — gate 46; fake chrome — 47; clickable text 2 dòng — 49;
-scroll ngang mobile — 34; italic heading — 38a) và grep pre-commit 07 §5 (màu hard-code
-ngoài token — 48; `overflow-x: hidden` ở root — 34; `1fr` trần cho grid ảnh — 50).
+scroll ngang mobile — 34; italic heading — 38a; `1fr` trần cho grid ảnh — 50, check bằng mắt)
+và cổng máy `UI_CHECKS` trong pre-commit.hook.template mục 1d (màu hard-code ngoài token — 48
+BLOCK; `font-family` ngoài tokens + `overflow-x: hidden` — 34 WARN; chi tiết 07 §5).
 Đây là toàn bộ phần được phép "copy" — từng dòng checklist, không phải nội dung file.

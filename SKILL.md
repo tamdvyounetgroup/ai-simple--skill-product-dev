@@ -18,6 +18,7 @@ description: Methodology for organizing software projects to be AI-agent-friendl
 | ops | Có process chạy nền (cron/agent/pipeline) | + 11 |
 | optimization | Hệ chạy > 3 tháng / muốn học từ revisions | + 12 |
 | parallel | ≥ 2 session thường trực trên 1 repo | + 13 (CLI `ai-simple parallel` — đọc guard dưới) |
+| full | Bật tất cả không cần nghĩ (repo lớn, đội quen hệ) | 01–13 (về bộ file = core; khác biệt là nguyên tắc nào BẬT) |
 
 `doctor` phát hiện trigger scale-up và đề xuất profile kế tiếp — hệ mở rộng theo tải, không theo trí nhớ người dùng.
 
@@ -39,7 +40,7 @@ description: Methodology for organizing software projects to be AI-agent-friendl
 7. **Memory** — preference explicit của user = fast-path vòng B → `methodology/07`
 
 **Scale (08–10):**
-8. **Automated Enforcement** — fast gates ở pre-commit (≤ 500ms), việc nặng về pre-push/CI/doctor → `methodology/08`
+8. **Automated Enforcement** — fast gates ở pre-commit (mục tiêu ≤ 500ms POSIX; Windows đo thật ~3s do chi phí spawn `sh` — vẫn dưới ngưỡng `--no-verify`, đang tối ưu), việc nặng về pre-push/CI/doctor → `methodology/08`
 9. **Generated vs Authored** — máy sinh "cái gì" (`_generated/`), người viết "tại sao" → `methodology/09`
 10. **Cross-Repo Contract** — shared boundary = contract đánh version + bảng SYNC → `methodology/10`
 

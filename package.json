@@ -1,14 +1,20 @@
 {
   "name": "ai-simple",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "AI-agent-friendly project methodology: hierarchical context, doc-code coupling map, write/read verification gates, enforcement hooks, doc-health CI. This CLI installs and maintains the deterministic layer (hooks, scripts, templates); the reasoning layer ships as a Claude Code skill in the same repo.",
   "bin": {
     "ai-simple": "bin/ai-simple.js"
+  },
+  "homepage": "https://github.com/Long-Forfun/ai-simple--skill-product-dev#readme",
+  "bugs": {
+    "url": "https://github.com/Long-Forfun/ai-simple--skill-product-dev/issues"
   },
   "files": [
     "bin",
     "lib",
     "templates",
+    "skills",
+    "docs/adr",
     "methodology",
     "SKILL.md",
     "README.md",
@@ -24,7 +30,10 @@
   },
   "keywords": [
     "ai",
+    "claude",
     "claude-code",
+    "skill",
+    "git-hooks",
     "cursor",
     "documentation",
     "docs-as-code",

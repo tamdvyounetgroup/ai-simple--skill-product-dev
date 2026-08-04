@@ -33,7 +33,7 @@ Kích hoạt khi user:
 KHÔNG kích hoạt (→ skill khác):
 - Nhu cầu/tính năng mới, "tại sao user cần…" → **BA**
 - Thiết kế màn mới, "build trang", "làm đẹp từ đầu" → **ui-design-logic**
-- Review tĩnh 1 màn không cần flow+fix loop → **uiux**
+- Review tĩnh 1 màn không cần flow+fix loop → **ui-design-logic 06 §3** (diagnose 4-case, read-only)
 - DB migration / schema → ASK + gate (ai-simple #06 RED + memory db-safety)
 
 Tie-breaker đầy đủ: §11.
@@ -68,11 +68,13 @@ Observer phân loại defect bằng cách **đối chiếu với oracle**, KHÔN
 |---|---|---|
 | **LOGIC** / **FLOW** | `ba-spec` (acceptance criteria, JTBD) → app-map flows | lệch AC / vi phạm invariant / journey đứt |
 | **DESIGN** | `design-spec` (ui-design-logic) → design-system doc | lệch screen map / state matrix / token |
-| **TEXT** | ba-spec copy + i18n contract | sai/ lẫn ngôn ngữ, copy không khớp intent |
+| **TEXT** | `design-spec` (copy/wording UI) + ba-spec (THUẬT NGỮ nghiệp vụ: tên đối tượng/trạng thái) + i18n contract | sai/ lẫn ngôn ngữ, copy không khớp intent, thuật ngữ lệch ba-spec |
 
 - **Có ba-spec/design-spec** → diff thực-tế-vs-spec. Đây là chế độ mạnh nhất (composition đủ).
 - **Thiếu spec** (repo chưa chạy BA/design) → fallback design-system + heuristics, NHƯNG gắn cờ `[no-oracle, confidence thấp]` trong mọi finding để Lead biết đang đoán.
-- **Defect mà code KHỚP spec** → không phải bug triage. Code đúng spec mà vẫn sai = **spec sai** → §5 bước 4c handoff về BA.
+- **Defect mà code KHỚP spec** → không phải bug triage. Code đúng spec mà vẫn sai = **spec sai** →
+  §5 bước 4c: sai HÀNH VI (AC/flow/nghiệp vụ) → handoff **BA**; sai GIAO DIỆN tại design-spec
+  (screen map/state/token chính nó sai) → handoff **ui-design-logic** — BA bị cấm đụng UI.
 
 ---
 
@@ -129,7 +131,9 @@ iter N:
       - stale-pause >24h không hồi → nhắc 1 lần → TeamDelete (không giữ team zombie)
  4b. CAPTURE (đóng vòng học): user trả lời ASK → ghi [date] tình-huống→quyết-định→heuristic vào §6 +
       memory feedback_triage_decisions.md; mâu thuẫn heuristic cũ → [stale]; ≥2x → promote rule (ai-simple #07)
- 4c. HANDOFF→BA: nếu code KHỚP spec mà vẫn sai → KHÔNG fix; ghi "nhu cầu mới/spec sai" → đẩy về BA, exit
+ 4c. HANDOFF khi code KHỚP spec mà vẫn sai → KHÔNG fix, ghi 1 dòng HANDOFF vào triage-log rồi exit:
+      `HANDOFF | to=<BA|design> | spec=<file + AC/mục bị nghi> | ca=<spec-sai|nhu-cầu-thiếu|nhu-cầu-mới> | bằng-chứng=<screenshot/log> | đề-xuất=<1 câu>`
+      — sai HÀNH VI → to=BA (ba-flow-logic ref 04 nhận đúng format này); sai GIAO DIỆN tại design-spec → to=design (ui-design-logic đọc spec + sửa theo pipeline nó)
  5. LEAD brief FIXER (request cụ thể)
  6. FIXER apply + verify; không rõ → hỏi Lead; verify fail → revert + escalate
  7. TESTER rerun từ step 1 (regression) — tái dùng pattern bug-fix-verify spec của repo nếu có
@@ -212,7 +216,7 @@ ai-simple/BA/ui-design-logic **vắng** trong repo → degrade: tier áp cục b
 ## 11. Cross-reference + tie-breaker
 - **Skill nền**: `ai-simple-product-dev` (#06 tier, #07 memory, #08 gate, #12 verify) — defer, không tự chế.
 - **Pha trên (oracle)**: `BA` → ba-spec (AC); `ui-design-logic` → design-spec.
-- **Tie-breaker** (cùng trigger "rà soát UI"): triage = multi-step flow+fix loop; `uiux` = review tĩnh 1 màn; `test-runner` = jest/playwright only; `code-review` = static, no UI.
+- **Tie-breaker** (cùng trigger "rà soát UI"): triage = multi-step flow+fix loop; review tĩnh 1 màn = ui-design-logic 06 §3; chạy test suite thuần (jest/playwright) hoặc static code review = KHÔNG phải triage (nếu máy user có skill riêng cho việc đó thì nhường).
 - Chi tiết hợp đồng composition: `references/07-integration.md`.
 
 ---

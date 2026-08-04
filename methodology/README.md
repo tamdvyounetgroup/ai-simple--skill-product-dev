@@ -100,6 +100,7 @@ Bảng chọn profile (tiny/core/scale/contracts/ops/optimization/parallel → n
 | Template | Dùng cho |
 |---|---|
 | `CLAUDE.md.template` | Root project guide (01) |
+| `CLAUDE.tiny.md.template` | Bản TINY cho profile tiny — chỉ 01+06, không tham chiếu hook/fl (R19) |
 | `app-map-README.md.template` / `app-map-doc.md.template` | App-map index + canonical doc (02) |
 | `ADR.md.template` | Architecture decision record |
 | `context-router.agent.md.template` / `fl.command.md.template` | Routing (03) — kèm cổng doc-status (12) + cổng conflict (13) |

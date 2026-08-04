@@ -91,6 +91,10 @@ lint_one() {
     || echo "  WARN: thieu section 'Flows' (flow map — duong user di, 01 §3)"
   grep -qiE 'screenshot|qa|nghiệm thu|nghiem thu|\.png|\.jpg' "$f" \
     || echo "  WARN: chua thay bang chung screenshot QA (man hinh chua co anh 3 viewport = chua xong, 06)"
+  # Contract 08: màn marketing-public đã build thì phải có mục Visual fingerprint (08 §3)
+  if grep -qi 'marketing-public' "$f" && ! grep -qiE 'visual.?fingerprint' "$f"; then
+    echo "  WARN: co man 'marketing-public' nhung thieu muc 'Visual fingerprint' (contract 08 §3)"
+  fi
 
   return $rc
 }
@@ -138,6 +142,13 @@ if [ "$MODE" = "--self-test" ]; then
   R=$(lint_one "$T/warn-only.md")
   if echo "$R" | grep -q BLOCK; then echo "FAIL: phan tuy chon thieu lai len BLOCK:"; echo "$R"; RC=1
   else echo "$R" | grep -q WARN && echo "PASS: thieu phan tuy chon -> chi WARN, khong chan" || { echo "FAIL: khong WARN gi"; RC=1; }; fi
+
+  # 9) marketing-public không có Visual fingerprint → WARN (không BLOCK); có đủ thì im
+  printf "# x\n${FM}${LADDER}${SMHDR}${SMROW}| 2 | Landing | marketing-public | seo | đọc | Đăng ký | hero | S |\n${STATE}" > "$T/mkt.md"
+  R=$(lint_one "$T/mkt.md")
+  if echo "$R" | grep -q "thieu muc 'Visual fingerprint'"; then
+    echo "$R" | grep -q BLOCK && { echo "FAIL: WARN fingerprint keo theo BLOCK oan"; RC=1; } || echo "PASS: marketing-public thieu fingerprint -> chi WARN"
+  else echo "FAIL: marketing-public thieu fingerprint khong WARN"; RC=1; fi
 
   rm -rf "$T"
   [ "$RC" -eq 0 ] && echo "design-verify self-test: ALL PASS" || echo "design-verify self-test: CO FAIL"

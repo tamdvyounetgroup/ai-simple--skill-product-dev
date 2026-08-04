@@ -341,6 +341,8 @@ Usage:
       Regenerate docs/app-map/_generated/doc-status.md (+ marker DOC-STATUS trong doc).
   npx ai-simple doc-health [--ci]
       Report doc-lag/ORPHANED/symbol chết/broken ref; --ci exit 1 để fail PR.
+  npx ai-simple self-test
+      Chạy self-test của hook + doc-health template (chính là \`npm test\`).
   npx ai-simple version | help
 
 Sau khi init, hệ chạy theo SỰ KIỆN — không có lệnh nào phải nhớ:

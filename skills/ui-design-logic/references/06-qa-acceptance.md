@@ -45,7 +45,7 @@ Task mới cả app: đủ ma trận màn hình × viewport.
 - [ ] Cột số trong table thiếu `tabular-nums` hoặc không căn phải; hero KPI không đạt 2–3× cỡ label
 - [ ] 2 primary button trong 1 màn hình; hàng > 3 button
 - [ ] Title cùng cấp lệch ngữ pháp / có cái 2 dòng / lệch casing
-- [ ] Nhóm ngang hàng (1 hàng tab/button, menu, lưới card) lệch hình dạng label: trộn 1 dòng với 2 dòng, lệch > 1 từ giữa label dài nhất và ngắn nhất — check ở viewport hẹp nhất (375px), sửa bằng ĐỔI TỪ NGỮ theo budget nhóm (03 §4)
+- [ ] Nhóm ngang hàng (1 hàng tab/button, menu, lưới card) lệch hình dạng label: trộn 1 dòng với 2 dòng, lệch > 1 từ giữa label dài nhất và ngắn nhất — check ở 375px trong ma trận VÀ spot-check 320px (§1; fail ở 320 cũng là MAJOR), sửa bằng ĐỔI TỪ NGỮ theo budget nhóm (03 §4)
 - [ ] Badge sai bảng màu trạng thái đã chốt, hoặc badge > 2 từ
 - [ ] Card cùng hàng lệch chiều cao; cột số không căn phải; lệch trục căn trái
 - [ ] Số/ngày chưa format locale hoặc format lẫn lộn 2 kiểu
@@ -79,7 +79,8 @@ Task mới cả app: đủ ma trận màn hình × viewport.
 component, hierarchy, density, mobile adaptation. KHÔNG tự đổi: AC, permission, flow, dữ liệu,
 trạng thái nghiệp vụ — muốn đổi là việc BA, handoff ngược. Đổi token toàn cục / tái cấu trúc nav
 giữa chừng redesign vẫn là RED theo 07 §4 (1 câu confirm), không nằm trong "phạm vi redesign".
-Đổi wording = sync ba-spec cùng commit (oracle text là ba-spec).
+Đổi wording = sync design-spec cùng commit (oracle copy UI là design-spec; riêng THUẬT NGỮ
+nghiệp vụ — tên đối tượng/trạng thái — phải khớp ba-spec, lệch thì hỏi BA chứ không tự đổi).
 
 Chạy ngược checklist: screenshot hiện trạng → đánh dấu vi phạm theo 3 mức → báo cáo
 "X BLOCK, Y MAJOR" kèm ảnh → đề xuất thứ tự sửa: BLOCK → căn hàng/spacing (mục MAJOR

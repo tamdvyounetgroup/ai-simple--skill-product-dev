@@ -39,7 +39,7 @@ Degrade: oracle = design-system doc + heuristics; MỌI finding gắn `[no-oracl
 | nhu cầu/tính năng mới, "tại sao cần", "phân tích nghiệp vụ", "tối ưu flow" | BA = `ba-flow-logic` |
 | thiết kế màn mới, "làm đẹp từ đầu" | ui-design-logic |
 | "màn này sai/lệch", screenshot lỗi, "test+fix flow" | ui-ux-triage |
-| review tĩnh 1 màn | uiux |
+| review tĩnh 1 màn | ui-design-logic 06 §3 |
 
 ## Cross-repo — INSTALL = JUNCTION, không copy (chống drift)
 Skill global (junction `~/.claude/skills/ui-ux-triage` → repo này). Mỗi repo cấp ngữ cảnh riêng qua `.claude/triage.config` (hoặc auto-discover). ba-spec/design-spec ở repo nào thì triage repo đó đọc của repo đó.
@@ -48,7 +48,7 @@ Skill global (junction `~/.claude/skills/ui-ux-triage` → repo này). Mỗi rep
 ```powershell
 # từ repo root:
 Remove-Item .claude\skills\ui-ux-triage -Recurse -Force   # nếu đang là dir-copy cũ
-New-Item -ItemType Junction -Path .claude\skills\ui-ux-triage -Target C:\Code\ui-ux-triage
+New-Item -ItemType Junction -Path .claude\skills\ui-ux-triage -Target <đường-dẫn-clone>\ai-simple--skill-product-dev\skills\ui-ux-triage
 # VERIFY là junction thật (không phải dir):
 Get-Item .claude\skills\ui-ux-triage | Select-Object LinkType, Target   # LinkType phải = Junction
 ```

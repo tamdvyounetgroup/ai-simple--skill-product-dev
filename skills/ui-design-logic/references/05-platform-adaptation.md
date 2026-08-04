@@ -75,4 +75,5 @@ Logic nghiệp vụ + screen map + token màu GIỮ NGUYÊN; chỉ lớp compone
 ## 5. Kiểm tra 3 design con (nối với 06)
 
 Mọi màn hình trong screen map phải được xem ở 3 viewport: **375×812 (mobile), 768×1024 (tablet),
-1440×900 (desktop)**. Màn hình chỉ đẹp ở desktop = mới làm xong 1/3 việc.
+1440×900 (desktop)** + spot-check 320×568 cho scroll ngang / label wrap / heading tràn (06 §1).
+Màn hình chỉ đẹp ở desktop = mới làm xong 1/3 việc.

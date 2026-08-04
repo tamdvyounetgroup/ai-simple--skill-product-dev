@@ -2,7 +2,16 @@
 
 ## Reverse handoff — "code khớp spec mà vẫn sai"
 
-`ui-ux-triage` (§4c của nó) đẩy về đây khi: code **khớp** ba-spec/design-spec nhưng hành vi vẫn sai. Nghĩa là lỗi nằm ở **spec**, không ở code → BA sửa SPEC, **không** sửa code, không tự triage.
+`ui-ux-triage` (§4c của nó) đẩy về đây khi: code **khớp** ba-spec nhưng **hành vi** vẫn sai — lỗi
+nằm ở SPEC HÀNH VI → BA sửa ba-spec, **không** sửa code, không tự triage. Payload nhận theo format
+4c của triage: `HANDOFF | to=BA | spec=... | ca=... | bằng-chứng=... | đề-xuất=...`.
+(Ca "code khớp *design-spec* mà GIAO DIỆN vẫn sai" KHÔNG về đây — triage đẩy thẳng
+`ui-design-logic`; BA bị cấm đụng UI.)
+
+**Đường nhận thứ 2 — từ `ui-design-logic` (06 §3 case C, TRƯỚC khi có code):** design đang làm màn
+thì phát hiện spec THIẾU hành vi (màn cần trạng thái/nghiệp vụ mà ba-spec không có). Tiền đề khác
+bảng 3-ca dưới (chưa có code để "khớp spec"), nhưng hành động trùng ca **Nhu cầu thiếu**: quay
+B4–B6 cho đúng nghiệp vụ đó, bump `last_verified`, rồi trả spec về cho design chạy tiếp.
 
 Phân loại 3 ca:
 

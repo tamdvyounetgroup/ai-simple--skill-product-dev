@@ -119,7 +119,7 @@ update_marker() {
 
 # ── chế độ --self-test: fixture tổng hợp trong temp repo, bắt regression lớp Bug A/B ──
 if [ "$1" = "--self-test" ]; then
-  SELF="$0"; case "$SELF" in /*) ;; *) SELF="$(pwd)/$SELF";; esac
+  SELF="$0"; case "$SELF" in /*|[A-Za-z]:*) ;; *) SELF="$(pwd)/$SELF";; esac
   T=$(mktemp -d) && OLDPWD_ST=$(pwd) && cd "$T" || exit 1
   git init -q . && git config user.email t@t.t && git config user.name t
   mkdir -p src/a src/b docs/app-map

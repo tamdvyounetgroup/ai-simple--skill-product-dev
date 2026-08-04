@@ -31,7 +31,7 @@ ttl_days: 90
 Thêm rule vào context-router: task là UI → ordered list bắt đầu bằng
 `docs/app-map/0X-design-spec.md`, rồi đúng file reference của ui-design-logic theo bước pipeline
 (thêm màn hình → 01; chỉnh layout/density → 02; chọn component/viết text → 03; màu/token → 04;
-responsive/mobile → 05; user chê xấu → 06). Không load cả 7 file cho một task sửa button.
+responsive/mobile → 05; user chê xấu → 06; landing/anti-slop/Hallmark → 08). Không load cả 8 file cho một task sửa button.
 
 ## 3. Sync invariant mở rộng: UI code ⇄ DESIGN-SPEC ⇄ screenshot (móc nguyên tắc 4 + 12 v2)
 
@@ -65,15 +65,12 @@ Khớp với 01 §8: màn hình mới phá budget → đề xuất tái cấu tr
   - `grep -E 'className="[^"]*\[[0-9]+px\]'` trên file staged → BLOCK: vi phạm thang spacing (04 §5)
   - Route/page mới trong code mà screen map không có dòng tương ứng → WARN (đối chiếu
     `_generated/routes.md`, xem mục 6)
-  - Anti-slop máy-check-được (nguồn: Hallmark gate 48/34/50 — xem contract ref 08):
-    - `grep -E '(text|bg|border|from|to|via)-\[#[0-9a-fA-F]'` trên file staged → BLOCK:
-      màu hard-code ngoài token — cần màu mới thì lift vào theme/globals.css trước
-    - `grep -E 'font-family:' ` trong file component (ngoài globals.css/token block) → WARN:
-      font bypass token — font sống ở 1 chỗ duy nhất
-    - `grep -E 'overflow-x:\s*hidden'` trên selector html/body → WARN: che triệu chứng
-      tràn ngang thay vì sửa; nếu buộc phải chặn thì dùng `clip`
-    - `grep -E 'grid-cols-[0-9]|1fr'` + grid chứa ảnh dùng `1fr` trần → WARN: dùng
-      `minmax(0,1fr)` để ảnh không phá track trên mobile
+  - Anti-slop máy-check (nguồn: Hallmark gate 48/34 — xem contract ref 08): **ĐÃ SHIP trong
+    `pre-commit.hook.template` mục 1d (`UI_CHECKS=auto`)** — màu hard-code `-[#...]` → BLOCK;
+    `font-family:` ngoài globals/tokens → WARN; `overflow-x: hidden` → WARN. Auto-bật khi repo
+    có tailwind.config/globals.css; có fixture trong hook self-test. KHÔNG chép grep tay nữa —
+    nguồn sự thật là template. Riêng `1fr` trần cho grid ảnh (gate 50): máy grep không phân biệt
+    được grid-có-ảnh → check bằng MẮT trong screenshot QA (06 §2), không grep
 - **`design-verify.sh --staged`** là cổng thứ hai, KHÁC việc với covers-sync ở trên — không drift đôi:
   covers-sync enforce *code ⇄ doc coupling* (UI đổi thì spec phải re-verify); design-verify enforce
   *spec đầy đủ* (thang user / screen map đủ cột + ≥1 dòng / ma trận trạng thái / frontmatter). Một cái

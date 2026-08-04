@@ -63,7 +63,8 @@ Quá 30% số hàng có badge đỏ/vàng = badge mất nghĩa cảnh báo → x
   là bug hình dạng, phải sửa từ ngữ hoặc nới width tab, không được để nguyên
 - Cùng nhóm = cùng cỡ từ: lệch tối đa 1 từ giữa label dài nhất và ngắn nhất
   ("Tài khoản / Sản phẩm / Hệ thống / Dữ liệu" ✓ — "Cài đặt / Quản lý cảnh báo thiết bị" ✗)
-- Kiểm tra bằng RENDER thật ở viewport hẹp nhất (mobile 375px), không kiểm tra bằng đếm
+- Kiểm tra bằng RENDER thật ở viewport hẹp nhất (375px trong ma trận; spot-check 320px theo
+  06 §1 — fail ở 320 cũng tính là fail), không kiểm tra bằng đếm
   ký tự trong code — tiếng Việt có dấu, cùng số ký tự vẫn lệch width
 - Sentence case ("Báo cáo doanh thu"). Không Title Case, không VIẾT HOA (trừ viết tắt: SKU, VAT)
 - Không chấm câu cuối title. Title không chứa giá trị động (đưa số vào metric, đừng vào title)
@@ -72,7 +73,9 @@ Quá 30% số hàng có badge đỏ/vàng = badge mất nghĩa cảnh báo → x
 - Label form: danh từ ngắn, không dấu hai chấm, không "Vui lòng nhập..."
 - Placeholder là VÍ DỤ ("vd: 0901 234 567"), không lặp lại label, không chứa hướng dẫn quan trọng (gõ là mất)
 - Lỗi validate: nói cách sửa ("Số điện thoại cần 10 chữ số") không nói lỗi suông ("Không hợp lệ")
-- Empty state: 1 dòng lý do + 1 nút hành động. Không chỉ "Không có dữ liệu"
+- Empty state — CÂU CHUẨN DUY NHẤT (SKILL.md và 01 trỏ về đây): 1 cụm ngắn nêu lý do
+  ("Chưa có đơn") + 1 CTA hành động. CẤM văn thuyết minh cơ chế kiểu AI. Ngoại lệ duy nhất:
+  bậc user MỚI được empty state = onboarding (1 CTA + checklist 2–3 bước, 01 §1)
 
 **Số & ký tự:**
 - Format locale nhất quán toàn app: vi-VN "2.450.000 ₫", ngày "11/06/2026" hoặc tương đối "3 giờ trước" — chọn 1 kiểu/ngữ cảnh, dùng mọi nơi

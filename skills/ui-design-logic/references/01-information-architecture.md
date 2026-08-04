@@ -162,9 +162,17 @@ Màn hình không tồn tại độc lập. Trước khi layout, trả lời 4 c
 
 Đừng chọn nav theo thẩm mỹ. Chọn theo số đếm, rồi mới làm đẹp cái đã chọn.
 
-## 7. Template DESIGN-SPEC.md (copy vào root project)
+## 7. Template DESIGN-SPEC.md
+
+Project trần: đặt ở root. Project dùng ai-simple: đặt `docs/app-map/0X-design-spec.md` (07 §1 —
+KHÔNG để root). 4 dòng frontmatter đầu là BẮT BUỘC — `design-verify.sh` BLOCK nếu thiếu.
 
 ```markdown
+> Load khi: task chạm UI/screen/component/flow/style
+covers: src/app, src/components
+last_verified: <YYYY-MM-DD>
+ttl_days: 90
+
 # DESIGN-SPEC — <tên app>
 
 ## Người dùng & nhiệm vụ
@@ -186,10 +194,14 @@ Màn hình không tồn tại độc lập. Trước khi layout, trả lời 4 c
 <sidebar 5 mục: ...> | mobile: <bottom tabs: ...>
 
 ## Screen map
-| # | Màn hình | Vào từ | User đến để làm gì (1 câu) | Step tiếp theo mong muốn | Primary action | Widget chính | Density |
-|---|---|---|---|---|---|---|---|
-| 1 | Dashboard | login, bottom tab | Nắm tình hình hôm nay trong 5 giây | xử lý cảnh báo nóng nhất | + Tạo đơn | 4 metric + 1 chart + 1 list 5 dòng | M |
-| 2 | Chi tiết đơn | list, noti, link share | Quyết định duyệt/từ chối | duyệt → đơn kế tiếp | Duyệt | header trạng thái + bảng item + timeline | M |
+| # | Màn hình | Type | Vào từ | User đến để làm gì (1 câu) | Step tiếp theo mong muốn | Primary action | Widget chính | Density |
+|---|---|---|---|---|---|---|---|---|
+| 1 | Dashboard | product | login, bottom tab | Nắm tình hình hôm nay trong 5 giây | xử lý cảnh báo nóng nhất | + Tạo đơn | 4 metric + 1 chart + 1 list 5 dòng | M |
+| 2 | Chi tiết đơn | product | list, noti, link share | Quyết định duyệt/từ chối | duyệt → đơn kế tiếp | Duyệt | header trạng thái + bảng item + timeline | M |
+
+Cột **Type**: `product` (mặc định — admin/internal/app) hoặc `marketing-public` (landing/marketing —
+mở cửa Hallmark theo contract 08; màn `product` thì Hallmark cấm đụng). Màn `marketing-public`
+sau khi build thêm mục `## Visual fingerprint — <màn>` theo format 08 §3.
 
 Màn hình phục vụ ≥ 2 loại user → mỗi biến thể 1 dòng (vd: `1a Dashboard (mới)` = onboarding checklist, `1b Dashboard (quen)` = metric của họ).
 

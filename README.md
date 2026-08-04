@@ -1,5 +1,7 @@
 # AI-Augmented Product Development — A Simple Skill
 
+[![npm version](https://img.shields.io/npm/v/ai-simple.svg)](https://www.npmjs.com/package/ai-simple)
+
 **TL;DR (30 giây):**
 - **Cho ai?** Dev/team dùng AI coding agent (Claude Code, Cursor, Aider) trên project ≥ 30 file có business logic thật.
 - **Giải lỗi gì?** AI hallucinate tên hàm/file, đọc lan man tốn token, doc lệch code rồi AI tin doc cũ, hỏi confirm lặt vặt, không ai biết restart con bot.
@@ -69,7 +71,12 @@ This methodology solves all 3 with:
 
 ## Quick start
 
-### Cách 1 — CLI (30 giây, khuyến nghị / recommended)
+### Cách 1 — CLI (khuyến nghị / recommended)
+
+> ⚠ Nếu `npx ai-simple` báo 404 (npm chưa có bản mới nhất): dùng
+> `npx github:Long-Forfun/ai-simple--skill-product-dev init`, hoặc clone repo rồi chạy
+> `node <repo>/bin/ai-simple.js init` trong project của bạn.
+> Windows: lần chạy đầu gồm self-test hook nên mất ~1-2 phút — bình thường, các lần sau không lặp.
 
 ```bash
 npx ai-simple init                  # cài hook + doc-health + templates + workflow, set hooksPath, chạy self-test
@@ -81,9 +88,42 @@ npx ai-simple doc-health --ci       # gate fail PR; doc-status: regenerate trạ
 npx ai-simple parallel plan|claim|ready|merge|recover   # ≥ 2 session song song (nguyên tắc 13)
 ```
 
+Song song nhiều AI session: đi tay từng bước ở [docs/walkthroughs/parallel-sessions.md](docs/walkthroughs/parallel-sessions.md).
+
 Sau `init`, hệ chạy theo **sự kiện** — không có lệnh nào phải nhớ: commit → hook chặn sai;
 PR → CI fail nếu doc-lag; AI đọc doc → cổng đọc bắt verify. Phần "não" (`/fl`, `/audit`,
 verify-on-use) dùng qua Claude Code skill — CLI chỉ đóng gói phần máy chạy-không-cần-AI.
+
+### Cài 4 skill vào Claude Code (bắt buộc để có phần "não")
+
+`init` cài phần MÁY vào project; phần NÃO là 4 skill — Claude Code phải nhìn thấy chúng trong
+`~/.claude/skills/`. Clone repo này rồi link (Windows dùng Git Bash, hoặc `mklink /J` trong cmd):
+
+```bash
+git clone https://github.com/Long-Forfun/ai-simple--skill-product-dev
+cd ai-simple--skill-product-dev
+ln -s "$(pwd)" ~/.claude/skills/ai-simple-product-dev
+ln -s "$(pwd)/skills/ba-flow-logic" ~/.claude/skills/ba-flow-logic
+ln -s "$(pwd)/skills/ui-design-logic" ~/.claude/skills/ui-design-logic
+ln -s "$(pwd)/skills/ui-ux-triage" ~/.claude/skills/ui-ux-triage
+```
+
+Link (không copy) để `git pull` là mọi project nhận bản skill mới. Mở phiên Claude Code mới là
+skill tự kích hoạt theo tình huống (xem "Không cần nhớ lệnh" bên dưới).
+
+### First win — thấy hook chặn thật trong 2 phút
+
+```bash
+printf '> Load khi: task chạm orders\ncovers: src/orders\nlast_verified: 2020-01-01\nttl_days: 90\n\n# Orders\n' > docs/app-map/10-orders.md
+mkdir -p src/orders && echo "export const approve = () => true" > src/orders/approve.ts
+git add -A && git commit -m "orders: doc + code"
+echo "// changed" >> src/orders/approve.ts
+git add -A && git commit -m "orders: đổi code, quên doc"   # ← hook BLOCK tại đây
+```
+
+Commit thứ hai bị chặn: code trong vùng `covers:` đổi mà doc không sửa/re-verify — đây chính là
+lời hứa "doc lệch code không lọt vào suy luận của AI". Sửa doc (hoặc bump `last_verified` kèm
+message `re-verify(...)`) rồi commit lại là qua.
 
 ### Cách 2 — copy tay (5 phút / 5 min)
 
@@ -135,6 +175,7 @@ ai-simple--skill-product-dev/
                                  # điền khi copy; <chữ-thường> = ví dụ minh họa hoặc biến — thay bằng
                                  # nội dung thật khi viết, giữ nguyên nếu là pattern runtime (src/<module>/).
     ├── CLAUDE.md.template
+    ├── CLAUDE.tiny.md.template
     ├── app-map-README.md.template
     ├── app-map-doc.md.template
     ├── ADR.md.template

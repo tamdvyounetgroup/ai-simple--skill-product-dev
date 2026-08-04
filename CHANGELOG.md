@@ -2,6 +2,16 @@
 
 Toàn bộ lịch sử tiến hóa của phương pháp. README/methodology dùng tên LỚP (Core / Scale / Ops / Optimization & Learning / Collaboration); version chỉ sống ở đây.
 
+## v1.4.0 — 2026-08-04 (ui-design-logic: anti-slop layer + contract Hallmark — qua hội đồng 3 reviewer)
+
+Đề xuất ban đầu (fork nội dung Hallmark thành 4 references + 4 command) bị hội đồng 3 reviewer độc lập chấm 4/3/3 trên 10 — finding hội tụ: theme catalog chứa font bị cấm đích danh (Hum = Plus Jakarta Sans), diversification rule nghịch triết lý nhất quán của admin app (chính Hallmark tự đảo rule khi có design.md — DESIGN-SPEC chính là design.md), fork-tóm-tắt dựng lại monolith Hallmark v1.1 vừa refactor bỏ, và claim "Hallmark build trước hỏi sau" sai 180° so với nguồn. Bản ship theo kiến trúc thay thế của hội đồng — contract thay vì copy (đúng nguyên tắc 10):
+
+- **NEW `ui-design-logic/references/08-integration-hallmark.md`** — contract 4 mục với skill Hallmark (cài riêng `npx skills add nutlope/hallmark`, không fork nội dung): bảng ROUTE (admin/internal → ui-design-logic 100%, Hallmark cấm đụng; landing/marketing khai `type: marketing-public` trong screen map → Hallmark lo visual giữa bước 3 và 6); PRECEDENCE (system font stack + lệnh cấm font + shadcn lock + 1 accent + hoà màu logo THẮNG theme catalog — theme nhập kiểu palette-only; diversification TẮT vì DESIGN-SPEC đóng vai design.md; 3-question gate của Hallmark im lặng khi có ba-spec/DESIGN-SPEC; đổi token toàn cục vẫn là RED theo 07 §4); HANDOFF (output Hallmark ghi ngược vào DESIGN-SPEC mục Visual Fingerprint — oracle duy nhất cho triage, token lift vào globals.css cùng commit); danh mục gate đã cherry-pick kèm số gate nguồn.
+- **Checklist 06 §2 nhập 5 gate anti-slop phổ quát** (ghi nguồn Hallmark gate): scroll ngang mobile kể cả 320px (34) + metric/testimonial bịa (46) vào BLOCK; clickable text wrap 2 dòng (49), fake browser/phone/code chrome (47), heading italic (38a) vào MAJOR. Screenshot loop thêm **spot-check 320×568** (soi 3 lỗi chỉ lộ ở bề rộng hẹp nhất — không nhân đôi ma trận 3 viewport).
+- **07 §5 thêm 4 pattern grep anti-slop máy-check** cho pre-commit hook của project: màu hard-code `-[#...]` ngoài token → BLOCK (gate 48); `font-family:` trong component ngoài token block → WARN; `overflow-x: hidden` ở html/body → WARN (dùng `clip`); `1fr` trần cho grid ảnh → WARN (`minmax(0,1fr)`, gate 50). Đúng charter: design-verify.sh KHÔNG đổi (lint spec), lint code sống ở hook.
+- **Fix bug 04 §3**: gợi ý font còn sót "Be Vietnam Pro" mâu thuẫn lệnh cấm trong SKILL.md → thay bằng system font stack, cấm đích danh 3 font, font riêng (kể cả Inter) chỉ khi user yêu cầu rõ.
+- **SKILL.md ui-design-logic**: 3 quy tắc cứng mới từ sản phẩm thật (system font stack + cấm chữ giải thích kiểu AI trên UI + IA theo đối tượng/bộ phận), rule đồng bộ HÌNH DẠNG label nhóm ngang hàng (03 §4 quy trình budget-trước-chọn-từ-sau + checklist 06), trigger + description nhận diện "UI nhìn như AI", mục lục thêm ref 08.
+
 ## v1.3.1 — 2026-07-28 (hardening vòng 2+3 theo hội đồng tái chấm — 42 test nghiệm thu)
 
 Hội đồng 3 reviewer tái chấm v1.3.0 (67/77/82 trên 100) và tìm ra 1 CRITICAL bằng thí nghiệm thật: **2 merge đồng thời làm mất lot khỏi integration 8/8 lần** (rebase→ff chạy ngoài lock, `branch -f` đè nhau, cả hai báo OK). Fix + toàn bộ MAJOR:

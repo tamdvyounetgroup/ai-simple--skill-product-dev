@@ -52,6 +52,19 @@ Quá 30% số hàng có badge đỏ/vàng = badge mất nghĩa cảnh báo → x
 - Kỷ luật truncate: cắt SAU từ khoá phân biệt (model, cỡ, biến thể) — truncate mà mất từ phân biệt
   giữa các item trong list thì tệ ngang không có title (Baymard: 55% site cắt sai). Tag: max-width 200px rồi ellipsis
 - Page title ≤ 35 ký tự; card/section title ≤ 25; menu item ≤ 15
+
+**Đồng bộ hình dạng trong nhóm ngang hàng (tab bar, hàng button, menu, lưới card):**
+- Quy trình BẮT BUỘC: chốt **label budget cho cả nhóm TRƯỚC** (số từ + số ký tự max, ví dụ
+  tab bar mobile = 2 từ ≤ 10 ký tự) → rồi mới chọn từ ngữ cho TỪNG label vừa budget đó.
+  Từ ngữ là biến thiết kế: đổi sang từ đồng nghĩa ngắn hơn, viết tắt đã quen (TV, SKU),
+  bỏ từ thừa ("Quản lý đơn hàng" → "Đơn hàng") — KHÔNG lấy tên có sẵn rồi để UI chịu trận
+- Cùng nhóm = cùng số dòng render ở viewport hẹp nhất: tất cả 1 dòng, hoặc (bất khả kháng)
+  tất cả 2 dòng. CẤM trộn — 1 hàng tab có cái "Yêu cầu" 1 dòng cạnh cái "Cảnh báo TV" 2 dòng
+  là bug hình dạng, phải sửa từ ngữ hoặc nới width tab, không được để nguyên
+- Cùng nhóm = cùng cỡ từ: lệch tối đa 1 từ giữa label dài nhất và ngắn nhất
+  ("Tài khoản / Sản phẩm / Hệ thống / Dữ liệu" ✓ — "Cài đặt / Quản lý cảnh báo thiết bị" ✗)
+- Kiểm tra bằng RENDER thật ở viewport hẹp nhất (mobile 375px), không kiểm tra bằng đếm
+  ký tự trong code — tiếng Việt có dấu, cùng số ký tự vẫn lệch width
 - Sentence case ("Báo cáo doanh thu"). Không Title Case, không VIẾT HOA (trừ viết tắt: SKU, VAT)
 - Không chấm câu cuối title. Title không chứa giá trị động (đưa số vào metric, đừng vào title)
 

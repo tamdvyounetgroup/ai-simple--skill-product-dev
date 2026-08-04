@@ -61,10 +61,19 @@ Khớp với 01 §8: màn hình mới phá budget → đề xuất tái cấu tr
 - ~~Diff có file UI mà không kèm DESIGN-SPEC → warn~~ **ĐÃ THAY THẾ**: check này được
   covers-sync của 12 v2 làm hộ, mạnh hơn (block, có `gate: warn` knob, có fixture) — chỉ cần
   khai `covers:` đúng ở mục 1, KHÔNG viết check riêng (2 cơ chế cùng việc = drift đôi)
-- Vẫn thêm 2 pattern UI-riêng vào hook của project:
+- Vẫn thêm các pattern UI-riêng vào hook của project:
   - `grep -E 'className="[^"]*\[[0-9]+px\]'` trên file staged → BLOCK: vi phạm thang spacing (04 §5)
   - Route/page mới trong code mà screen map không có dòng tương ứng → WARN (đối chiếu
     `_generated/routes.md`, xem mục 6)
+  - Anti-slop máy-check-được (nguồn: Hallmark gate 48/34/50 — xem contract ref 08):
+    - `grep -E '(text|bg|border|from|to|via)-\[#[0-9a-fA-F]'` trên file staged → BLOCK:
+      màu hard-code ngoài token — cần màu mới thì lift vào theme/globals.css trước
+    - `grep -E 'font-family:' ` trong file component (ngoài globals.css/token block) → WARN:
+      font bypass token — font sống ở 1 chỗ duy nhất
+    - `grep -E 'overflow-x:\s*hidden'` trên selector html/body → WARN: che triệu chứng
+      tràn ngang thay vì sửa; nếu buộc phải chặn thì dùng `clip`
+    - `grep -E 'grid-cols-[0-9]|1fr'` + grid chứa ảnh dùng `1fr` trần → WARN: dùng
+      `minmax(0,1fr)` để ảnh không phá track trên mobile
 - **`design-verify.sh --staged`** là cổng thứ hai, KHÁC việc với covers-sync ở trên — không drift đôi:
   covers-sync enforce *code ⇄ doc coupling* (UI đổi thì spec phải re-verify); design-verify enforce
   *spec đầy đủ* (thang user / screen map đủ cột + ≥1 dòng / ma trận trạng thái / frontmatter). Một cái

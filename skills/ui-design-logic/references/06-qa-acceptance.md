@@ -9,6 +9,8 @@ skill này bắt buộc vòng lặp đó. **Cấm tuyên bố "xong" khi chưa s
 1. Chạy app (dev server / preview tool có sẵn trong môi trường)
 2. Với MỖI màn hình trong screen map: screenshot ở 1440×900, 768×1024, 375×812
    + dark mode ở viewport chính (nếu app có dark mode)
+   + SPOT-CHECK 320×568 (không cần đủ ma trận): chỉ soi scroll ngang, label wrap 2 dòng,
+   heading tràn — 3 lỗi chỉ lộ ở bề rộng hẹp nhất
 3. Tự chấm theo checklist mục 2 — nhìn ảnh thật, không nhìn code mà đoán
 4. Có lỗi BLOCK/MAJOR → sửa → screenshot lại vùng đã sửa → chấm lại
 5. Lặp đến khi hết BLOCK/MAJOR (thường 2–3 vòng). MINOR còn lại: liệt kê cho user quyết
@@ -26,6 +28,9 @@ Task mới cả app: đủ ma trận màn hình × viewport.
 - [ ] Dark mode: text tàng hình, nền trắng chói trong dark, border biến mất
 - [ ] Hover-only action không có đường thay thế trên touch
 - [ ] Primary action nằm dưới fold hoặc trong vùng collapse
+- [ ] Scroll ngang trên mobile ở bất kỳ viewport nào, kể cả 320px (Hallmark gate 34)
+- [ ] Số liệu/metric/testimonial BỊA trên UI — "+47% conversion", "10.000+ khách" không có nguồn:
+      dùng số thật, "—" kèm nhãn "chờ số liệu", hoặc bỏ khối đó (Hallmark gate 46)
 
 **MAJOR — vi phạm spec/budget, sửa trước khi giao:**
 - [ ] Màn hình vượt density budget đã khai trong DESIGN-SPEC (đếm khối, không cảm tính)
@@ -40,12 +45,19 @@ Task mới cả app: đủ ma trận màn hình × viewport.
 - [ ] Cột số trong table thiếu `tabular-nums` hoặc không căn phải; hero KPI không đạt 2–3× cỡ label
 - [ ] 2 primary button trong 1 màn hình; hàng > 3 button
 - [ ] Title cùng cấp lệch ngữ pháp / có cái 2 dòng / lệch casing
+- [ ] Nhóm ngang hàng (1 hàng tab/button, menu, lưới card) lệch hình dạng label: trộn 1 dòng với 2 dòng, lệch > 1 từ giữa label dài nhất và ngắn nhất — check ở viewport hẹp nhất (375px), sửa bằng ĐỔI TỪ NGỮ theo budget nhóm (03 §4)
 - [ ] Badge sai bảng màu trạng thái đã chốt, hoặc badge > 2 từ
 - [ ] Card cùng hàng lệch chiều cao; cột số không căn phải; lệch trục căn trái
 - [ ] Số/ngày chưa format locale hoặc format lẫn lộn 2 kiểu
 - [ ] Logo vi phạm quy tắc 04 (trên nền accent, thiếu khoảng thở, bị đổi màu)
 - [ ] Mobile: table scroll ngang thay vì biến thành list card; form 2 cột
 - [ ] Empty state trống trơn không có hành động; ô table trống không có "—"
+- [ ] Button/nav link/breadcrumb/CTA wrap 2 dòng ở bất kỳ viewport nào — clickable text
+      luôn 1 dòng, sửa bằng đổi từ ngữ theo budget nhóm (03 §4; Hallmark gate 49)
+- [ ] Fake chrome vẽ tay: browser bar giả (URL pill + 3 chấm), khung điện thoại giả,
+      cửa sổ code giả — dùng screenshot thật trong `<figure>` hoặc bỏ (Hallmark gate 47)
+- [ ] Heading in nghiêng (italic) hoặc từ nhấn `<em>` nghiêng trong heading — nhấn bằng
+      weight/màu accent, italic chỉ sống trong body text (Hallmark gate 38a)
 
 **MINOR — ghi nhận, sửa nếu còn thời gian:**
 - [ ] Transition giật/thiếu cho overlay; focus ring thiếu trên vài element

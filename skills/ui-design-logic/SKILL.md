@@ -1,6 +1,6 @@
 ---
 name: ui-design-logic
-description: Top-down, user-oriented UI/UX design methodology that guarantees consistent, intelligent, beautiful interfaces. Use whenever the user asks to design or build ANY web/app UI — dashboard, landing page, admin tool, mobile screen, form, report — even if they only say "make it pretty", "build a page", or "thêm màn hình". Enforces user-ladder segmentation (public vs account vs role/tier X/Y — per level: what they want to see, what the product communicates, what nudges their next action), per-screen behavior design (entry points, user goal, desired next step, action→expectation, logged-in/out/role/empty/loading/error state matrix, habit-based defaults), information architecture budgets (how many pages/tabs/flows/buttons), screen density limits + information compaction, component decision tables (badge vs tag, modal vs drawer vs page, table vs list vs cards), title/text grammar consistency, logo color harmonization, collapse/expand rules, and platform-specific adaptation (desktop/tablet/mobile as three distinct sub-designs; iOS follows HIG, Android follows Material). Locked stack React + Tailwind + shadcn/ui, ends with a mandatory screenshot QA loop. Parameters calibrated against award-winning apps and design-system research (see research/).
+description: Top-down, user-oriented UI/UX design methodology that guarantees consistent, intelligent, beautiful interfaces. Use whenever the user asks to design or build ANY web/app UI — dashboard, landing page, admin tool, mobile screen, form, report — even if they only say "make it pretty", "build a page", or "thêm màn hình". Enforces user-ladder segmentation (public vs account vs role/tier X/Y — per level: what they want to see, what the product communicates, what nudges their next action), per-screen behavior design (entry points, user goal, desired next step, action→expectation, logged-in/out/role/empty/loading/error state matrix, habit-based defaults), information architecture budgets (how many pages/tabs/flows/buttons), screen density limits + information compaction, component decision tables (badge vs tag, modal vs drawer vs page, table vs list vs cards), title/text grammar consistency, peer-group label shape uniformity (same line count + word budget per tab bar/button row — pick words to fit, never mixed 1-line/2-line), logo color harmonization, collapse/expand rules, anti-AI-slop QA gates (no invented metrics, no fake browser/phone chrome, no italic headings, no 2-line clickable text, hard-coded colors blocked at pre-commit — adapted from Hallmark, with a routing contract to the Hallmark skill when landing/marketing pages need visual craft or the user says UI "looks AI-generated"), and platform-specific adaptation (desktop/tablet/mobile as three distinct sub-designs; iOS follows HIG, Android follows Material). Locked stack React + Tailwind + shadcn/ui, ends with a mandatory screenshot QA loop. Parameters calibrated against award-winning apps and design-system research (see research/).
 ---
 
 # UI Design Logic
@@ -26,6 +26,9 @@ badge dùng bừa, popup vô tội vạ, logo chỏi màu. Skill này diệt s�
 - User chê UI hiện tại "xấu", "rối", "không đồng nhất", "chỏi" → diagnose bằng checklist 06
 - Thêm màn hình/feature vào app đã có → đọc DESIGN-SPEC.md hiện có trước, tuân theo budget
 - User đưa logo/brand color → chạy quy trình hoà màu (04)
+- Landing/marketing page cần visual craft, UI bị chê "nhìn như AI", user đưa
+  screenshot/URL tham khảo → đọc contract 08 (route sang skill Hallmark nếu đã cài;
+  admin/internal thì Hallmark KHÔNG được đụng, xử lý bằng 06 §3)
 
 ## Pipeline 7 bước — BẮT BUỘC theo thứ tự, không nhảy cóc
 
@@ -71,6 +74,7 @@ Hai file riêng, hai oracle riêng cho `ui-ux-triage`. Không có ba-spec (task 
 
 **Nhất quán text:**
 - Title cùng cấp = cùng ngữ pháp (cùng là danh từ hoặc cùng là động từ), luôn 1 dòng, không chấm câu cuối
+- **Nhóm ngang hàng = đồng bộ HÌNH DẠNG label**: các label trong cùng 1 nhóm (1 hàng tab, 1 hàng button, 1 menu, 1 lưới card) phải cùng số dòng render (tất cả 1 dòng — hoặc tất cả 2 dòng nếu buộc phải thế) và cùng cỡ từ (chốt budget cho cả nhóm: ví dụ tab = 2 từ ≤ 10 ký tự, rồi CHỌN TỪ NGỮ cho vừa budget — đổi từ, viết tắt, cắt bớt). 1 nhãn không nhét vừa → sửa TỪ, không chấp nhận nhãn đó wrap riêng. Cấm trong cùng 1 nhóm: cái 1 dòng cái 2 dòng, cái 1 từ cái 4 từ, cái cụt lủn cái dài ngoằng — từ ngữ là biến thiết kế, không phải cái có sẵn phải chịu
 - Sentence case mọi nơi. Badge ≤ 2 từ. Số liệu luôn format theo locale
 
 **Mật độ & thao tác:**
@@ -83,6 +87,9 @@ Hai file riêng, hai oracle riêng cho `ui-ux-triage`. Không có ba-spec (task 
 **Visual:**
 - 1 neutral ramp + 1 accent + 4 màu semantic. Hết. Logo xử lý theo 04, không nhét thô
 - Text contrast ≥ 4.5:1. Dark mode phải được kiểm tra, không phải "để sau"
+- **FONT — mặc định SYSTEM FONT STACK kiểu Apple/Facebook**: `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif` (SF Pro trên Apple, Segoe UI trên Windows — pro, phổ biến, native, có sẵn tiếng Việt, không tải Google Fonts). Số: system mono + tabular-nums. **CẤM `Be Vietnam Pro`, `Plus Jakarta Sans`, `Fraunces`** (user gọi "ngu ngốc / vớ vẩn / thấy gớm" — 2026-07). KHÔNG dùng serif/display trang trí hay font trendy cho UI sản phẩm nội bộ — user muốn giống app thật (Apple/Facebook), không muốn "cá tính". Chỉ cân nhắc font riêng khi user YÊU CẦU rõ.
+- **KHÔNG viết chữ giải thích kiểu AI trên UI** — bỏ subtitle/hint/marketing dạng câu văn thuyết minh. UI sản phẩm thật chỉ có NHÃN chức năng ngắn (nút, tiêu đề, cột), không có văn diễn giải "cái này để làm gì". Empty state: 1 cụm ngắn ("Chưa có đơn"), không giải thích cơ chế.
+- **IA — tổ chức theo ĐỐI TƯỢNG/BỘ PHẬN, không theo khái niệm trừu tượng** (user 2026-07: "phòng điều khiển nhà máy là quần què gì"). Hệ nội bộ nhiều phòng ban → mỗi bộ phận là 1 không gian làm việc có Dashboard KPI riêng (con số bộ phận đó quản lý) + thao tác vào/ra của nó; lãnh đạo có 1 Dashboard tổng rollup. Đừng ép user vào mô hình flow trừu tượng của mình.
 
 ## Tài liệu chi tiết — đọc đúng file theo bước đang làm
 
@@ -93,6 +100,7 @@ Hai file riêng, hai oracle riêng cho `ui-ux-triage`. Không có ba-spec (task 
 - `references/05-platform-adaptation.md` — 3 design con, biến đổi nav theo thiết bị, iOS vs Android vs desktop, chuột vs chạm
 - `references/06-qa-acceptance.md` — checklist nghiệm thu, quy trình screenshot loop, phân cấp lỗi
 - `references/07-integration-ai-simple.md` — ĐỌC KHI project dùng ai-simple-product-dev: DESIGN-SPEC vào app-map, routing task UI, sync invariant UI⇄spec⇄screenshot, risk tier cho design, hook check UI, drift routes vs screen map
+- `references/08-integration-hallmark.md` — ĐỌC KHI task chạm landing/marketing page cần visual craft, UI bị chê "nhìn như AI", hoặc user đưa screenshot/URL tham khảo: contract route/precedence/handoff với skill Hallmark (không fork nội dung — cài riêng `npx skills add nutlope/hallmark`)
 
 ## Stack (khoá cứng)
 

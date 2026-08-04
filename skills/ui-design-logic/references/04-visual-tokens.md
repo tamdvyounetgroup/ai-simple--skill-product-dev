@@ -39,8 +39,11 @@ B4. Logo luôn đặt trên nền neutral (trắng/xám nhạt/sidebar sẫm) v�
 
 ## 3. Typography
 
-- 1 font duy nhất cho UI nghiệp vụ (sans, hỗ trợ tiếng Việt tốt): Inter, Be Vietnam Pro,
-  hoặc system stack. Landing page ĐƯỢC PHÉP thêm 1 display font cho hero.
+- 1 font duy nhất cho UI nghiệp vụ — MẶC ĐỊNH SYSTEM FONT STACK (xem quy tắc cứng FONT
+  trong SKILL.md): `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`.
+  **CẤM Be Vietnam Pro / Plus Jakarta Sans / Fraunces**; không serif/display trang trí, không font
+  trendy cho UI sản phẩm. Font riêng (kể cả Inter) chỉ khi user YÊU CẦU rõ.
+  Landing page ĐƯỢC PHÉP thêm 1 display font cho hero — cũng chỉ khi user yêu cầu rõ.
   Được phép +1 font MONO chỉ cho code, ID, phím tắt, data label kỹ thuật (10–14px; label uppercase
   thì tracking +0.3 đến +1.5px) — chuẩn ngành Linear/Vercel. Không mono cho body. Tối đa 3 font/project
 - Scale: 12 (caption) / 13 (label phụ) / 14 (body UI) / 16 (body đọc dài) / 18 (section title)

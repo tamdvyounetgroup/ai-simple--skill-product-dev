@@ -327,9 +327,10 @@ const HELP = `ai-simple v${PKG.version} — lớp máy của phương pháp ai-s
 (não — /fl, /audit, verify-on-use — sống trong Claude Code skill cùng repo)
 
 Usage:
-  npx ai-simple init [--stack supabase|prisma|custom] [--profile tiny|core|full] [--force] [--no-workflow]
+  npx ai-simple init [--stack supabase|prisma|custom] [--profile tiny|core|full|scale|contracts|ops|optimization|parallel] [--force] [--no-workflow]
       Cài hook + doc-health + templates + workflow, set hooksPath, chạy self-test.
       --profile tiny: chỉ CLAUDE.md + risk tier (project < 10 file); repo nhỏ được tự gợi ý.
+      Các profile ngoài tiny: bộ file cài giống core — khác biệt là nguyên tắc nào BẬT (SKILL.md §Bước 0).
   npx ai-simple parallel <plan|claim|extend|renew|status|ready|merge|recover|release|self-test>
       Nguyên tắc 13 — chia lot MECE, claim atomic có lease, worktree per lot, merge queue.
   npx ai-simple doctor

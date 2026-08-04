@@ -3,7 +3,7 @@
 **TL;DR (30 giây):**
 - **Cho ai?** Dev/team dùng AI coding agent (Claude Code, Cursor, Aider) trên project ≥ 30 file có business logic thật.
 - **Giải lỗi gì?** AI hallucinate tên hàm/file, đọc lan man tốn token, doc lệch code rồi AI tin doc cũ, hỏi confirm lặt vặt, không ai biết restart con bot.
-- **Cài thế nào?** Copy 3 template (CLAUDE.md, app-map, hook) + `git config core.hooksPath .githooks` — 5 phút, có `--self-test` xác nhận chạy đúng.
+- **Cài thế nào?** `npx ai-simple init` — cài hook + doc-health + templates + workflow, tự set hooksPath, tự chạy self-test. Fallback không dùng CLI: copy 3 template (CLAUDE.md, app-map, hook) + `git config core.hooksPath .githooks`.
 - **Được gì?** Session AI mới onboard < 1 phút; mọi doc gắn code có trạng thái VERIFIED/SUSPECT máy tính từ git — doc sai **không lọt vào suy luận của AI mà chưa qua đối chiếu**; commit đổi code mà quên doc bị chặn tại chỗ.
 - **5 lớp:** Core (context + routing + sync) → Scale (enforcement + generated docs + contract) → Ops (runbook + registry) → Optimization & Learning (coupling map + 2 cổng verify + học từ accepted diffs + /audit) → Collaboration (lot MECE + claim + worktree + merge queue cho nhiều session song song). Versions: xem [CHANGELOG.md](CHANGELOG.md).
 

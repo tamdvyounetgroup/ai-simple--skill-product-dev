@@ -37,6 +37,26 @@ jobs:
             echo "Không phải project npm — cấu hình osv-scanner/pip-audit/bundler-audit tương ứng (point-to-tool)."
           fi
 
+      # ── Kênh báo bản mới ai-simple (OS-style update notification — tuần 1 lần theo schedule) ──
+      # Advisory THUẦN: continue-on-error + không exit ≠0 — WARN là WARN, không fail PR/schedule.
+      # Offline/registry chết → im lặng bỏ qua (cùng luật chống-oan với update-check trong doctor).
+      - name: Update-check ai-simple (advisory)
+        if: github.event_name == 'schedule'
+        continue-on-error: true
+        run: |
+          INSTALLED=$(sed -n 's/^# ai-simple-version: *//p' .githooks/pre-commit 2>/dev/null | head -1)
+          NPM_V=$(curl -fsS --max-time 10 https://registry.npmjs.org/ai-simple/latest 2>/dev/null | sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' | head -1)
+          GH_V=$(curl -fsS --max-time 10 https://raw.githubusercontent.com/Long-Forfun/ai-simple--skill-product-dev/main/package.json 2>/dev/null | sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' | head -1)
+          LATEST=$(printf '%s\n%s\n' "$NPM_V" "$GH_V" | grep -v '^$' | sort -V | tail -1)
+          if [ -n "$INSTALLED" ] && [ -n "$LATEST" ] && [ "$INSTALLED" != "$LATEST" ] \
+             && [ "$(printf '%s\n%s\n' "$INSTALLED" "$LATEST" | sort -V | tail -1)" = "$LATEST" ]; then
+            CMD='npx ai-simple@latest update'
+            [ "$NPM_V" != "$LATEST" ] && CMD='npx github:Long-Forfun/ai-simple--skill-product-dev update'
+            echo "::warning::ai-simple v$LATEST đã có (bản cài v$INSTALLED) — chạy '$CMD' (giữ CONFIG, backup .bak) rồi làm theo checklist RE-APPLY nó in ra."
+          else
+            echo "ai-simple: bản cài v${INSTALLED:-?} đã mới nhất (hoặc offline/tiny không hook — bỏ qua)."
+          fi
+
       - name: Upload report artifact
         if: always()
         run: sh scripts/doc-health-report.sh > doc-health-report.txt || true

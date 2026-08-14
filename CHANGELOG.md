@@ -2,6 +2,25 @@
 
 Toàn bộ lịch sử tiến hóa của phương pháp. README/methodology dùng tên LỚP (Core / Scale / Ops / Optimization & Learning / Collaboration / Security); version chỉ sống ở đây.
 
+Convention từ v1.10.0: mỗi mục version có thể chứa dòng `**RE-APPLY**: <việc project tiêu thụ cần làm lại sau update>` — `ai-simple update` tự trích các dòng này trong khoảng (bản-cũ → bản-mới] in thành checklist. Không có dòng RE-APPLY = update xong là xong.
+
+## v1.10.0 — 2026-08-14 (Kênh update cho project tiêu thụ — "OS-style": biết có bản mới + biết phải làm lại gì)
+
+Đóng lỗ phân phối: project đã `init` không có cách nào tự biết skill/hook có bản mới (doctor chỉ so
+với CLI trên máy, không hỏi registry), và update xong không biết cái gì đổi / có phải rà lại gì không.
+
+- **`doctor` check bản mới 2 nguồn**: npm registry + GitHub raw package.json (GitHub là nguồn gốc —
+  npm từng trễ, README ⚠ npx 404 đã document 2 đường cài). Lấy bản cao nhất, gợi ý đúng lệnh theo
+  nguồn (`npx ai-simple@latest update` hay `npx github:Long-Forfun/... update`). Cache 7 ngày trong
+  `.git/ai-simple/update-check.json`; timeout 3s; **offline/registry chết → im lặng bỏ qua, tuyệt đối
+  không FAIL/WARN oan** (fixture trong self-test); tắt hẳn bằng `AI_SIMPLE_NO_UPDATE_CHECK=1`.
+  KHÔNG đặt check này vào pre-commit hook — hook phải nhanh + offline-safe.
+- **`update` in "release notes + RE-APPLY"**: đọc dấu `ai-simple-version:` cũ trước khi ghi đè, sau
+  self-test in các mục CHANGELOG trong khoảng (cũ → mới] + checklist `**RE-APPLY**` gộp. Convention
+  RE-APPLY khai ở đầu file này; self-test có fixture parse CHANGELOG thật chống format-drift.
+- **Workflow template**: job schedule tuần sẵn có thêm step advisory so version cài vs npm/GitHub →
+  `::warning::` kèm lệnh update (continue-on-error — WARN là WARN, không fail PR/schedule).
+
 ## v1.9.0 — 2026-08-14 (NỘI HOÁ 3 nguồn: nguyên tắc 15 Build Discipline + 18 luật UI first-party + cửa chống-mục rule-enforcer)
 
 User quyết: "lấy logic Ponytail/Hallmark/Impeccable viết lại vào logic của mình để làm chủ toàn bộ."
@@ -45,6 +64,7 @@ của upstream — số của họ tự mâu thuẫn trong cùng cây, đã đo)
   CLAUDE.md + junction 4 skill. Test B2: subagent KHÔNG nhận CLAUDE.md (chỉ auto-memory) — kiến trúc
   3 tầng phủ (hook > CLAUDE.md > references) không phụ thuộc kết quả này, caveat ghi ADR 002.
   doctor +2 check NT15; /audit +dòng 15 (đếm nợ:, export trùng, so NOTICE với upstream 1 dòng/quý).
+- **RE-APPLY**: hook mới có gate 1f + 5 BLOCK 1d — chạy `git commit` thử 1 lần trên diff đang dở để xem gate mới có chạm code hiện có; CLAUDE.md project chưa có block "Quy tắc viết code (NT15)" thì chép từ `templates/CLAUDE.md.template` (doctor sẽ WARN nếu thiếu).
 
 ## v1.8.0 — 2026-08-13 (Hội đồng 14-agent Impeccable-vs-ai-simple: đóng khoảng cách "tuyên bố vs máy" của lớp design)
 
@@ -57,6 +77,7 @@ Rà chéo với [Impeccable](https://github.com/pbakaus/impeccable) qua hội đ
 - **ui-design-logic tách 3 mức chính sách** `[INV]`/`[DEF]`/`[STACK]` — hết trộn invariant usability với gu với stack convention. Luật FONT hạ `[DEF]`: bỏ danh sách đen 3 font toàn cục (gu 1 user hard-code thành luật là sai kiến trúc — ForFish chọn đúng font bị cấm vì lý do audience đọc được); cơ chế thay thế = `## Ngoại lệ đã duyệt` (lý do audience/kỹ thuật, cấm lý do "gu") + `## Anti-references` cấp project trong template DESIGN-SPEC. Trọng số 0–3 hạ khỏi quy tắc cứng thành công cụ tư duy (01 §1b; bảng ví dụ của chính nó từng vi phạm trần W3 của chính nó).
 - **Dọn 9 mâu thuẫn nội tại ui-design-logic**: metric card về 1 nhà (02 §1, tối đa 4/màn M — 03 và kim tự tháp trỏ về); kim tự tháp dashboard khớp budget M ≤6 khối; tỷ lệ 2–3× chỉ cho hero KPI (metric phụ ≥1,5×); bottom tabs 05 §2 = 4+Menu (tổng ≤5, hết phá M3); tách thang spacing vs sizing + grep 07 §5 scope prefix spacing (cấm blanket px); gate 50 + gradient/hero-3-card có mục THẬT trong 06 §2 (trước đây 2 file trỏ vào checklist không tồn tại); density L hero ≥50% chỉ landing/onboarding; thuật toán hoà màu logo phải ĐO ≥4.5:1 (hue ấm L 32–40% — công thức cũ cho accent trượt chính gate BLOCK của skill); toast Undo 5s; +categorical palette cho chart (04 §1 — 02 §22 bắt hue-danh-mục mà không có nguồn màu).
 - **`ui-lane.sh` (skill ui-design-logic)**: cost-router dạng SCRIPT xuất 1 token (NOUI/LANE1/LANE2/LANE3) từ diff staged, luật tất định, `--self-test` 10 case, vào gate `npm test` (discovery mở rộng `-(verify|lane).sh`); context-router template thêm bảng route theo lane — hết load 8 reference cho task sửa button.
+- **RE-APPLY**: chạy `ai-simple init` lại 1 lần để tạo junction 4 skill vào `.claude/skills/` (update chỉ thay hook/script, không tạo junction); repo có UI thì khai `type-ramp:` trong design-system doc để gate text-size bật.
 - **ForFish (project tiêu thụ)**: bật `core.hooksPath`; hook lên 1.8.0 giữ nguyên custom (spacing-px, encoding guard, contract); junction 4 skill; chốt `type-ramp:` 6 bậc (phủ 87% — 800/919 lượt đo thật, nợ đuôi ~119 ghi trong 03 §3 kèm luật cấm nới ramp); dọn drift font Be-Vietnam-Pro trong 07-design-spec; 3 khối token lift về 03-design-system (07 chỉ trỏ). Tiêu chí dừng của hội đồng ghi ở CHANGELOG này: ramp nới >2 bậc sprint đầu = rút lui; >10 waiver/sprint = rút lui.
 
 ## v1.7.0 — 2026-08-13 (Bộ chấm điểm SẢN PHẨM — 5 GATE máy: self-test hợp nhất, stranger-path E2E, ship-gate, dogfood, CI 2 OS)

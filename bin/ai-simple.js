@@ -60,6 +60,94 @@ function stampVersion(content) {
   return content.replace(/(ai-simple-version:\s*)[0-9][0-9a-zA-Z.\-]*/, `$1${PKG.version}`);
 }
 
+// ---------- update channel (kênh báo bản mới — 2 nguồn vì README document 2 đường cài) ----------
+// GitHub là nguồn gốc (npm có thể trễ vài version — đã xảy ra thật, xem README ⚠ npx 404).
+// LUẬT CHỐNG-OAN: mọi lỗi mạng/timeout/registry chết → trả null, KHÔNG BAO GIỜ throw hay kéo FAIL.
+const UPDATE_SOURCES = {
+  npm: 'https://registry.npmjs.org/ai-simple/latest',
+  github: 'https://raw.githubusercontent.com/Long-Forfun/ai-simple--skill-product-dev/main/package.json',
+};
+const UPDATE_CACHE_TTL_S = 7 * 24 * 3600; // cache 7 ngày trong .git/ — không gọi mạng mỗi lần doctor
+
+function semverCmp(a, b) {
+  const pa = String(a).split('.').map((n) => parseInt(n, 10) || 0);
+  const pb = String(b).split('.').map((n) => parseInt(n, 10) || 0);
+  for (let i = 0; i < 3; i++) if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0);
+  return 0;
+}
+
+function updateCachePath() {
+  const common = git(['rev-parse', '--git-common-dir']);
+  if (common.status !== 0) return null;
+  return path.join(path.resolve(process.cwd(), common.stdout), 'ai-simple', 'update-check.json');
+}
+
+async function fetchVersion(url, timeoutMs, fetchFn) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), timeoutMs);
+  try {
+    const res = await (fetchFn || fetch)(url, { signal: ctl.signal });
+    if (!res.ok) return null;
+    const j = await res.json();
+    return typeof j.version === 'string' ? j.version : null;
+  } catch { return null; } finally { clearTimeout(t); }
+}
+
+async function checkLatestVersion({ fetchFn = null, cachePath = undefined, now = Date.now(), timeoutMs = 3000 } = {}) {
+  // Trả { latest, source, npm, github, cached? } hoặc null (offline/tắt/không có dữ liệu).
+  if (process.env.AI_SIMPLE_NO_UPDATE_CHECK === '1') return null;
+  const cp = cachePath === undefined ? updateCachePath() : cachePath; // truyền null = không cache (self-test)
+  if (cp) {
+    try {
+      const c = JSON.parse(fs.readFileSync(cp, 'utf8'));
+      if (now / 1000 - c.checked_epoch < UPDATE_CACHE_TTL_S && c.latest) return { ...c, cached: true };
+    } catch { /* cache hỏng/chưa có — đi hỏi mạng */ }
+  }
+  const [npmV, ghV] = await Promise.all([
+    fetchVersion(UPDATE_SOURCES.npm, timeoutMs, fetchFn),
+    fetchVersion(UPDATE_SOURCES.github, timeoutMs, fetchFn),
+  ]);
+  if (!npmV && !ghV) return null;
+  const source = ghV && (!npmV || semverCmp(ghV, npmV) > 0) ? 'github' : 'npm';
+  const result = { latest: source === 'github' ? ghV : npmV, source, npm: npmV, github: ghV };
+  if (cp) {
+    try {
+      fs.mkdirSync(path.dirname(cp), { recursive: true });
+      fs.writeFileSync(cp, JSON.stringify({ ...result, checked_epoch: Math.floor(now / 1000) }), 'utf8');
+    } catch { /* .git read-only (worktree/CI) — check vẫn chạy, chỉ mất cache */ }
+  }
+  return result;
+}
+
+function updateCommandFor(up) {
+  // npm có bản mới nhất → đường npm (ngắn); npm trễ → đường GitHub (README ⚠ đã document)
+  return up.npm && semverCmp(up.npm, up.latest) === 0
+    ? 'npx ai-simple@latest update'
+    : 'npx github:Long-Forfun/ai-simple--skill-product-dev update';
+}
+
+function parseChangelogDelta(text, fromV, toV) {
+  // Trích các mục CHANGELOG trong khoảng (fromV, toV] — mới nhất trước.
+  // RE-APPLY convention: dòng `**RE-APPLY**: <việc project tiêu thụ cần làm lại>` trong mục version.
+  const heads = [];
+  const re = /^## v([0-9][\w.\-]*)[^\n]*$/gm;
+  let m;
+  while ((m = re.exec(text))) heads.push({ version: m[1], title: m[0].replace(/^## /, ''), index: m.index, end: m.index + m[0].length });
+  const out = [];
+  for (let i = 0; i < heads.length; i++) {
+    const h = heads[i];
+    if (semverCmp(h.version, fromV) <= 0 || semverCmp(h.version, toV) > 0) continue;
+    const body = text.slice(h.end, i + 1 < heads.length ? heads[i + 1].index : text.length);
+    const reapply = [];
+    for (const line of body.split('\n')) {
+      const rm = line.match(/^\s*(?:[-*]\s+)?\*\*RE-APPLY\*\*:\s*(.+)$/);
+      if (rm) reapply.push(rm[1].trim());
+    }
+    out.push({ version: h.version, title: h.title, reapply });
+  }
+  return out;
+}
+
 function copyTemplate(src, dest, { force = false, transform = null } = {}) {
   if (fs.existsSync(dest) && !force) return { action: 'SKIP (đã tồn tại — dùng --force để ghi đè, hoặc `update` để nâng cấp giữ config)', dest };
   fs.mkdirSync(path.dirname(dest), { recursive: true });
@@ -200,7 +288,7 @@ function cmdInit(args) {
   process.exit(failed ? 1 : 0);
 }
 
-function cmdDoctor() {
+async function cmdDoctor() {
   console.log(`ai-simple v${PKG.version} — doctor\n`);
   const checks = [];
   const add = (name, status, note = '') => checks.push({ name, status, note });
@@ -238,6 +326,14 @@ function cmdDoctor() {
     if (v === PKG.version) add(`${label} version ${v}`, 'PASS');
     else add(`${label} version`, 'WARN', `bản cài ${v || 'không rõ'} ≠ CLI ${PKG.version} — chạy \`ai-simple update\` (giữ nguyên CONFIG)`);
   }
+
+  // Kênh báo bản mới (OS-style "Check for Updates") — hỏi npm + GitHub, cache 7 ngày.
+  // Offline/timeout → up === null → KHÔNG in gì, tuyệt đối không FAIL/WARN oan (fixture trong self-test).
+  const up = await checkLatestVersion();
+  if (up && semverCmp(up.latest, PKG.version) > 0)
+    add(`bản mới v${up.latest} có trên ${up.source}`, 'WARN',
+      `CLI đang v${PKG.version} — chạy \`${updateCommandFor(up)}\` (giữ CONFIG, backup .bak); update xong sẽ in mục RE-APPLY từ CHANGELOG`);
+  else if (up) add(`update-check: v${PKG.version} là bản mới nhất${up.cached ? ' (cache ≤ 7 ngày)' : ''}`, 'PASS');
 
   for (const t of runSelfTests()) add(t.name, t.ok ? 'PASS' : 'FAIL', t.ok ? '' : t.out.split('\n').find((l) => l.includes('FAIL')) || 'xem output');
 
@@ -325,6 +421,8 @@ function cmdDoctor() {
 function cmdUpdate(args) {
   if (!inGitRepo()) { console.error('FAIL: không phải git repo.'); process.exit(1); }
   console.log(`ai-simple v${PKG.version} — update (giữ nguyên CONFIG người dùng)\n`);
+  // Đọc dấu version TRƯỚC khi ghi đè — để cuối lệnh in đúng delta CHANGELOG (v-cũ → v-mới]
+  const oldVersion = readVersionMarker('.githooks/pre-commit') || readVersionMarker('scripts/doc-health-report.sh');
   const PRESERVE = {
     '.githooks/pre-commit': ['MIGRATIONS_PATTERN=', 'DB_DOC_PATTERN=', 'CLAUDE_MD_CHAR_BUDGET=', 'SELF_TEST_MIGRATION_SAMPLE=', 'SELF_TEST_DOC_SAMPLE='],
     'scripts/doc-health-report.sh': ['MIGRATIONS_DIR=', 'DOC_LAG_MAX_DAYS='],
@@ -353,6 +451,25 @@ function cmdUpdate(args) {
   let failed = false;
   for (const t of runSelfTests()) { console.log(`  ${t.ok ? 'PASS ' : 'FAIL '} ${t.name}`); if (!t.ok) { failed = true; console.log(t.out.split('\n').map((l) => '        ' + l).join('\n')); } }
   if (failed) console.log('\nFAIL: rollback bằng file .bak nếu cần (mv .bak về tên cũ).');
+
+  // "Release notes + việc cần làm lại" (phần OS có mà update mù version thiếu):
+  // in các mục CHANGELOG trong khoảng (bản-cũ → bản-mới] kèm checklist RE-APPLY.
+  const clPath = path.join(PKG_ROOT, 'CHANGELOG.md');
+  if (!failed && oldVersion && semverCmp(oldVersion, PKG.version) < 0 && fs.existsSync(clPath)) {
+    const delta = parseChangelogDelta(fs.readFileSync(clPath, 'utf8'), oldVersion, PKG.version);
+    if (delta.length) {
+      console.log(`\nĐổi gì từ v${oldVersion} → v${PKG.version} (chi tiết: CHANGELOG.md trong package):`);
+      const todos = [];
+      for (const d of delta) {
+        console.log(`  • ${d.title}`);
+        for (const r of d.reapply) todos.push(`v${d.version}: ${r}`);
+      }
+      if (todos.length) {
+        console.log('\nRE-APPLY — việc project này cần làm lại sau update:');
+        for (const t of todos) console.log(`  [ ] ${t}`);
+      } else console.log('\nRE-APPLY: không có — update xong là xong, không phải rà lại gì.');
+    }
+  }
   process.exit(failed ? 1 : 0);
 }
 
@@ -363,7 +480,7 @@ function passthrough(scriptArgs) {
   process.exit(r.status);
 }
 
-function cmdSelfTest() { // dùng cho `npm test` của chính package: chạy self-test template + skill-verifier
+async function cmdSelfTest() { // dùng cho `npm test` của chính package: chạy self-test template + skill-verifier
   let failed = false;
   for (const [label, file, arg] of [['hook', TPL('pre-commit.hook.template'), '--self-test'], ['report', TPL('doc-health-report.sh.template'), '--self-test']]) {
     const r = sh([file, arg], { cwd: PKG_ROOT });
@@ -421,6 +538,56 @@ function cmdSelfTest() { // dùng cho `npm test` của chính package: chạy se
     }
   }
   if (xcutOk) console.log('PASS cross-cut (cả 3 skill anh em khai security-logic cắt ngang)');
+
+  // Update-channel fixtures (YELLOW — đổi hành vi doctor/update): fixture chống-oan là bắt buộc,
+  // ca quan trọng nhất: OFFLINE KHÔNG ĐƯỢC THROW/FAIL (bài học design-verify BLOCK oan dogfood).
+  const envSave = process.env.AI_SIMPLE_NO_UPDATE_CHECK;
+  delete process.env.AI_SIMPLE_NO_UPDATE_CHECK;
+  const ut = [];
+  ut.push(['semver: 1.10.0 > 1.9.0 (so số, không so chuỗi)', semverCmp('1.10.0', '1.9.0') > 0]);
+  ut.push(['semver: bằng nhau → 0', semverCmp('1.9.0', '1.9.0') === 0]);
+  const sampleCl = ['# Changelog', '', '## v1.10.0 — 2026-08-14 (kênh update)', '- x',
+    '- **RE-APPLY**: chạy lại design-verify trên spec hiện có', '',
+    '## v1.9.0 — 2026-08-14 (NT15)', '- y', '', '## v1.8.0 — 2026-08-13 (design)', '- z', ''].join('\n');
+  const d1 = parseChangelogDelta(sampleCl, '1.8.0', '1.10.0');
+  ut.push(['changelog delta (1.8.0→1.10.0] = 2 mục, mới nhất trước', d1.length === 2 && d1[0].version === '1.10.0' && d1[1].version === '1.9.0']);
+  ut.push(['changelog RE-APPLY trích đúng dòng', d1[0].reapply.length === 1 && d1[0].reapply[0].includes('design-verify') && d1[1].reapply.length === 0]);
+  ut.push(['changelog delta rỗng khi đã mới nhất', parseChangelogDelta(sampleCl, '1.10.0', '1.10.0').length === 0]);
+  const offline = await checkLatestVersion({ fetchFn: () => Promise.reject(new Error('offline')), cachePath: null });
+  ut.push(['update-check OFFLINE → null, không throw (chống FAIL oan doctor)', offline === null]);
+  let netCalls = 0;
+  // Fake mạng-treo phải tôn trọng abort signal (như fetch thật) — đây chính là đường timeout được test
+  const hang = (url, opts) => new Promise((_, rej) => opts.signal.addEventListener('abort', () => rej(new Error('aborted'))));
+  const slow = await checkLatestVersion({ fetchFn: hang, cachePath: null, timeoutMs: 100 });
+  ut.push(['update-check TIMEOUT (mạng treo) → null qua abort, không treo doctor', slow === null]);
+  const tmpCache = path.join(require('os').tmpdir(), `ai-simple-selftest-${process.pid}.json`);
+  fs.writeFileSync(tmpCache, JSON.stringify({ checked_epoch: Math.floor(Date.now() / 1000), latest: '9.9.9', source: 'npm', npm: '9.9.9', github: null }), 'utf8');
+  netCalls = 0;
+  const cached = await checkLatestVersion({ fetchFn: () => { netCalls++; return Promise.reject(new Error('x')); }, cachePath: tmpCache });
+  ut.push(['update-check cache tươi (≤7 ngày) → dùng cache, 0 lần gọi mạng', !!cached && cached.latest === '9.9.9' && cached.cached === true && netCalls === 0]);
+  const mkRes = (v) => Promise.resolve({ ok: true, json: () => Promise.resolve({ version: v }) });
+  const gh = await checkLatestVersion({ fetchFn: (url) => mkRes(url.includes('github') ? '2.1.0' : '2.0.0'), cachePath: null });
+  ut.push(['update-check GitHub mới hơn npm → source github + lệnh đường github', !!gh && gh.latest === '2.1.0' && gh.source === 'github' && updateCommandFor(gh).includes('github:Long-Forfun')]);
+  const npmUp = await checkLatestVersion({ fetchFn: () => mkRes('2.0.0'), cachePath: null });
+  ut.push(['update-check npm đủ mới → lệnh đường npm ngắn', !!npmUp && updateCommandFor(npmUp) === 'npx ai-simple@latest update']);
+  process.env.AI_SIMPLE_NO_UPDATE_CHECK = '1';
+  ut.push(['AI_SIMPLE_NO_UPDATE_CHECK=1 → tắt hẳn, trả null', (await checkLatestVersion({ fetchFn: () => mkRes('9.9.9'), cachePath: null })) === null]);
+  if (envSave === undefined) delete process.env.AI_SIMPLE_NO_UPDATE_CHECK; else process.env.AI_SIMPLE_NO_UPDATE_CHECK = envSave;
+  try { fs.unlinkSync(tmpCache); } catch { /* dọn best-effort */ }
+  for (const [name, ok] of ut) { console.log(`${ok ? 'PASS' : 'FAIL'} update-channel: ${name}`); if (!ok) failed = true; }
+  // CHANGELOG.md thật phải parse được (format drift thì kênh RE-APPLY chết im lặng).
+  // Check LIÊN TỤC minor-version, không chỉ mục đầu — bug thật đã bắt: edit nuốt heading ## v1.9.0
+  // làm body v1.9.0 merge im lặng vào mục trên, RE-APPLY gắn nhầm version.
+  const realCl = fs.readFileSync(path.join(PKG_ROOT, 'CHANGELOG.md'), 'utf8');
+  const realDelta = parseChangelogDelta(realCl, '0.0.0', PKG.version);
+  const versions = realDelta.map((d) => d.version);
+  const minors = versions.filter((v) => v.endsWith('.0') || true).map((v) => v.split('.').slice(0, 2).join('.'));
+  const missing = [];
+  for (let mi = 1; mi <= parseInt(PKG.version.split('.')[1], 10); mi++) if (!minors.includes(`1.${mi}`)) missing.push(`1.${mi}`);
+  const clOk = realDelta.length > 0 && realDelta[0].version === PKG.version && missing.length === 0;
+  console.log(`${clOk ? 'PASS' : 'FAIL'} update-channel: CHANGELOG.md thật — ${realDelta.length} mục, đầu = v${versions[0]}, minor liên tục${missing.length ? ` (THIẾU heading v${missing.join(', v')} — nuốt heading?)` : ''}`);
+  if (!clOk) failed = true;
+
   process.exit(failed ? 1 : 0);
 }
 
@@ -450,8 +617,10 @@ Usage:
       Nguyên tắc 13 — chia lot MECE, claim atomic có lease, worktree per lot, merge queue.
   npx ai-simple doctor
       Khám setup: hooksPath, version drift, self-tests, budget CLAUDE.md, covers coverage.
+      + báo bản mới (npm + GitHub, cache 7 ngày, offline bỏ qua im lặng; tắt: AI_SIMPLE_NO_UPDATE_CHECK=1).
   npx ai-simple update [--workflow]
-      Nâng hook + report lên bản CLI này, GIỮ NGUYÊN config người dùng (backup .bak).
+      Nâng hook + report lên bản CLI này, GIỮ NGUYÊN config người dùng (backup .bak);
+      xong in changelog (bản-cũ → bản-mới] + checklist RE-APPLY việc cần làm lại.
   npx ai-simple doc-status
       Regenerate docs/app-map/_generated/doc-status.md (+ marker DOC-STATUS trong doc).
   npx ai-simple doc-health [--ci]

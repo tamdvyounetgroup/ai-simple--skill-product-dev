@@ -2,6 +2,50 @@
 
 Toàn bộ lịch sử tiến hóa của phương pháp. README/methodology dùng tên LỚP (Core / Scale / Ops / Optimization & Learning / Collaboration / Security); version chỉ sống ở đây.
 
+## v1.9.0 — 2026-08-14 (NỘI HOÁ 3 nguồn: nguyên tắc 15 Build Discipline + 18 luật UI first-party + cửa chống-mục rule-enforcer)
+
+User quyết: "lấy logic Ponytail/Hallmark/Impeccable viết lại vào logic của mình để làm chủ toàn bộ."
+Thi công qua hội đồng 9-agent (3 test máy → 3 bản trích → synthesizer + red-skeptic → judge, cắt 42%
+số luật đề xuất trước khi vào repo). KHÔNG cài nguồn nào — lý do riêng từng nguồn + đánh đổi ghi ở
+`docs/adr/002-noi-hoa-3-nguon.md`; nguồn ý tưởng theo commit ở `NOTICE.md` (cấm ghi version string
+của upstream — số của họ tự mâu thuẫn trong cùng cây, đã đo).
+
+- **Nguyên tắc 15 — Build Discipline** (`methodology/15`, lớp Core): thang 7 bậc chống viết thừa
+  (component [STACK] thắng bậc 4); **YAGNI chỉ áp cho thứ AI tự nghĩ thêm** — spec/AC là định nghĩa
+  duy nhất của "được yêu cầu tường minh", precedence [INV]→spec→[STACK]→[DEF]→thang; sửa gốc + grep
+  trước khi thêm export; 8 guardrail không cắt; thiếu-spec → handoff, cấm im lặng; vùng miễn test
+  giữ đúng 3 ca NT04 (từ chối nhập "YAGNI applies to tests"); marker `nợ:` 2 vế thay TODO.
+  **Bản hành động 7 điều thay khối placeholder trong `CLAUDE.md.template`** (8.888 byte / trần 20K).
+  Identity mới: **15 nguyên tắc** / 6 lớp / 5-skill (guard cập nhật — và đã bắt được 1 sót thật khi chạy).
+- **18 luật UI nội hoá** vào ui-design-logic (mỗi luật kèm mã nguồn + "ép bởi"): focus ring bất khả
+  xâm phạm [INV]; onClick phải là button [INV]; bộ trạng thái control sàn 5 (03 §6); contrast đo theo
+  CẶP thực tế; cấm gradient trên chữ; cấm glow; tracking sàn −0.03em; motion chỉ transform/opacity ở
+  màn product (mâu thuẫn 2 nguồn phân giải bằng Type); product không màn chào; reduced-motion toàn app;
+  IN HOA không leading-none (dấu tiếng Việt); rem cố định trong app, clamp chỉ marketing; 1 bộ icon +
+  cấm emoji-icon; browser surfaces vào theme (04 §4b); cấm border+shadow-lg cùng element; căn giữa dọc
+  hàng trộn chiều cao (02 §6); cấm card lồng card (03 §1); **cột `Type` enum 3 giá trị
+  product/read/marketing-public** (01 §7 — mở khoá văn diễn giải cho trang trợ giúp, design-verify BLOCK enum lạ).
+- **Hook v1.9.0**: mục **1f** build discipline (nợ-marker 2 vế WARN; export trùng tên WARN; page có
+  fetch thiếu loading/error TRONG CODE WARN — đóng lỗ "design-verify chỉ lint spec"; **màn hình mới
+  không kèm design-spec cùng commit BLOCK**; diff-size-vs-lane LANE1>200/LANE2>800 WARN — ngưỡng từ
+  backtest 40 commit, 0 oan); mục 1d thêm **5 BLOCK** (1d-e focus ring — sweep ForFish ra ĐÚNG 3 lỗi
+  thật đã định danh; 1d-f onClick-div; 1d-g gradient-chữ; 1d-h glow; 1d-i tracking) + 1d-p browser
+  surfaces WARN + P2 1d-j..1d-o gộp 1 alternation (ngân sách thời gian: gate mới +2,3s/commit sau khi
+  gộp vòng lặp và awk-hoá ramp — nợ 8,1s covers-sync có trước, ghi marker `nợ:` trong hook ForFish).
+  Self-test 37 fixture. `BUILD_CHECKS=auto` tắt được.
+- **`scripts/rule-enforcer-gate.js`** (vào `npm run gates`): luật nội hoá thiếu "ép bởi" hoặc trỏ
+  enforcer không tồn tại → FAIL; in tỷ lệ luật chỉ-người-ép (hiện 8/22 = 36%, ngưỡng cảnh báo 40%).
+  Lần chạy đầu bắt ngay 2 drift thật (1d-m/1d-n chưa có chuỗi literal trong hook). Copy-check tay
+  đã chạy: 0 chuỗi ≥15 từ trùng corpus 3 nguồn.
+- **`08-integration-hallmark.md` → `08-landing-and-external-sources.md`**: contract trỏ-ra-ngoài
+  (đã hỏng — upstream không định danh được) thành route-theo-Type + precedence luật-ta-thắng +
+  handoff `## Ngôn ngữ hình` + cửa công cụ ngoài CÓ ĐIỀU KIỆN. Nói thẳng đánh đổi: có SÀN anti-slop,
+  không có TRẦN visual craft cho landing.
+- **Dogfood đóng lỗ**: repo dev tự chạy `init` (trước đó chưa từng — phát hiện của judge), có
+  CLAUDE.md + junction 4 skill. Test B2: subagent KHÔNG nhận CLAUDE.md (chỉ auto-memory) — kiến trúc
+  3 tầng phủ (hook > CLAUDE.md > references) không phụ thuộc kết quả này, caveat ghi ADR 002.
+  doctor +2 check NT15; /audit +dòng 15 (đếm nợ:, export trùng, so NOTICE với upstream 1 dòng/quý).
+
 ## v1.8.0 — 2026-08-13 (Hội đồng 14-agent Impeccable-vs-ai-simple: đóng khoảng cách "tuyên bố vs máy" của lớp design)
 
 Rà chéo với [Impeccable](https://github.com/pbakaus/impeccable) qua hội đồng 5 lăng kính + 5 refuter + judge, mọi claim chạy máy thật. Kết luận: KHÔNG nhận Impeccable (trên stack React/Tailwind nó còn đúng 1 rule chạy được; advisory 1/59; HTML prerender trả `[]` exit 0 im lặng) — chỉ port 1 Ý TƯỞNG (gate cỡ chữ theo type-ramp khai báo) tự viết ~15 dòng. Phát hiện nền: cổng design chưa từng chạy ở project tiêu thụ (hooksPath rỗng, init không cài skill, design-verify không được wire).

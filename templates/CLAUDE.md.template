@@ -21,12 +21,15 @@
 └── tests/
 ```
 
-## Quy tắc viết code
-1. <e.g. TypeScript strict mode>
-2. <e.g. Function components only>
-3. <e.g. Mobile-first responsive>
-4. <e.g. Error handling with toast>
-5. ...
+## Quy tắc viết code (nguyên tắc 15)
+1. **Leo thang trước khi viết**, dừng ở bậc đầu tiên đủ dùng: (1) việc này có cần tồn tại không — không có dòng nào trong spec đòi thì bỏ · (2) repo đã có helper/type/pattern chưa · (3) thư viện chuẩn của ngôn ngữ · (4) nền tảng có sẵn (HTML/CSS/ràng buộc DB) — trừ các component đã chốt trong [STACK], chúng thắng bậc 4 · (5) dependency ĐÃ CÀI, cấm thêm dep mới cho việc vài dòng · (6) gói 1 dòng · (7) code tối thiểu chạy được. Không interface cho 1 implementation, không factory cho 1 sản phẩm, không wrapper chỉ để gọi tiếp; "để mở rộng sau" không phải lý do. Leo thang SAU khi đã đọc code bị chạm và lần đúng luồng thật.
+2. Bậc 1 chỉ áp cho thứ AI tự nghĩ ra thêm. CẤM dùng nó để cắt thứ ba-spec/AC/design-spec đã ghi — đó là định nghĩa duy nhất của "được yêu cầu tường minh".
+3. Sửa bug = sửa gốc: grep MỌI nơi gọi hàm đó trước, đặt guard ở hàm dùng chung, không vá từng caller. Trước khi thêm một hàm export mới: grep tên nó và grep việc nó làm — trùng nghĩa thì dùng lại hoặc gộp.
+4. **KHÔNG cắt, dù thang bảo gì**: validate input ở ranh giới tin cậy · error handling chống mất dữ liệu · biện pháp bảo mật · ĐỦ MA TRẬN TRẠNG THÁI TRONG CODE (chưa login / role / trống / đang tải / lỗi / dữ liệu cực đoan) · touch target 44/48 · contrast 4.5:1 + dark mode · focus ring không bị huỷ trắng · hover không phải đường duy nhất · action → expectation (tạo xong thấy cái vừa tạo, xoá xong có Undo).
+5. Gặp hành vi chưa có trong spec: CẤM bỏ qua im lặng. Trạng thái thuộc ma trận mục 4 → làm mặc định an toàn nhất + ghi `## Assumptions` + bổ sung 1 dòng vào spec CÙNG COMMIT; hành vi nghiệp vụ → handoff ngược BA; HOW-nhìn → handoff design.
+6. Vùng miễn test giữ đúng 3 ca của nguyên tắc 04 (pure UI tweak / config-only / doc-only). "Sửa 1 dòng nên khỏi test" KHÔNG phải một ca.
+7. Cắt góc có trần biết trước → để lại `// nợ: <trần là gì>, <điều kiện nâng cấp>`. Thiếu vế thứ hai thì nợ sẽ mục.
+8. <quy ước riêng của project, vd TypeScript strict mode>
 
 ## Commit convention
 ```

@@ -1,3 +1,6 @@
 
 *.tgz
 node_modules/
+
+# Junction skill per-machine do `ai-simple init` tao — CAM commit (git recurse junction = copy = drift, bai hoc #08/#10)
+.claude/skills/

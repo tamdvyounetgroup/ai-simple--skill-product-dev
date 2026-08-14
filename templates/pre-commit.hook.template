@@ -1,5 +1,5 @@
 #!/bin/sh
-# ai-simple-version: 1.8.0
+# ai-simple-version: 1.9.0
 # pre-commit — Automated enforcement (nguyên tắc 08 / principle 08)
 #
 # CHẠY ĐƯỢC NGAY với default Supabase + Next.js. Sửa 3 biến CẤU HÌNH bên dưới cho project khác.
@@ -22,6 +22,7 @@ CLAUDE_MD_CHAR_BUDGET=24000                               # ~6K tokens (EN ~4 ch
 CLAIMS_CHECK=auto                                         # auto | off — NT13 claim gate: auto = chỉ chạy khi registry tồn tại
 UI_CHECKS=auto                                            # auto | on | off — anti-slop UI gate (ui-design-logic 07 §5): auto = chỉ chạy khi repo có tailwind.config.*/globals.css
 SEC_CHECKS=auto                                           # auto | off — nguyên tắc 14: secret-scan (BLOCK) + doc prompt-injection lint (BLOCK/WARN). auto = luôn bật (bảo mật là default-on)
+BUILD_CHECKS=auto                                         # auto | off — nguyên tắc 15 build discipline: nợ-marker 2 vế, export trùng, page thiếu state, lane-vs-spec, diff-size-vs-lane
 SEC_SENSITIVE_PATHS='(^|/)(auth|payment|billing|crypto|secrets?)(/|$)|\.env|migrations?/|(permission|rls|policy)'  # path nhạy cảm → WARN nhắc security-review (advisory)
 # Sample paths cho --self-test — đổi CÙNG LÚC với 2 pattern trên:
 SELF_TEST_MIGRATION_SAMPLE='supabase/migrations/0001_sample.sql'
@@ -130,7 +131,93 @@ if [ "$1" = "--self-test" ]; then
   else
     echo "FAIL: ramp gate sai hanh vi (exit=$RCU4): $OUTU4"; RC=1
   fi
+  # F1/F2 — 1d-e focus ring: huy trang -> BLOCK; huy + focus-visible:ring-2 cung dong -> PASS
+  printf 'export const F = () => <button className="outline-none px-2">x</button>\n' > src/ui/Fc.tsx
+  git add src/ui/Fc.tsx
+  OUTU5=$(git commit -m f1 2>&1); RCU5=$?
+  if [ "$RCU5" -ne 0 ] && echo "$OUTU5" | grep -q "huy focus ring"; then echo "PASS: 1d-e BLOCK outline-none tran"
+  else echo "FAIL: 1d-e khong chan outline-none tran (exit=$RCU5)"; RC=1; fi
+  printf 'export const F = () => <button className="outline-none focus-visible:ring-2 px-2">x</button>\n' > src/ui/Fc.tsx
+  git add src/ui/Fc.tsx
+  OUTU6=$(git commit -m f2 2>&1); RCU6=$?
+  if [ "$RCU6" -eq 0 ]; then echo "PASS: 1d-e cho qua outline-none + focus-visible:ring (fixture quan trong nhat)"
+  else echo "FAIL: 1d-e chan oan pattern hop le (exit=$RCU6): $OUTU6"; RC=1; fi
+  # F3 — 1d-f: onClick tren div khong role -> BLOCK; co role -> qua
+  printf 'export const D = () => <div onClick={()=>1}>x</div>\n' > src/ui/Dv.tsx
+  git add src/ui/Dv.tsx
+  OUTU7=$(git commit -m f3 2>&1); RCU7=$?
+  if [ "$RCU7" -ne 0 ] && echo "$OUTU7" | grep -q "onClick tren div"; then echo "PASS: 1d-f BLOCK onClick tren div tran"
+  else echo "FAIL: 1d-f khong chan (exit=$RCU7)"; RC=1; fi
+  printf 'export const D = () => <div role="button" tabIndex={0} onClick={()=>1}>x</div>\n' > src/ui/Dv.tsx
+  git add src/ui/Dv.tsx
+  OUTU8=$(git commit -m f3b 2>&1); RCU8=$?
+  [ "$RCU8" -eq 0 ] && echo "PASS: 1d-f cho qua div co role" || { echo "FAIL: 1d-f chan oan div co role (exit=$RCU8)"; RC=1; }
+  # F4 — 1d-g: bg-clip-text MOT MINH -> qua (mat na anh); + text-transparent -> BLOCK
+  printf 'export const G = () => <span className="bg-clip-text bg-[url(/x.png)]">x</span>\n' > src/ui/Gr.tsx
+  git add src/ui/Gr.tsx
+  OUTU9=$(git commit -m f4a 2>&1); RCU9=$?
+  [ "$RCU9" -eq 0 ] && echo "PASS: 1d-g khong bat bg-clip-text mot minh" || { echo "FAIL: 1d-g bat oan mat na anh (exit=$RCU9)"; RC=1; }
+  printf 'export const G = () => <span className="bg-clip-text text-transparent bg-gradient-to-r">x</span>\n' > src/ui/Gr.tsx
+  git add src/ui/Gr.tsx
+  OUTU10=$(git commit -m f4b 2>&1); RCU10=$?
+  if [ "$RCU10" -ne 0 ] && echo "$OUTU10" | grep -q "gradient to len chu"; then echo "PASS: 1d-g BLOCK gradient tren chu"
+  else echo "FAIL: 1d-g khong chan gradient chu (exit=$RCU10)"; RC=1; fi
+  git reset -q HEAD src/ui/Gr.tsx 2>/dev/null; rm -f src/ui/Gr.tsx
+  # F5 — 1d-h glow (shadow offset 0, dung var() de tranh gate mau) + 1d-i tracking vuot san
+  printf 'export const H = () => <div className="shadow-[0_0_20px_var(--accent)] tracking-[-0.05em]">x</div>\n' > src/ui/Gl.tsx
+  git add src/ui/Gl.tsx
+  OUTU11=$(git commit -m f5 2>&1); RCU11=$?
+  if [ "$RCU11" -ne 0 ] && echo "$OUTU11" | grep -q "glow (shadow offset 0)" && echo "$OUTU11" | grep -q "letter-spacing am vuot san"; then
+    echo "PASS: 1d-h BLOCK glow + 1d-i BLOCK tracking vuot san"
+  else echo "FAIL: 1d-h/1d-i sai (exit=$RCU11): $OUTU11"; RC=1; fi
+  git reset -q HEAD src/ui/Gl.tsx 2>/dev/null; rm -f src/ui/Gl.tsx
+  # 1d-p — globals.css thieu ::selection/caret -> WARN, khong chan
+  mkdir -p src/app
+  printf ':root{--x:1}\nbody{margin:0}\n' > src/app/globals.css
+  git add src/app/globals.css
+  OUTU12=$(git commit -m f6p 2>&1); RCU12=$?
+  if [ "$RCU12" -eq 0 ] && echo "$OUTU12" | grep -q "thieu be mat trinh duyet"; then echo "PASS: 1d-p WARN globals thieu ::selection/caret, khong chan"
+  else echo "FAIL: 1d-p sai (exit=$RCU12): $OUTU12"; RC=1; fi
   cd "$OPW" && rm -rf "$TU"
+  # 1f (NT15): no-marker 2 ve, export trung, page thieu state, lane-vs-spec — moi WARN khong duoc keo FAIL
+  TB=$(mktemp -d); cd "$TB" && git init -q . && git config user.email t@t.t && git config user.name t
+  mkdir -p .githooks src/lib src/app/foo docs/app-map
+  cp "$HOOK_SELF" .githooks/pre-commit && git config core.hooksPath .githooks
+  printf 'export function dupFn(a){return a}\n' > src/lib/a.ts
+  printf '# ds\n> Load khi: t\ncovers: src/app\ngate: warn\nlast_verified: 2026-01-01\nttl_days: 90\n## Thang người dùng\n| a |\n|---|\n| b |\n## Screen map\n| # | Màn | Vào từ | User đến để làm gì | Step tiếp theo | Primary |\n|---|---|---|---|---|---|\n| 1 | X | login | làm | xong | Tạo |\n## Ma trận trạng thái\n| a |\n|---|\n| b |\n' > docs/app-map/07-design-spec.md
+  git add -A && git commit -qm setup >/dev/null 2>&1
+  # F7: no-marker thieu ve 2 -> WARN nhung commit VAN QUA (khong keo FAIL)
+  printf '// nợ: chỉ đỡ 100 dòng đầu\nexport const a=1\n' > src/lib/no1.ts
+  git add src/lib/no1.ts
+  OUTB=$(git commit -m no1 2>&1); RCB=$?
+  if [ "$RCB" -eq 0 ] && echo "$OUTB" | grep -q "thieu ve 2"; then echo "PASS: 1f-a WARN no-marker thieu ve, khong chan"
+  else echo "FAIL: 1f-a sai (exit=$RCB)"; RC=1; fi
+  printf '// nợ: chỉ đỡ 100 dòng, phân trang khi list >100\nexport const b=1\n' > src/lib/no2.ts
+  git add src/lib/no2.ts
+  OUTB2=$(git commit -m no2 2>&1); RCB2=$?
+  if [ "$RCB2" -eq 0 ] && ! echo "$OUTB2" | grep -q "thieu ve 2"; then echo "PASS: 1f-a im voi no-marker du 2 ve"
+  else echo "FAIL: 1f-a bat oan marker du ve (exit=$RCB2)"; RC=1; fi
+  # 1f-b: export function trung ten -> WARN, khong chan
+  printf 'export function dupFn(b){return b}\n' > src/lib/b.ts
+  git add src/lib/b.ts
+  OUTB3=$(git commit -m dup 2>&1); RCB3=$?
+  if [ "$RCB3" -eq 0 ] && echo "$OUTB3" | grep -q "trung ten voi"; then echo "PASS: 1f-b WARN export trung ten"
+  else echo "FAIL: 1f-b khong WARN export trung (exit=$RCB3)"; RC=1; fi
+  # F8 + lane-vs-spec: page MOI co fetch, khong loading/error, spec KHONG staged -> BLOCK (repo co spec)
+  printf 'export default async function P(){const r=await fetch("/api/x");return <div>{String(r)}</div>}\n' > src/app/foo/page.tsx
+  git add src/app/foo/page.tsx
+  OUTB4=$(git commit -m page 2>&1); RCB4=$?
+  if [ "$RCB4" -ne 0 ] && echo "$OUTB4" | grep -q "design-spec KHONG duoc cap nhat" && echo "$OUTB4" | grep -q "thieu nhanh"; then
+    echo "PASS: 1f-d BLOCK page moi khong spec + 1f-c WARN thieu loading/error"
+  else echo "FAIL: 1f-c/1f-d sai (exit=$RCB4): $OUTB4"; RC=1; fi
+  # stage kem spec + du state -> qua
+  printf 'export default async function P(){try{const r=await fetch("/api/x");return <div>{String(r)}</div>}catch(e){return <div>lỗi</div>}}\nexport const loading=1\n' > src/app/foo/page.tsx
+  printf '| 2 | Foo | nav | xem foo | quay lai | (khong) |\n' >> docs/app-map/07-design-spec.md
+  git add src/app/foo/page.tsx docs/app-map/07-design-spec.md
+  OUTB5=$(git commit -m page2 2>&1); RCB5=$?
+  if [ "$RCB5" -eq 0 ]; then echo "PASS: 1f page moi + spec cung commit + du state -> qua"
+  else echo "FAIL: 1f chan oan khi da du (exit=$RCB5): $OUTB5"; RC=1; fi
+  cd "$OPW" && rm -rf "$TB"
   # 1b moi: gate: warn nam SAU dong 10 nhung trong frontmatter (truoc heading ## dau) -> van WARN, khong BLOCK
   TG=$(mktemp -d); cd "$TG" && git init -q . && git config user.email t@t.t && git config user.name t
   mkdir -p .githooks src/g docs/app-map
@@ -391,8 +478,51 @@ if [ "$UI_CHECKS" != "off" ]; then
           echo " $RAMP " | grep -qF " $v " || echo "WARN: co chu '$tv' ngoai type-ramp da khai trong $f — dung bac ramp hoac them bac vao design-system doc kem ly do (ui-design-logic 04 §3)."
         done
       fi
+      # ── 1d-e..1d-i: 5 BLOCK noi hoa 2026-08-14 (NOTICE.md; FP do tren ForFish 73 file = 0) ──
+      # 1d-e focus ring bi huy trang — soi TUNG DONG: dong co outline-none ma khong co vong thay the
+      BADFOCUS=$(echo "$UC" | grep -nE 'outline-none|outline:[[:space:]]*none' | grep -vE 'ring-|focus-visible|outline-offset|outline:[[:space:]]*[1-9]' || true)
+      if [ -n "$BADFOCUS" ]; then
+        echo "BLOCK: huy focus ring khong co vong thay the trong $f — nguoi dung ban phim bi chan hang; dung focus-visible:ring-* (ui-design-logic SKILL [INV], hook 1d-e):"
+        echo "$BADFOCUS" | head -3 | sed 's/^/    /'
+        FAIL=1
+      fi
+      # 1d-f onClick tren the khong tuong tac (grep tho 1 dong — JSX xuong dong se lot, lot la an toan)
+      if echo "$UC" | grep -E '<(div|span|li|td|tr)[^>]*onClick' | grep -qv 'role='; then
+        echo "BLOCK: onClick tren div/span/li/td khong role/tabIndex trong $f — doi sang <button type=\"button\"> (ui-design-logic SKILL [INV], hook 1d-f)."
+        FAIL=1
+      fi
+      # 1d-g gradient tren CHU — doi CA HAI dau hieu (bg-clip-text mot minh co the la mat na anh)
+      if echo "$UC" | grep -q 'bg-clip-text' && echo "$UC" | grep -q 'text-transparent'; then
+        echo "BLOCK: gradient to len chu trong $f — khong do duoc contrast, lot moi cong mau; nhan bang weight/co/accent dac (04 §1, hook 1d-g)."
+        FAIL=1
+      fi
+      # 1d-h glow = shadow offset 0 moi huong (bat ca kenh var() ma gate mau hex/rgba khong thay)
+      if echo "$UC" | grep -qE '(shadow|drop-shadow)-\[0(px|rem)?_0(px|rem)?_'; then
+        echo "BLOCK: glow (shadow offset 0) trong $f — bong phai co offset+blur, khong halo trang tri (04 §4, hook 1d-h)."
+        FAIL=1
+      fi
+      # 1d-i tracking am vuot san -0.03em
+      if echo "$UC" | grep -qE 'tracking-\[-0\.0[4-9]|tracking-\[-0\.[1-9]'; then
+        echo "BLOCK: letter-spacing am vuot san -0.03em trong $f — chu dinh nhau, khong doc duoc (04 §3, hook 1d-i)."
+        FAIL=1
+      fi
+      # P2 (WARN — GOP 1 alternation theo ngan sach thoi gian methodology/08). Tung id:
+      # 1d-j transition-all · 1d-k animate layout-prop (width/height/top/left/margin/padding)
+      # · 1d-l hover:scale · 1d-m uppercase+leading-none · 1d-n text-[clamp(] · 1d-o border+shadow-lg
+      P2=$(echo "$UC" | grep -nE 'transition-all|transition-\[[^]]*(width|height|top|left|margin|padding)|hover:scale-|text-\[clamp\(|uppercase[^"]*leading-none|leading-none[^"]*uppercase|[" ]border[" ][^"]*shadow-(lg|xl|2xl)|shadow-(lg|xl|2xl)[^"]*[" ]border[" ]' || true)
+      if [ -n "$P2" ]; then
+        echo "WARN: pattern P2 trong $f — transition-all/animate-layout-prop/hover:scale (04 §6) · clamp font trong app (04 §3) · IN HOA+leading-none cat dau tieng Viet (04 §3) · border+shadow-lg 2 lop elevation (04 §4) — hook 1d-j..1d-o:"
+        echo "$P2" | head -3 | sed 's/^/    /'
+      fi
       case "$f" in
-        *globals.css|*token*.css) ;;
+        *globals.css|*token*.css)
+          # 1d-p: theme dung cham globals/tokens ma thieu be mat trinh duyet -> WARN (tra no 1 lan la xong)
+          MISSB=""
+          echo "$UC" | grep -q '::selection' || MISSB="$MISSB ::selection"
+          echo "$UC" | grep -q 'caret-color' || MISSB="$MISSB caret-color"
+          echo "$UC" | grep -q 'text-underline-offset' || MISSB="$MISSB text-underline-offset"
+          [ -n "$MISSB" ] && echo "WARN: $f thieu be mat trinh duyet:$MISSB — theme phai phu ::selection/caret/underline-offset (04 §4b, hook 1d-p)."
+          ;;
         *) echo "$UC" | grep -qE 'font-family:' && echo "WARN: font-family trong $f (ngoai globals/tokens) — font song o 1 cho duy nhat (ui-design-logic 07 §5)." ;;
       esac
       echo "$UC" | grep -qE 'overflow-x:[[:space:]]*hidden' && echo "WARN: overflow-x: hidden trong $f — che trieu chung tran ngang thay vi sua; neu buoc phai chan dung 'clip' (Hallmark gate 34)."
@@ -405,6 +535,74 @@ fi
 DV=".claude/skills/ui-design-logic/design-verify.sh"
 if [ "$UI_CHECKS" != "off" ] && [ -f "$DV" ]; then
   if ! sh "$DV" --staged; then FAIL=1; fi
+fi
+
+# ── 1f. Build discipline (nguyên tắc 15 — nội hoá 2026-08-14, xem NOTICE.md) ──
+# 1f-a: marker `nợ:` phải đủ 2 vế (trần, điều kiện nâng cấp) — chỉ soi DÒNG THÊM (15 §7)
+# 1f-b: export function mới trùng tên với export sẵn có trong repo -> WARN (15 §3)
+# 1f-c: page/screen mới có fetch mà thiếu nhánh loading/error TRONG CODE -> WARN
+#       (dong lo "spec đủ ma trận nhưng code cắt state — design-verify chỉ lint SPEC", 15 §4)
+# 1f-d: lane gate (can ui-lane.sh qua junction): page moi (status A) ma design-spec khong staged
+#       -> BLOCK neu repo CO design-spec (WARN neu chua tung co — dung ep repo chua dung design flow);
+#       diff qua to so voi lane (LANE1>200, LANE2>800 dong) -> WARN. Nguong tu backtest 40 commit.
+if [ "$BUILD_CHECKS" != "off" ]; then
+  # Loại .githooks/ + *.template khỏi scan dòng-thêm: chính hook/template chứa chuỗi fixture
+  # mẫu marker — không phải nợ thật (tự bắt mình khi commit hook là WARN rác).
+  BD_FILES=$(echo "$CHANGED" | grep -vE '^\.githooks/|\.template$' || true)
+  ADDED=$(git diff --cached -U0 -- $BD_FILES 2>/dev/null | grep '^+' | grep -vE '^\+\+\+' || true)
+  # 1f-a — nợ: hai vế (chấp nhận alias ASCII debt:)
+  BADNO=$(echo "$ADDED" | grep -E '(//|#|--|<!--) *(nợ|debt):' | grep -vE '(nợ|debt):[^,]+,' || true)
+  if [ -n "$BADNO" ]; then
+    echo "WARN: marker no/debt thieu ve 2 (dieu kien nang cap) — format '// nợ: <tran>, <dieu kien nang cap>' (NT15 §7):"
+    echo "$BADNO" | head -3 | sed 's/^/    /'
+  fi
+  # 1f-b — export trùng tên (staged-only; allowlist route handler + Next conventions)
+  EXPORT_ALLOW='GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS|middleware|default|generateMetadata|generateStaticParams|generateViewport'
+  for f in $(echo "$CHANGED" | grep -E '\.(ts|tsx|js|jsx)$' || true); do
+    NEWFN=$(git diff --cached -U0 -- "$f" 2>/dev/null | grep -E '^\+export (async )?function [A-Za-z_]' | sed -E 's/^\+export (async )?function ([A-Za-z_][A-Za-z0-9_]*).*/\2/' || true)
+    for fn in $NEWFN; do
+      echo "$fn" | grep -qE "^($EXPORT_ALLOW)$" && continue
+      DUP=$(git grep -lE "export (async )?function $fn\b" -- '*.ts' '*.tsx' '*.js' '*.jsx' 2>/dev/null | grep -v "^$f$" | head -1)
+      [ -n "$DUP" ] && echo "WARN: export function '$fn' moi trong $f trung ten voi $DUP — grep truoc khi them, dung lai hoac gop (NT15 §3)."
+    done
+  done
+  # 1f-c — page fetch thiếu state (content HOẶC sibling loading/error đều được tính là đủ)
+  for f in $(echo "$CHANGED" | grep -E '(page|screen)\.(tsx|jsx)$' || true); do
+    PC=$(git show ":$f" 2>/dev/null) || continue
+    echo "$PC" | grep -qE 'fetch\(|useEffect|useQuery|useSWR|supabase|axios' || continue
+    D=$(dirname "$f")
+    HASL=0; echo "$PC" | grep -qiE 'loading|skeleton|suspense|isPending|spinner|đang tải|dang tai' && HASL=1
+    [ "$HASL" -eq 0 ] && { [ -f "$D/loading.tsx" ] || [ -f "$D/loading.jsx" ]; } && HASL=1
+    HASE=0; echo "$PC" | grep -qiE 'error|catch|onError|thất bại|that bai|lỗi' && HASE=1
+    [ "$HASE" -eq 0 ] && { [ -f "$D/error.tsx" ] || [ -f "$D/error.jsx" ]; } && HASE=1
+    if [ "$HASL" -eq 0 ] || [ "$HASE" -eq 0 ]; then
+      echo "WARN: $f co fetch nhung thieu nhanh $([ "$HASL" -eq 0 ] && printf 'loading ')$([ "$HASE" -eq 0 ] && printf 'error') trong code — ma tran trang thai phai SONG TRONG CODE, khong chi trong spec (NT15 §4; design-verify chi lint spec)."
+    fi
+  done
+  # 1f-d — lane-vs-spec: KHONG can classifier (tu grep page moi) — chi diff-size can ui-lane.sh
+  NS=$(git diff --cached --name-status 2>/dev/null)
+  NEWPAGE=$(printf '%s\n' "$NS" | awk '$1=="A"{print $2}' | grep -E '(^|/)(page|layout|route)\.(tsx|jsx)$|(^|/)(pages|routes|screens|views)/[^/]*\.(tsx|jsx)$' || true)
+  if [ -n "$NEWPAGE" ]; then
+    SPEC_STAGED=$(printf '%s\n' "$NS" | awk '{print $2}' | grep -iE 'design-spec.*\.md$|DESIGN-SPEC\.md$' || true)
+    if [ -z "$SPEC_STAGED" ]; then
+      SPEC_EXISTS=$(git ls-files 2>/dev/null | grep -icE 'design-spec.*\.md$|DESIGN-SPEC\.md$' || true)
+      if [ "${SPEC_EXISTS:-0}" -gt 0 ]; then
+        echo "BLOCK: man hinh moi ($NEWPAGE) ma design-spec KHONG duoc cap nhat cung commit — screen map phai co dong TRUOC khi code (ui-design-logic 01 §8, NT15 §2)."
+        FAIL=1
+      else
+        echo "WARN: man hinh moi ($NEWPAGE) va repo chua co design-spec nao — can nhac chay pipeline ui-design-logic buoc 1 (spec nho cho task nho van la spec)."
+      fi
+    fi
+  fi
+  UL=".claude/skills/ui-design-logic/ui-lane.sh"
+  if [ -f "$UL" ]; then
+    LANE=$(printf '%s\n' "$NS" | sh "$UL" --stdin 2>/dev/null | tail -1)
+    if [ "$LANE" = "LANE1" ] || [ "$LANE" = "LANE2" ]; then
+      DLINES=$(git diff --cached --numstat 2>/dev/null | awk '{a+=$1+$2} END{print a+0}')
+      { [ "$LANE" = "LANE1" ] && [ "$DLINES" -gt 200 ]; } && echo "WARN: lane LANE1 (sua nho) nhung diff $DLINES dong (>200) — co dang refactor 'tien tay' ngoai pham vi? (NT15 §1; nguong tu backtest 40 commit)"
+      { [ "$LANE" = "LANE2" ] && [ "$DLINES" -gt 800 ]; } && echo "WARN: lane LANE2 nhung diff $DLINES dong (>800) — can nhac tach lot/commit (NT15 §1)."
+    fi
+  fi
 fi
 
 # ── 1e. Security gate — secret-scan + doc prompt-injection lint (nguyên tắc 14) ──

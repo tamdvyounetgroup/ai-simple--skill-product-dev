@@ -1,6 +1,6 @@
 ---
 name: ui-design-logic
-description: Top-down, user-oriented UI/UX design methodology that guarantees consistent, intelligent, beautiful interfaces. Use whenever the user asks to design or build ANY web/app UI — dashboard, landing page, admin tool, mobile screen, form, report — even if they only say "make it pretty", "build a page", or "thêm màn hình". Enforces user-ladder segmentation (public vs account vs role/tier X/Y — per level: what they want to see, what the product communicates, what nudges their next action), per-screen behavior design (entry points, user goal, desired next step, action→expectation, logged-in/out/role/empty/loading/error state matrix, habit-based defaults), information architecture budgets (how many pages/tabs/flows/buttons), screen density limits + information compaction, component decision tables (badge vs tag, modal vs drawer vs page, table vs list vs cards), title/text grammar consistency, peer-group label shape uniformity (same line count + word budget per tab bar/button row — pick words to fit, never mixed 1-line/2-line), logo color harmonization, collapse/expand rules, anti-AI-slop QA gates (no invented metrics, no fake browser/phone chrome, no italic headings, no 2-line clickable text, hard-coded colors blocked at pre-commit — adapted from Hallmark, with a routing contract to the Hallmark skill when landing/marketing pages need visual craft or the user says UI "looks AI-generated"), and platform-specific adaptation (desktop/tablet/mobile as three distinct sub-designs; iOS follows HIG, Android follows Material). Locked stack React + Tailwind + shadcn/ui, ends with a mandatory screenshot QA loop. Parameters calibrated against award-winning apps and design-system research (see research/). Kích hoạt cả khi user nói tiếng Việt tự nhiên — "thiết kế màn/dashboard", "màn này xấu/rối/nhìn như AI", "redesign giữ nguyên chức năng". KHÔNG kích hoạt cho: defect app đang chạy — nút lỗi, sai dữ liệu, sai role (→ui-ux-triage); nhu cầu nghiệp vụ mới còn mơ hồ (→ba-flow-logic); đổi text nhỏ không đổi layout (→build thẳng).
+description: Top-down, user-oriented UI/UX design methodology that guarantees consistent, intelligent, beautiful interfaces. Use whenever the user asks to design or build ANY web/app UI — dashboard, landing page, admin tool, mobile screen, form, report — even if they only say "make it pretty", "build a page", or "thêm màn hình". Enforces user-ladder segmentation (public vs account vs role/tier X/Y — per level: what they want to see, what the product communicates, what nudges their next action), per-screen behavior design (entry points, user goal, desired next step, action→expectation, logged-in/out/role/empty/loading/error state matrix, habit-based defaults), information architecture budgets (how many pages/tabs/flows/buttons), screen density limits + information compaction, component decision tables (badge vs tag, modal vs drawer vs page, table vs list vs cards), title/text grammar consistency, peer-group label shape uniformity (same line count + word budget per tab bar/button row — pick words to fit, never mixed 1-line/2-line), logo color harmonization, collapse/expand rules, anti-AI-slop QA gates fully internalized as first-party rules (no invented metrics, no fake browser/phone chrome, no italic headings, no 2-line clickable text, no gradient-on-text, focus ring inviolable, hard-coded colors + glow + tracking blocked at pre-commit — idea provenance tracked in NOTICE.md; screen Type enum product/read/marketing-public routes rule strictness), and platform-specific adaptation (desktop/tablet/mobile as three distinct sub-designs; iOS follows HIG, Android follows Material). Locked stack React + Tailwind + shadcn/ui, ends with a mandatory screenshot QA loop. Parameters calibrated against award-winning apps and design-system research (see research/). Kích hoạt cả khi user nói tiếng Việt tự nhiên — "thiết kế màn/dashboard", "màn này xấu/rối/nhìn như AI", "redesign giữ nguyên chức năng". KHÔNG kích hoạt cho: defect app đang chạy — nút lỗi, sai dữ liệu, sai role (→ui-ux-triage); nhu cầu nghiệp vụ mới còn mơ hồ (→ba-flow-logic); đổi text nhỏ không đổi layout (→build thẳng).
 ---
 
 # UI Design Logic
@@ -37,9 +37,9 @@ BA (nhu cầu→ba-spec) → [ui-design-logic] (→design-spec) → build → ui
 - User chê UI hiện tại "xấu", "rối", "không đồng nhất", "chỏi" → diagnose bằng checklist 06
 - Thêm màn hình/feature vào app đã có → đọc DESIGN-SPEC.md hiện có trước, tuân theo budget
 - User đưa logo/brand color → chạy quy trình hoà màu (04)
-- Landing/marketing page cần visual craft, UI bị chê "nhìn như AI", user đưa
-  screenshot/URL tham khảo → đọc contract 08 (route sang skill Hallmark nếu đã cài;
-  admin/internal thì Hallmark KHÔNG được đụng, xử lý bằng 06 §3)
+- Landing/marketing page (`Type: marketing-public`), UI bị chê "nhìn như AI", user đưa
+  screenshot/URL tham khảo → đọc 08 (route theo Type; gate anti-slop đã nội hoá trong 06 §2 +
+  hook 1d; màn `product` thì công cụ visual ngoài KHÔNG được đụng, xử lý bằng 06 §3)
 
 ## Pipeline 7 bước — BẮT BUỘC theo thứ tự, không nhảy cóc
 
@@ -104,6 +104,8 @@ Mỗi quy tắc mang đúng 1 nhãn. Vi phạm xử THEO NHÃN, không theo cả
 - [DEF] 1 hàng button ≤ 3 cái; còn lại vào menu ⋯
 - [INV] Hover KHÔNG BAO GIỜ là cách duy nhất làm một việc (touch không có hover)
 - [INV] Touch target ≥ 44×44pt (iOS) / 48×48dp (Android); desktop được phép dày hơn mobile
+- [INV] **Focus ring là bất khả xâm phạm**: `outline: none`/`focus:outline-none` CHỈ hợp lệ khi cùng element có vòng thay thế (`focus-visible:ring-*` hoặc outline khác 0). Dùng `:focus-visible` chứ không `:focus`; vòng focus không transition. Người dùng bàn phím không có con trỏ — huỷ trắng focus là chặn hẳn họ. *(nguồn ý tưởng HM∩IMP-focus · ép bởi hook 1d-e BLOCK + 06 §2)*
+- [INV] **Thứ bấm được phải là thẻ bấm được**: `onClick` trên `div/span/li/td` thiếu `role`+`tabIndex`+`onKeyDown` là vi phạm — và cách sửa mặc định là đổi sang `<button type="button">`, không phải dán `role="button"` cho đủ lễ. *(nguồn ý tưởng IMP-semantic-html · ép bởi hook 1d-f BLOCK + 06 §2)*
 
 **Visual:**
 - [DEF] 1 neutral ramp + 1 accent + 4 màu semantic (+ 1 categorical palette RIÊNG cho chart nếu app có chart nhiều series — 04 §1). Logo xử lý theo 04, không nhét thô
@@ -123,7 +125,7 @@ Mỗi quy tắc mang đúng 1 nhãn. Vi phạm xử THEO NHÃN, không theo cả
 - `references/05-platform-adaptation.md` — 3 design con, biến đổi nav theo thiết bị, iOS vs Android vs desktop, chuột vs chạm
 - `references/06-qa-acceptance.md` — checklist nghiệm thu, quy trình screenshot loop, phân cấp lỗi
 - `references/07-integration-ai-simple.md` — ĐỌC KHI project dùng ai-simple-product-dev: DESIGN-SPEC vào app-map, routing task UI, sync invariant UI⇄spec⇄screenshot, risk tier cho design, hook check UI, drift routes vs screen map
-- `references/08-integration-hallmark.md` — ĐỌC KHI task chạm landing/marketing page cần visual craft, UI bị chê "nhìn như AI", hoặc user đưa screenshot/URL tham khảo: contract route/precedence/handoff với skill Hallmark (không fork nội dung — cài riêng `npx skills add nutlope/hallmark`)
+- `references/08-landing-and-external-sources.md` — ĐỌC KHI task chạm landing/marketing (`Type: marketing-public`), UI bị chê "nhìn như AI", hoặc cân nhắc công cụ visual ngoài: route theo Type + precedence luật-của-ta-thắng + handoff Ngôn ngữ hình + cửa tuỳ chọn có điều kiện (gate anti-slop đã NỘI HOÁ vào 06 §2 + hook 1d — v1.9.0, NOTICE.md)
 
 ## Stack — [STACK] convention, áp khi project đã chọn stack này
 

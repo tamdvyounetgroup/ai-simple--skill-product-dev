@@ -203,9 +203,17 @@ ttl_days: 90
 | 1 | Dashboard | product | login, bottom tab | Nắm tình hình hôm nay trong 5 giây | xử lý cảnh báo nóng nhất | + Tạo đơn | 4 metric + 1 chart + 1 list 5 dòng | M |
 | 2 | Chi tiết đơn | product | list, noti, link share | Quyết định duyệt/từ chối | duyệt → đơn kế tiếp | Duyệt | header trạng thái + bảng item + timeline | M |
 
-Cột **Type**: `product` (mặc định — admin/internal/app) hoặc `marketing-public` (landing/marketing —
-mở cửa Hallmark theo contract 08; màn `product` thì Hallmark cấm đụng). Màn `marketing-public`
-sau khi build thêm mục `## Visual fingerprint — <màn>` theo format 08 §3.
+Cột **Type** — enum ĐÚNG 3 giá trị, `design-verify.sh` BLOCK giá trị lạ *(nguồn ý tưởng IMP-4-mode,
+bỏ mode thứ tư "experience" · ép bởi design-verify.sh enum)*:
+- `product` (mặc định — admin/internal/app/dashboard): quen thuộc là ƯU ĐIỂM, bệnh của màn product
+  là *lạ vô cớ*. Áp trọn bộ luật nghiệp vụ: cấm văn diễn giải, density budget, motion tối thiểu.
+- `read` (trợ giúp/điều khoản/bài viết/tài liệu): **mở khoá luật cấm văn diễn giải** — trang đọc
+  TỒN TẠI để giải thích (trước đây màn trợ giúp bị ép làm `product` tức là bị cấm giải thích — lỗ thật).
+  Bù lại siết: 65–75 ký tự/dòng, line-height 1,5–1,6, heading không nhảy bậc.
+- `marketing-public` (landing/marketing): mở cửa công cụ ngoài theo contract 08; được display font/
+  clamp()/motion giàu hơn — nhưng cấm mượn vỏ dashboard làm trang trí (metric bịa là BLOCK, 06 §2).
+
+Màn `marketing-public` sau khi build thêm mục `## Ngôn ngữ hình — <màn>` theo format 08 §3.
 
 Màn hình phục vụ ≥ 2 loại user → mỗi biến thể 1 dòng (vd: `1a Dashboard (mới)` = onboarding checklist, `1b Dashboard (quen)` = metric của họ).
 

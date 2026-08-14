@@ -163,6 +163,16 @@ function cmdInit(args) {
   const skillsSrc = path.join(PKG_ROOT, 'skills');
   if (fs.existsSync(skillsSrc)) {
     fs.mkdirSync(path.join('.claude', 'skills'), { recursive: true });
+    // Junction là artifact PER-MACHINE — git trên Windows recurse junction thành BẢN COPY đầy đủ
+    // khi add (đo thật 2026-08-14: 29 file trùng lặp suýt vào commit) = đúng "copy = drift" #08/#10.
+    // → tự thêm gitignore, mỗi máy clone chạy lại `ai-simple init` để có junction.
+    try {
+      const gi = fs.existsSync('.gitignore') ? fs.readFileSync('.gitignore', 'utf8') : '';
+      if (!gi.includes('.claude/skills/')) {
+        fs.appendFileSync('.gitignore', `${gi.endsWith('\n') || gi === '' ? '' : '\n'}# Junction skill per-machine (ai-simple init) — cam commit: git recurse junction = copy = drift\n.claude/skills/\n`);
+        console.log('  OK    .gitignore += .claude/skills/ (junction không được commit)');
+      }
+    } catch { /* gitignore read-only: bỏ qua, doctor sẽ nhắc */ }
     for (const s of fs.readdirSync(skillsSrc)) {
       const src = path.join(skillsSrc, s);
       if (!fs.statSync(src).isDirectory()) continue;
@@ -243,6 +253,18 @@ function cmdDoctor() {
     add(`app-map: ${docs.length} docs, ${withCovers.length} có covers`, withCovers.length > 0 || docs.length <= 1 ? 'PASS' : 'WARN', withCovers.length === 0 && docs.length > 1 ? 'doc gắn code chưa khai covers: — nằm ngoài 2 cổng bảo vệ (nguyên tắc 12)' : '');
     add('doc-status.md', fs.existsSync('docs/app-map/_generated/doc-status.md') ? 'PASS' : 'WARN', fs.existsSync('docs/app-map/_generated/doc-status.md') ? '' : 'chưa sinh — chạy `ai-simple doc-status` (cổng đọc cần file này)');
   } else add('docs/app-map', 'WARN', 'chưa có — chạy `ai-simple init`');
+
+  // Lớp BUILD (NT15, nội hoá 2026-08-14): hook có gate build discipline chưa + CLAUDE.md có 7 điều chưa
+  if (fs.existsSync('.githooks/pre-commit')) {
+    const hookBody = fs.readFileSync('.githooks/pre-commit', 'utf8');
+    add('hook gate NT15 (1f build discipline)', hookBody.includes('1f-') || hookBody.includes('BUILD_CHECKS') ? 'PASS' : 'WARN',
+      hookBody.includes('1f-') || hookBody.includes('BUILD_CHECKS') ? '' : 'hook bản cũ chưa có gate nợ-marker/lane/state — `ai-simple update` (giữ CONFIG)');
+  }
+  if (fs.existsSync('CLAUDE.md')) {
+    const cm = fs.readFileSync('CLAUDE.md', 'utf8');
+    add('CLAUDE.md có Quy tắc viết code (NT15)', /nguyên tắc 15|Leo thang trước khi viết/i.test(cm) ? 'PASS' : 'WARN',
+      /nguyên tắc 15|Leo thang trước khi viết/i.test(cm) ? '' : 'block 7 điều NT15 chưa có — chép từ templates/CLAUDE.md.template mục "Quy tắc viết code"');
+  }
 
   // Lớp DESIGN (hội đồng 2026-08-13): doctor trước đây 0/10 check chạm lớp design —
   // cổng design tắt hay bật không ai biết. 3 check, guarded để repo không-UI im lặng.
@@ -374,7 +396,7 @@ function cmdSelfTest() { // dùng cho `npm test` của chính package: chạy se
   // Identity-numbers guard (hội đồng Fable, đề xuất #3): các "số bản sắc" (số nguyên tắc/lớp/skill)
   // drift ở ~8 chỗ mỗi lần thêm nguyên tắc. Fail khi doc HIỆN HÀNH còn số cũ. Scope CHỈ các file
   // sống (README/SKILL/methodology-README/skills) — CHANGELOG/ADR là lịch sử, được phép giữ số cũ.
-  const STALE = [/1[0-3] nguyên tắc/, /1[0-3] (core )?principles/i, /[45] lớp/, /[45] layers/i, /[34]-skill/, /composable principles in [45] layers/i];
+  const STALE = [/1[0-4] nguyên tắc/, /1[0-4] (core )?principles/i, /[45] lớp/, /[45] layers/i, /[34]-skill/, /composable principles in [45] layers/i];
   const LIVE = ['README.md', 'SKILL.md', 'methodology/README.md',
     ...['ba-flow-logic', 'ui-design-logic', 'ui-ux-triage', 'security-logic'].map(s => `skills/${s}/SKILL.md`)];
   for (const f of LIVE) {
@@ -383,11 +405,11 @@ function cmdSelfTest() { // dùng cho `npm test` của chính package: chạy se
     const body = fs.readFileSync(p, 'utf8');
     for (const re of STALE) {
       const m = body.match(re);
-      if (m) { failed = true; console.log(`FAIL identity-numbers: '${m[0]}' còn trong ${f} — số bản sắc đã drift (hiện hành: 14 nguyên tắc / 6 lớp / 5-skill)`); }
+      if (m) { failed = true; console.log(`FAIL identity-numbers: '${m[0]}' còn trong ${f} — số bản sắc đã drift (hiện hành: 15 nguyên tắc / 6 lớp / 5-skill)`); }
     }
   }
   if (!LIVE.some(f => STALE.some(re => fs.existsSync(path.join(PKG_ROOT, f)) && fs.readFileSync(path.join(PKG_ROOT, f), 'utf8').match(re))))
-    console.log('PASS identity-numbers (14 nguyên tắc / 6 lớp / 5-skill nhất quán trong docs sống)');
+    console.log('PASS identity-numbers (15 nguyên tắc / 6 lớp / 5-skill nhất quán trong docs sống)');
   // Cross-cut coverage guard: 4 skill anh em PHẢI nhắc security-logic (sơ đồ 5-skill / handoff) —
   // identity-numbers chỉ đếm số, guard này bắt "skill thiếu sơ đồ" (reviewer cuối trừ điểm đúng lỗ này).
   let xcutOk = true;

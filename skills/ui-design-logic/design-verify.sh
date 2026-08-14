@@ -84,6 +84,15 @@ lint_one() {
       if [ -z "$ROWS" ]; then
         echo "  BLOCK: Screen map co header nhung 0 dong man hinh -> spec rong"; rc=1
       fi
+      # Cột Type (nếu có) = ENUM đúng 3 giá trị: product | read | marketing-public (01 §7).
+      # Giá trị lạ -> BLOCK: enum là cơ chế phân giải luật theo loại màn, gõ sai là luật áp sai.
+      TCOL=$(echo "$HDR" | awk -F'|' '{for(i=1;i<=NF;i++){t=$i; gsub(/^[ \t]+|[ \t]+$/,"",t); if(tolower(t)=="type") print i}}' | head -1)
+      if [ -n "$TCOL" ]; then
+        BADTYPE=$(echo "$TBL" | awk -F'|' -v c="$TCOL" 'NR==1{next} { t=$0; gsub(/[ \t|:-]/,"",t); if(t=="") next; v=$c; gsub(/^[ \t]+|[ \t]+$/,"",v); if(v!="" && v!="product" && v!="read" && v!="marketing-public") print v }' | sort -u)
+        if [ -n "$BADTYPE" ]; then
+          echo "  BLOCK: cot Type co gia tri ngoai enum (product|read|marketing-public): $(echo "$BADTYPE" | tr '\n' ' ')(01 §7)"; rc=1
+        fi
+      fi
     fi
   fi
 
@@ -96,9 +105,10 @@ lint_one() {
     || echo "  WARN: thieu section 'Flows' (flow map — duong user di, 01 §3)"
   grep -qiE 'screenshot|qa|nghiệm thu|nghiem thu|\.png|\.jpg' "$f" \
     || echo "  WARN: chua thay bang chung screenshot QA (man hinh chua co anh 3 viewport = chua xong, 06)"
-  # Contract 08: màn marketing-public đã build thì phải có mục Visual fingerprint (08 §3)
-  if grep -qi 'marketing-public' "$f" && ! grep -qiE 'visual.?fingerprint' "$f"; then
-    echo "  WARN: co man 'marketing-public' nhung thieu muc 'Visual fingerprint' (contract 08 §3)"
+  # Contract 08: màn marketing-public đã build thì phải có mục Ngôn ngữ hình (08 §3;
+  # nhận cả tên cũ 'Visual fingerprint' — spec viết trước v1.9.0 không bị bắt oan)
+  if grep -qi 'marketing-public' "$f" && ! grep -qiE 'ngôn ngữ hình|ngon ngu hinh|visual.?fingerprint' "$f"; then
+    echo "  WARN: co man 'marketing-public' nhung thieu muc 'Ngon ngu hinh' (contract 08 §3)"
   fi
 
   return $rc
@@ -151,9 +161,9 @@ if [ "$MODE" = "--self-test" ]; then
   # 9) marketing-public không có Visual fingerprint → WARN (không BLOCK); có đủ thì im
   printf "# x\n${FM}${LADDER}${SMHDR}${SMROW}| 2 | Landing | marketing-public | seo | đọc | Đăng ký | hero | S |\n${STATE}" > "$T/mkt.md"
   R=$(lint_one "$T/mkt.md")
-  if echo "$R" | grep -q "thieu muc 'Visual fingerprint'"; then
-    echo "$R" | grep -q BLOCK && { echo "FAIL: WARN fingerprint keo theo BLOCK oan"; RC=1; } || echo "PASS: marketing-public thieu fingerprint -> chi WARN"
-  else echo "FAIL: marketing-public thieu fingerprint khong WARN"; RC=1; fi
+  if echo "$R" | grep -q "thieu muc 'Ngon ngu hinh'"; then
+    echo "$R" | grep -q BLOCK && { echo "FAIL: WARN Ngon ngu hinh keo theo BLOCK oan"; RC=1; } || echo "PASS: marketing-public thieu 'Ngon ngu hinh' -> chi WARN"
+  else echo "FAIL: marketing-public thieu 'Ngon ngu hinh' khong WARN"; RC=1; fi
 
   # 10) alias cột: header kiểu ForFish ("User đến để" / "Step tiếp mong muốn" / "Primary") → KHÔNG BLOCK oan
   SMHDR_FF='## Screen map\n| # | Màn | Vào từ | User đến để | Step tiếp mong muốn | Primary | Density |\n|---|---|---|---|---|---|---|\n'
@@ -161,6 +171,15 @@ if [ "$MODE" = "--self-test" ]; then
   printf "# x\n${FM}${LADDER}${SMHDR_FF}${SMROW_FF}${STATE}" > "$T/alias.md"
   R=$(lint_one "$T/alias.md")
   echo "$R" | grep -q "BLOCK" && { echo "FAIL: header alias hop le (kieu ForFish) van bi BLOCK:"; echo "$R"; RC=1; } || echo "PASS: alias cot — header 'Step tiep mong muon' qua, het FP dogfood"
+
+  # 11) enum Type: gia tri la ('landing') -> BLOCK; 3 gia tri hop le -> qua; khong co cot Type -> khong soi
+  SMHDR_T='## Screen map\n| # | Màn | Type | Vào từ | User đến để làm gì | Step tiếp theo | Primary |\n|---|---|---|---|---|---|---|\n'
+  printf "# x\n${FM}${LADDER}${SMHDR_T}| 1 | X | landing | nav | xem | xong | Tạo |\n${STATE}" > "$T/type-bad.md"
+  R=$(lint_one "$T/type-bad.md")
+  echo "$R" | grep -q "ngoai enum" && echo "PASS: enum Type — 'landing' bi BLOCK (phai la marketing-public)" || { echo "FAIL: enum Type khong bat gia tri la"; RC=1; }
+  printf "# x\n${FM}${LADDER}${SMHDR_T}| 1 | X | product | nav | xem | xong | Tạo |\n| 2 | Y | read | nav | đọc | xong | (không) |\n| 3 | Z | marketing-public | seo | đọc | Đăng ký | CTA |\nNgôn ngữ hình: có\n${STATE}" > "$T/type-ok.md"
+  R=$(lint_one "$T/type-ok.md")
+  echo "$R" | grep -q "ngoai enum" && { echo "FAIL: enum Type bat oan gia tri hop le:"; echo "$R"; RC=1; } || echo "PASS: enum Type — product/read/marketing-public deu qua"
 
   rm -rf "$T"
   [ "$RC" -eq 0 ] && echo "design-verify self-test: ALL PASS" || echo "design-verify self-test: CO FAIL"

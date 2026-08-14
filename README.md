@@ -140,7 +140,7 @@ message `re-verify(...)`) rồi commit lại là qua.
 3. Tạo `.claude/commands/fl.md` từ `templates/fl.command.md.template`
 4. Tạo `.claude/agents/context-router.md` từ `templates/context-router.agent.md.template`
 5. Cài hook versioned: `mkdir .githooks` → copy `templates/pre-commit.hook.template` vào `.githooks/pre-commit` → `git config core.hooksPath .githooks` → commit folder `.githooks` (sửa 3 biến CONFIG nếu không phải Supabase; verify: `sh .githooks/pre-commit --self-test`)
-6. Đọc `methodology/README.md` để hiểu 14 nguyên tắc
+6. Đọc `methodology/README.md` để hiểu 15 nguyên tắc
 
 ### EN
 1. Copy `templates/CLAUDE.md.template` → project root, rename to `CLAUDE.md`
@@ -148,7 +148,7 @@ message `re-verify(...)`) rồi commit lại là qua.
 3. Create `.claude/commands/fl.md` from `templates/fl.command.md.template`
 4. Create `.claude/agents/context-router.md` from `templates/context-router.agent.md.template`
 5. Install the versioned hook: `mkdir .githooks` → copy `templates/pre-commit.hook.template` to `.githooks/pre-commit` → `git config core.hooksPath .githooks` → commit `.githooks` (edit the 3 CONFIG vars if not Supabase; verify: `sh .githooks/pre-commit --self-test`)
-6. Read `methodology/README.md` to grasp the 14 principles
+6. Read `methodology/README.md` to grasp the 15 principles
 
 ---
 
@@ -163,7 +163,7 @@ ai-simple--skill-product-dev/
 ├── lib/parallel.js              # Nguyên tắc 13: claim atomic + merge queue CAS + test nghiệm thu (số: CHANGELOG)
 ├── docs/adr/                    # ADR-001: thiết kế vNext (Git-native parallel + learning) + roadmap 5 phase
 ├── skills/                      # 4 skill con: ba-flow-logic, ui-design-logic, ui-ux-triage, security-logic
-├── methodology/                 # 14 principles, deep-dive
+├── methodology/                 # 15 principles, deep-dive
 │   ├── README.md                # Principles index
 │   ├── 01-hierarchical-context.md
 │   ├── 02-app-map-pattern.md
@@ -195,7 +195,7 @@ ai-simple--skill-product-dev/
     ├── state-registry.md.template       # v2.2 — registry canonical cho state files
     ├── ops-schedules.md.template        # v3.0 — registry mọi cron/scheduled job
     ├── ops-external-services.md.template# v3.0 — registry API ngoài (token, rate limit, khi chết)
-    ├── audit.command.md.template        # /audit: chấm 14 nguyên tắc theo applicability → backlog tối ưu
+    ├── audit.command.md.template        # /audit: chấm 15 nguyên tắc theo applicability → backlog tối ưu
     ├── learn.command.md.template        # /learn: learning event từ accepted diff (12 v3 vòng B)
     ├── doc-health.workflow.yml.template # GitHub Actions: self-test + --status + --ci gate + SCA audit + artifact
     ├── contract-doc.md.template         # cross-repo contract

@@ -31,7 +31,7 @@ ttl_days: 90
 Thêm rule vào context-router: task là UI → ordered list bắt đầu bằng
 `docs/app-map/0X-design-spec.md`, rồi đúng file reference của ui-design-logic theo bước pipeline
 (thêm màn hình → 01; chỉnh layout/density → 02; chọn component/viết text → 03; màu/token → 04;
-responsive/mobile → 05; user chê xấu → 06; landing/anti-slop/Hallmark → 08). Không load cả 8 file cho một task sửa button.
+responsive/mobile → 05; user chê xấu → 06; landing/công cụ visual ngoài → 08). Không load cả 8 file cho một task sửa button.
 
 ## 3. Sync invariant mở rộng: UI code ⇄ DESIGN-SPEC ⇄ screenshot (móc nguyên tắc 4 + 12 v2)
 

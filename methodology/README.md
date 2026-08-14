@@ -1,7 +1,7 @@
-# Methodology — 14 nguyên tắc / 14 principles
+# Methodology — 15 nguyên tắc / 15 principles
 
-> 14 nguyên tắc cốt lõi, 6 lớp: **Core** (01–07) cho mọi project; **Scale** (08–10); **Ops** (11); **Optimization & Learning** (12 — ba vòng tự tiến hóa); **Collaboration** (13 — nhiều session song song trên nền Git); **Security** (14 — cổng shift-left có khai báo phủ sóng). Composable — kích hoạt theo profile + trigger, không ép project nào dùng cả 14.
-> *(EN: 14 core principles in 6 layers: Core 01–07 for every project; Scale 08–10; Ops 11; Optimization & Learning 12 — the three self-evolution loops; Collaboration 13 — Git-native parallel sessions; Security 14 — a shift-left gate with declared coverage. Composable — activated per profile and trigger.)*
+> 15 nguyên tắc cốt lõi, 6 lớp: **Core** (01–07 + 15 — kỷ luật build, áp mọi project có code) cho mọi project; **Scale** (08–10); **Ops** (11); **Optimization & Learning** (12 — ba vòng tự tiến hóa); **Collaboration** (13 — nhiều session song song trên nền Git); **Security** (14 — cổng shift-left có khai báo phủ sóng). Composable — kích hoạt theo profile + trigger, không ép project nào dùng cả 15.
+> *(EN: 15 core principles in 6 layers: Core 01–07 plus 15 — build discipline — for every project; Scale 08–10; Ops 11; Optimization & Learning 12 — the three self-evolution loops; Collaboration 13 — Git-native parallel sessions; Security 14 — a shift-left gate with declared coverage. Composable — activated per profile and trigger.)*
 
 ---
 
@@ -23,6 +23,7 @@
 | 12 | [self-optimization.md](12-self-optimization.md) | **v3** — 3 vòng: A coupling map + 2 cổng; B học từ accepted diffs (evidence enum, survival/correction rate); C skill evolution qua branch + regression + rollback |
 | 13 | [parallel-sessions.md](13-parallel-sessions.md) | **v1 (shipped)** — Lot MECE theo entity + DAG/waves + claim atomic có lease + worktree per lot + integration branch + merge queue (CLI `ai-simple parallel` + hook gate + bộ test nghiệm thu — số hiện hành xem CHANGELOG); dirty work user bất khả xâm phạm |
 | 14 | [security-gate.md](14-security-gate.md) | **v1 (shipped)** — Cổng shift-left có KHAI BÁO phủ sóng (3 vùng A git/B CI/C prod=NON-GOAL); secret-scan + doc prompt-injection lint (LLM01) enforced pre-commit + fixture self-test; map OWASP LLM Top-10 + OWASP Top-10 web; skill `security-logic`; KHÔNG "đã bảo mật ✓", KHÔNG thay pentest |
+| 15 | [15-build-discipline.md](15-build-discipline.md) | **v1 (2026-08-14)** — Kỷ luật pha BUILD (lớp Core): thang 7 bậc chống viết thừa; YAGNI chỉ áp cho thứ AI tự nghĩ thêm (spec/AC = "được yêu cầu tường minh"); sửa gốc + grep trước khi thêm export; 8 guardrail không được cắt; thiếu-spec → handoff, cấm im lặng; vùng miễn test không mở rộng; marker `nợ:` 2 vế. Bản hành động sống ở CLAUDE.md; ép bởi hook 1f + /simplify + 06 §2. Nội hoá 3 nguồn — NOTICE.md + ADR 002 |
 
 ---
 
@@ -57,7 +58,7 @@ Bảng chọn profile (tiny/core/scale/contracts/ops/optimization/parallel/secur
 5. Khi user feedback lặp lại: persist vào memory (nguyên tắc 07)
 
 ### Project cũ (retrofit)
-1. Đọc 14 nguyên tắc, score project hiện tại từng cái (theo applicability — cái không applicable thì NOT_APPLICABLE, không trừ oan)
+1. Đọc 15 nguyên tắc, score project hiện tại từng cái (theo applicability — cái không applicable thì NOT_APPLICABLE, không trừ oan)
 2. Pick 2 cái yếu nhất → retrofit trước (thường 02 + 04)
 3. Đừng cố retrofit hết 1 lần — chia 5 PR, mỗi PR 1 nguyên tắc
 

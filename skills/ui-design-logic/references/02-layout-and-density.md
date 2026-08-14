@@ -123,3 +123,8 @@ Thứ tự đọc: Label → Value → Delta → Timeframe (Kuznetsova, KPI card
   (Tailwind: class `tabular-nums`) — chữ số đều khổ xếp thành cột dọc, chênh lệch tự lộ ra khi quét.
   Cấm font condensed cho số liệu (Bloomberg đặt riêng font có glyph phân biệt 1/l và 0/O cho đúng việc này)
 - Label và giá trị thẳng hàng dọc qua mọi hàng (definition list 2 cột, không phải "Label: value" trôi nổi)
+- **Hàng ngang trộn phần tử KHÁC chiều cao nội tại** (button cạnh chữ, icon cạnh nhãn, badge cạnh
+  tiêu đề) phải khai `align-items: center`, và phần tử có chiều cao nội tại đặt `line-height: 1` —
+  mặc định flex là `stretch`, để nguyên là icon "trôi" so với baseline chữ. Đây là một nguồn
+  "lệch lệch khó tả" ngang hàng với lệch trục trái (06 §3 đo: ~80% cảm giác rối đến từ nhóm hình học).
+  *(nguồn ý tưởng HM-baseline, viết lại · ép bởi 06 §2 MAJOR)*

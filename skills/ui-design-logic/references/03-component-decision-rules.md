@@ -11,6 +11,7 @@ nhưng tích tụ thành cảm giác "app này rối". Tra bảng trước khi �
 | Nhiều bản ghi, mỗi cái chỉ cần 2–3 thuộc tính, đọc tuần tự (thông báo, tin) | **List** | Nhẹ hơn table, không cần header |
 | Ít bản ghi (≤ 12/trang), hình ảnh là thông tin chính (sản phẩm, dự án) | **Card grid** | Ảnh cần diện tích; > 20 card chữ là table trá hình — đổi sang table |
 | Thuộc tính quan trọng nhất là VỊ TRÍ địa lý | **Map** + list đồng bộ | Map luôn kèm list/panel — map một mình không quét nhanh được |
+| — quy tắc chứa: | **CẤM card lồng card** | Một tầng chứa duy nhất. Cần ranh giới bên trong → divider hoặc definition list. Cần lồng thật = khối đó đáng đứng riêng → quay lại screen map. Cùng câu chuyện với NT15 bậc 1 ở tầng code: thêm một lớp phải có người yêu cầu *(nguồn ý tưởng HM∩IMP-nested-cards · ép bởi 06 §2 MAJOR)* |
 | 2–4 con số tổng quan (trần theo 02 §1 — nhà duy nhất của con số) | **Metric card** | 1 số chính + ngữ cảnh của chính nó (`/tổng`, `%`, delta ▲▼) — nén theo khe chuẩn ở 02 mục 5. Hai chỉ số KHÔNG liên quan thì tách card |
 
 ## 2. Cửa sổ con: modal / drawer / popover / page — cây quyết định
@@ -88,3 +89,16 @@ Quá 30% số hàng có badge đỏ/vàng = badge mất nghĩa cảnh báo → x
 - Tên button = động từ + đối tượng ("Tạo đơn", "Xuất Excel"). Cấm "Submit", "OK", "Có/Không"
 - Icon-only button bắt buộc tooltip. 1 hàng ≤ 3 button, thứ 4+ vào ⋯
 - Trạng thái loading: spinner TRONG button + disable, giữ nguyên width (đừng cho button nhảy size)
+
+## 6. Bộ trạng thái của control — trục KHÁC ma trận trạng thái màn hình
+
+Ma trận 01 §4 là trạng thái MÀN HÌNH (login/trống/lỗi...); mục này là trạng thái CONTROL.
+Sàn 5 cho mọi control tương tác: **mặc định · hover · focus nhìn thấy · active · disabled** —
+cộng **loading** nếu control gọi mạng, cộng **lỗi** nếu control nhận input.
+Hai câu hình học đi kèm (2 nguồn lỗi xô layout hay gặp nhất):
+- `border-width` KHÔNG đổi giữa các state — đổi state bằng background/outline/shadow, không bằng
+  viền dày lên (viền dày lên = mọi thứ quanh nó xê dịch 1px)
+- Ô helper/lỗi dưới input GIỮ CHỖ SẴN 1 dòng kể cả khi trống — lỗi hiện ra không được đẩy cả form
+
+[STACK] shadcn đã ship đủ bộ trạng thái này — dùng shadcn là đã đạt; chỉ phải tự lo khi custom
+component (chart/map/canvas). *(nguồn ý tưởng HM-states sàn-5 + IMP-all-states · ép bởi 06 §2 BLOCK)*

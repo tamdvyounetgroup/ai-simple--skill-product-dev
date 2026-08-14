@@ -5,7 +5,7 @@ description: Methodology for organizing software projects to be AI-agent-friendl
 
 # AI-Simple Product Dev
 
-> Hệ điều hành cho codebase: **Git lưu sự thật; AI Simple quản context, ý định, invariants, quyền ghi, tích hợp, bảo mật và học từ lịch sử đó.** 14 nguyên tắc composable — kích hoạt theo profile, KHÔNG ép project nào dùng cả 14. Index chi tiết: `methodology/README.md`. Thiết kế + roadmap: `docs/adr/001`.
+> Hệ điều hành cho codebase: **Git lưu sự thật; AI Simple quản context, ý định, invariants, quyền ghi, tích hợp, bảo mật và học từ lịch sử đó.** 15 nguyên tắc composable — kích hoạt theo profile, KHÔNG ép project nào dùng cả 15. Index chi tiết: `methodology/README.md`. Thiết kế + roadmap: `docs/adr/001`.
 
 ## Bước 0 — chọn profile
 
@@ -29,9 +29,9 @@ description: Methodology for organizing software projects to be AI-agent-friendl
 
 **Đường tắt: Core profile + task GREEN = bước 1→2→4→5→8→9→13** (bước 2 LOGIC/REQUEST luôn chạy — nó quyết định có commit hay không). Các bước còn lại chỉ tồn tại khi profile tương ứng bật — không phải nghi thức phải đi đủ. Lưu ý CLI: `init --profile` nhận đủ 9 tên nhưng về BỘ FILE chỉ có 2 mức (tiny / còn-lại-như-core) — khác biệt giữa scale/ops/parallel... là nguyên tắc nào BẬT, sống ở đây và methodology.
 
-## 14 nguyên tắc / 6 lớp
+## 15 nguyên tắc / 6 lớp
 
-**Core (01–07):**
+**Core (01–07 + 15):**
 1. **Hierarchical Context** — root CLAUDE.md < 6K token, link xuống module → `methodology/01`
 2. **App-map** — doc canonical đánh số theo domain; `08` giữ RULE kiến trúc code feature-sliced → `methodology/02`
 3. **Context Routing** — `/fl` + router: deterministic trước, LLM fallback; kèm cổng doc-status + cổng conflict → `methodology/03`
@@ -52,6 +52,8 @@ description: Methodology for organizing software projects to be AI-agent-friendl
 **Collaboration (13):** 13. **Git-Native Parallel Sessions** — lot MECE theo entity, claim có lease, worktree per lot, integration branch, merge queue tuần tự → `methodology/13`
 
 **Security (14):** 14. **Security as a Declared Gate** — cổng shift-left có KHAI BÁO phủ sóng (3 vùng A git-time / B CI point-to-tool / C production=NON-GOAL); secret-scan + doc prompt-injection lint (LLM01) enforced ở pre-commit; mọi finding map OWASP LLM Top-10 + OWASP Top-10 web (ngang hàng); KHÔNG "đã bảo mật ✓", KHÔNG thay pentest → `methodology/14`
+
+**Core (tiếp) — 15:** 15. **Build Discipline** — kỷ luật pha VIẾT CODE: thang 7 bậc dừng-ở-bậc-đủ (chống viết thừa); YAGNI chỉ áp cho thứ AI tự nghĩ thêm — spec/AC là định nghĩa duy nhất của "được yêu cầu tường minh", precedence [INV] → spec → [STACK] → [DEF] → thang; 8 guardrail không được cắt (kéo [INV] thiết kế xuống build); thiếu-spec → handoff ngược, cấm im lặng; vùng miễn test giữ đúng 3 ca NT04; marker `nợ:` 2 vế. Bản hành động 7 điều nằm trong CLAUDE.md template; ép bởi hook 1f + gate lane → `methodology/15`
 
 ## Hard safety rules (mọi profile, mọi lúc)
 

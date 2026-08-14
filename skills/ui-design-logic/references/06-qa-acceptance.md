@@ -31,6 +31,15 @@ Task mới cả app: đủ ma trận màn hình × viewport.
 - [ ] Scroll ngang trên mobile ở bất kỳ viewport nào, kể cả 320px (Hallmark gate 34)
 - [ ] Số liệu/metric/testimonial BỊA trên UI — "+47% conversion", "10.000+ khách" không có nguồn:
       dùng số thật, "—" kèm nhãn "chờ số liệu", hoặc bỏ khối đó (Hallmark gate 46)
+- [ ] Focus ring bị huỷ trắng: `outline-none` mà không có vòng thay thế trên cùng element —
+      người dùng bàn phím bị chặn hẳn (SKILL.md [INV]; hook 1d-e cũng BLOCK, đây là lưới thứ hai)
+- [ ] `onClick` trên `div/span/li/td` không role/tabIndex/onKeyDown — sửa mặc định: đổi sang
+      `<button>` (SKILL.md [INV]; hook 1d-f)
+- [ ] Control tương tác thiếu bộ trạng thái sàn 5 (mặc định/hover/focus/active/disabled;
+      +loading nếu gọi mạng, +lỗi nếu nhận input); border-width đổi giữa state làm xô layout;
+      ô lỗi không giữ chỗ đẩy cả form (03 §6)
+- [ ] Contrast đo theo CẶP thực tế sau kế thừa — soi riêng: chữ trong card đổi nền, dark mode,
+      chữ trên accent (04 §1); chữ gradient = BLOCK vì không đo được
 
 **MAJOR — vi phạm spec/budget, sửa trước khi giao:**
 - [ ] Màn hình vượt density budget đã khai trong DESIGN-SPEC (đếm khối, không cảm tính)
@@ -65,6 +74,13 @@ Task mới cả app: đủ ma trận màn hình × viewport.
       07 §5 và 08 §4 trỏ về đúng dòng này)
 - [ ] Gradient trang trí vô cớ (không mã hoá thông tin gì) hoặc bố cục "hero + 3 card giống hệt"
       kiểu template AI — thay bằng nội dung thật hoặc bỏ khối (triệu chứng case B của §3, chấm tại đây)
+- [ ] Card lồng card — một tầng chứa duy nhất; ranh giới trong dùng divider (03 §1)
+- [ ] Hàng ngang trộn phần tử khác chiều cao mà không căn giữa dọc — icon/badge "trôi" so với
+      baseline chữ (02 §6)
+- [ ] Màn `product` có sequence animation lúc tải / scroll-reveal / nội dung thật nằm ẩn chờ JS —
+      trạng thái nghỉ của DOM phải là đã hiện (04 §6; check bằng mắt + tắt JS thử, KHÔNG grep
+      `opacity-0` — đã đo oan 100%)
+- [ ] Emoji làm icon chức năng / trộn ≥ 2 bộ icon trong 1 màn (04 §3)
 
 **MINOR — ghi nhận, sửa nếu còn thời gian:**
 - [ ] Transition giật/thiếu cho overlay; focus ring thiếu trên vài element

@@ -36,12 +36,14 @@ Task mới cả app: đủ ma trận màn hình × viewport.
 - [ ] Màn hình vượt density budget đã khai trong DESIGN-SPEC (đếm khối, không cảm tính)
 - [ ] Step tiếp theo mong muốn (theo screen map) KHÔNG phải element nổi bật nhất màn hình
 - [ ] Màn hình phục vụ ≥ 2 loại user nhưng chỉ có 1 bản "trung bình cộng" (user mới và power user thấy y hệt nhau)
-- [ ] Vị trí/cỡ element không khớp bảng trọng số (item W3 nằm dưới fold; item W1 chiếm chỗ to bậc 0; item W0 vẫn hiện); hoặc > 2 item W3/màn hình
+- [ ] (chỉ khi spec CÓ bảng trọng số — 01 §1b là công cụ tư duy, không bắt buộc) Vị trí/cỡ element không khớp bảng: item W3 nằm dưới fold; item W1 chiếm chỗ to bậc 0; item W0 vẫn hiện; > 2 item W3/màn hình/**loại user** (đúng phạm vi 01 §1b)
 - [ ] Quá 1 nudge thăng cấp/màn hình, hoặc upsell chen lên trên job chính của user
 - [ ] Thiếu trạng thái: empty không CTA, không skeleton, lỗi không lối thoát, chưa-login chưa quyết định
 - [ ] Sau hành động chính, màn hình hiện ra KHÔNG khớp bảng action → expectation (tạo xong không thấy cái vừa tạo)
 - [ ] Demo bằng lorem ipsum/dữ liệu đẹp thay vì dữ liệu thật cực đoan (tên dài, số 0, list dài)
-- [ ] Spacing ngoài thang 4/8/12/16/24/32/48/64/80/96 (grep `[..px]` arbitrary trong code Tailwind)
+- [ ] Spacing ngoài thang 4/8/12/16/24/32/48/64/80/96 — grep arbitrary CHỈ trên prefix spacing
+      (p/m/gap/space, xem 07 §5); sizing 40/44/48/56 (row height, touch target) là thang RIÊNG,
+      không tính vi phạm (SKILL.md, hội đồng 2026-08-13)
 - [ ] Cột số trong table thiếu `tabular-nums` hoặc không căn phải; hero KPI không đạt 2–3× cỡ label
 - [ ] 2 primary button trong 1 màn hình; hàng > 3 button
 - [ ] Title cùng cấp lệch ngữ pháp / có cái 2 dòng / lệch casing
@@ -58,6 +60,11 @@ Task mới cả app: đủ ma trận màn hình × viewport.
       cửa sổ code giả — dùng screenshot thật trong `<figure>` hoặc bỏ (Hallmark gate 47)
 - [ ] Heading in nghiêng (italic) hoặc từ nhấn `<em>` nghiêng trong heading — nhấn bằng
       weight/màu accent, italic chỉ sống trong body text (Hallmark gate 38a)
+- [ ] Grid chứa ẢNH dùng `1fr` trần làm ảnh phình/đẩy vỡ hàng — dùng `minmax(0,1fr)`;
+      check bằng MẮT trong screenshot, máy grep không phân biệt được grid-có-ảnh (Hallmark gate 50 —
+      07 §5 và 08 §4 trỏ về đúng dòng này)
+- [ ] Gradient trang trí vô cớ (không mã hoá thông tin gì) hoặc bố cục "hero + 3 card giống hệt"
+      kiểu template AI — thay bằng nội dung thật hoặc bỏ khối (triệu chứng case B của §3, chấm tại đây)
 
 **MINOR — ghi nhận, sửa nếu còn thời gian:**
 - [ ] Transition giật/thiếu cho overlay; focus ring thiếu trên vài element

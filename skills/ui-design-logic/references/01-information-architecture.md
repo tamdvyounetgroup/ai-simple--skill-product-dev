@@ -39,6 +39,10 @@ khách-của-khách (portal) muốn tiến độ + minh bạch, không muốn th
 
 ### 1b. Trọng số thông tin theo loại user — từ cảm tính sang số đếm được
 
+> **Vai trò**: đây là CÔNG CỤ TƯ DUY sinh biến thể (SKILL.md xếp [DEF]) — không phải gate.
+> Không doc nào bắt buộc lưu bảng trọng số; gate đo được là density budget (02 §1) + checklist 06.
+> Dùng khi màn phục vụ ≥ 2 loại user và cần lý do cho "ai thấy gì ở đâu".
+
 Cùng 1 mẩu thông tin, giá trị khác nhau hoàn toàn theo người nhìn. Với mỗi màn hình,
 liệt kê các info item rồi CHẤM TRỌNG SỐ 0–3 cho TỪNG loại user:
 
@@ -58,7 +62,7 @@ Ví dụ màn hình "Chi tiết ao nuôi":
 |---|---|---|---|---|
 | Cảnh báo thông số vượt ngưỡng | **3** | **3** | 0 | 2 (mồi giá trị) |
 | pH/oxy/nhiệt độ hiện tại | **3** | **3** | 0 | 2 |
-| Lịch cho ăn hôm nay | 2 | **3** | 0 | 1 |
+| Lịch cho ăn hôm nay | 2 | 2 | 0 | 1 |
 | Chi phí thức ăn luỹ kế | 1 | 0 | **3** | 0 |
 | Lịch sử thông số 30 ngày | 1 | 2 | 1 | 0 |
 
@@ -230,6 +234,15 @@ Màn hình phục vụ ≥ 2 loại user → mỗi biến thể 1 dòng (vd: `1a
 
 ## Quyết định đã chốt (không hỏi lại)
 - <ví dụ: tạo/sửa khách dùng drawer, không page riêng>
+
+## Ngoại lệ đã duyệt (cơ chế [DEF] — SKILL.md)
+<!-- Mỗi dòng: quy tắc [DEF] nào bị làm khác · giá trị thay thế · LÝ DO audience/kỹ thuật · nguồn + ngày.
+     Lý do "đẹp/trendy/gu" không được tính. Không có dòng ở đây = mọi [DEF] áp nguyên. -->
+- <ví dụ: FONT → Plus Jakarta Sans (body) — audience ngư dân 40–60 tuổi, UI chữ to ≥18px ngoài nắng,
+  cần subset `vietnamese` đủ dấu nét đậm; user chốt 2026-06-11>
+
+## Anti-references (gu cấp project — không phải luật)
+- <ví dụ: user đã chê đích danh: font Fraunces; gradient tím; card lồng card — tránh trong project này>
 ```
 
 Cột "User đến để làm gì" bắt buộc điền được bằng 1 câu. Không điền được = màn hình

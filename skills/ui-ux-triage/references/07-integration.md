@@ -1,4 +1,4 @@
-# 07 — Hợp đồng composition: ui-ux-triage trong hệ 4-skill
+# 07 — Hợp đồng composition: ui-ux-triage trong hệ 5-skill
 
 ui-ux-triage là **pha VẬN HÀNH**. Nó không đứng một mình — nó tiêu thụ output các pha trên làm oracle, và đẩy ngược việc không-thuộc-nó sang đúng skill. File này là nguồn sự thật cho cách ghép; SKILL.md chỉ tóm tắt.
 

@@ -25,6 +25,18 @@ jobs:
       - name: Doc-health gate (fail PR khi doc-lag/ORPHANED/symbol chết/broken ref)
         run: sh scripts/doc-health-report.sh --ci
 
+      # ── Vùng B của nguyên tắc 14 — SCA dependency audit (point-to-tool) ──
+      # Advisory mặc định (continue-on-error): report vuln nhưng KHÔNG fail PR. Bỏ continue-on-error
+      # để biến thành GATE khi đội sẵn sàng. Đây KHÔNG phải SAST/pentest — chỉ soi dependency (LLM03/A06).
+      - name: SCA — dependency audit (npm — bỏ qua nếu không phải project npm)
+        continue-on-error: true
+        run: |
+          if [ -f package-lock.json ] || [ -f package.json ]; then
+            npm audit --audit-level=high || echo "::warning::npm audit thay vuln high/critical — xem log (nguyên tắc 14 vùng B)"
+          else
+            echo "Không phải project npm — cấu hình osv-scanner/pip-audit/bundler-audit tương ứng (point-to-tool)."
+          fi
+
       - name: Upload report artifact
         if: always()
         run: sh scripts/doc-health-report.sh > doc-health-report.txt || true

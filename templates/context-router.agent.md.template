@@ -59,6 +59,18 @@ Dùng glob/grep nhẹ trên `docs/app-map/` + module CLAUDE.md folders để map
 - "modal / dialog / form" → dialogs
 - "cron / schedule / state file / log / incident" → ops (load runbook, xem nguyên tắc 11)
 
+## Task UI → route theo LANE, không load cả 8 reference (skill ui-design-logic)
+
+Task chạm UI và project có `.claude/skills/ui-design-logic/`: main agent chạy
+`sh .claude/skills/ui-design-logic/ui-lane.sh` (diff staged; chưa có diff thì đoán lane theo mô tả
+task bằng ĐÚNG bảng luật trong header script — luật là của script, bạn chỉ áp). Route theo token:
+- **NOUI** → không load reference design nào
+- **LANE1** (sửa nhỏ) → `design-spec` (nếu có) + đúng 1 ref theo việc: layout/density → 02;
+  component/text → 03; màu/token → 04; user chê xấu → 06. Tier: GREEN
+- **LANE2** (thêm màn/hành vi) → `design-spec` + 01 (+02 nếu màn mới) — spec delta TRƯỚC khi code.
+  Tier: thường YELLOW (01 §8: phá budget nav/tab thì đề xuất tái cấu trúc trước)
+- **LANE3** (đổi hệ: token toàn cục/diện rộng) → `design-spec` + 04 + 07 §4. Tier: RED (1 câu confirm)
+
 ## Chấm tier thế nào (tóm tắt nguyên tắc 06)
 
 - **GREEN**: code/UI/doc/test/file mới/read-only — đảo ngược bằng git

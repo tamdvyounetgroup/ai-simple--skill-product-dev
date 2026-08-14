@@ -1,7 +1,7 @@
-# Methodology — 13 nguyên tắc / 13 principles
+# Methodology — 14 nguyên tắc / 14 principles
 
-> 13 nguyên tắc cốt lõi, 5 lớp: **Core** (01–07) cho mọi project; **Scale** (08–10); **Ops** (11); **Optimization & Learning** (12 — ba vòng tự tiến hóa); **Collaboration** (13 — nhiều session song song trên nền Git). Composable — kích hoạt theo profile + trigger, không ép project nào dùng cả 13.
-> *(EN: 13 core principles in 5 layers: Core 01–07 for every project; Scale 08–10; Ops 11; Optimization & Learning 12 — the three self-evolution loops; Collaboration 13 — Git-native parallel sessions. Composable — activated per profile and trigger.)*
+> 14 nguyên tắc cốt lõi, 6 lớp: **Core** (01–07) cho mọi project; **Scale** (08–10); **Ops** (11); **Optimization & Learning** (12 — ba vòng tự tiến hóa); **Collaboration** (13 — nhiều session song song trên nền Git); **Security** (14 — cổng shift-left có khai báo phủ sóng). Composable — kích hoạt theo profile + trigger, không ép project nào dùng cả 14.
+> *(EN: 14 core principles in 6 layers: Core 01–07 for every project; Scale 08–10; Ops 11; Optimization & Learning 12 — the three self-evolution loops; Collaboration 13 — Git-native parallel sessions; Security 14 — a shift-left gate with declared coverage. Composable — activated per profile and trigger.)*
 
 ---
 
@@ -22,6 +22,7 @@
 | 11 | [ops-layer.md](11-ops-layer.md) | **v2.2** — Runbook per service, state registry, routing sự cố |
 | 12 | [self-optimization.md](12-self-optimization.md) | **v3** — 3 vòng: A coupling map + 2 cổng; B học từ accepted diffs (evidence enum, survival/correction rate); C skill evolution qua branch + regression + rollback |
 | 13 | [parallel-sessions.md](13-parallel-sessions.md) | **v1 (shipped)** — Lot MECE theo entity + DAG/waves + claim atomic có lease + worktree per lot + integration branch + merge queue (CLI `ai-simple parallel` + hook gate + bộ test nghiệm thu — số hiện hành xem CHANGELOG); dirty work user bất khả xâm phạm |
+| 14 | [security-gate.md](14-security-gate.md) | **v1 (shipped)** — Cổng shift-left có KHAI BÁO phủ sóng (3 vùng A git/B CI/C prod=NON-GOAL); secret-scan + doc prompt-injection lint (LLM01) enforced pre-commit + fixture self-test; map OWASP LLM Top-10 + OWASP Top-10 web; skill `security-logic`; KHÔNG "đã bảo mật ✓", KHÔNG thay pentest |
 
 ---
 
@@ -42,7 +43,7 @@
 
 ## Profiles — kích hoạt theo tải, không theo đức tin
 
-Bảng chọn profile (tiny/core/scale/contracts/ops/optimization/parallel → nguyên tắc nào bật) nằm ở `SKILL.md` §Bước 0 — nguồn duy nhất, không lặp ở đây. Nguyên tắc chung: bắt đầu NHỎ NHẤT có thể (project < 10 file → tiny = 01+06), để trigger scale-up (bảng dưới) mở dần các lớp sau. Audit chấm theo applicability — profile chưa bật thì NOT_APPLICABLE, không trừ oan.
+Bảng chọn profile (tiny/core/scale/contracts/ops/optimization/parallel/security/full → nguyên tắc nào bật) nằm ở `SKILL.md` §Bước 0 — nguồn duy nhất, không lặp ở đây. Nguyên tắc chung: bắt đầu NHỎ NHẤT có thể (project < 10 file → tiny = 01+06), để trigger scale-up (bảng dưới) mở dần các lớp sau. Audit chấm theo applicability — profile chưa bật thì NOT_APPLICABLE, không trừ oan.
 
 ---
 
@@ -56,7 +57,7 @@ Bảng chọn profile (tiny/core/scale/contracts/ops/optimization/parallel → n
 5. Khi user feedback lặp lại: persist vào memory (nguyên tắc 07)
 
 ### Project cũ (retrofit)
-1. Đọc 13 nguyên tắc, score project hiện tại từng cái (theo applicability — cái không applicable thì NOT_APPLICABLE, không trừ oan)
+1. Đọc 14 nguyên tắc, score project hiện tại từng cái (theo applicability — cái không applicable thì NOT_APPLICABLE, không trừ oan)
 2. Pick 2 cái yếu nhất → retrofit trước (thường 02 + 04)
 3. Đừng cố retrofit hết 1 lần — chia 5 PR, mỗi PR 1 nguyên tắc
 
@@ -72,6 +73,7 @@ Bảng chọn profile (tiny/core/scale/contracts/ops/optimization/parallel → n
 | User phàn nàn "phải confirm lặt vặt" | Re-calibrate tier theo 06 v3 — confirm chỉ cho RED |
 | User chỉnh sửa lặp lại cùng pattern qua nhiều bản AI làm | Vòng B learning — learning event từ accepted diff (12 v3 §B) |
 | Hệ chạy > 3 tháng chưa từng audit | `/audit` + bật nhịp tháng/quý (12) — detect không có heal thì điểm chỉ đi xuống |
+| Code chạm auth/payment/crypto/migration; kéo dependency ngoài; docs từ nhiều nguồn | Bật `SEC_CHECKS=auto` + skill `security-logic` (14) — secret-scan + doc-injection lint + SCA ở CI |
 
 ---
 
@@ -92,6 +94,7 @@ Bảng chọn profile (tiny/core/scale/contracts/ops/optimization/parallel → n
 | Hệ thống chạy nền không có runbook | Sự cố = đoán mò + bus factor 1 (11) |
 | 2 session sửa cùng vùng không claim/không worktree | Merge conflict + lost work (13) |
 | Học preference từ 1 lần user im lặng | Rule không stable + echo chamber (12 v3) |
+| Dán nhãn "đã bảo mật ✓" không khai vùng phủ | Cảm giác an toàn giả = chính là lỗ hổng (14) — khai A/B/C, coi docs untrusted-by-default |
 
 ---
 
@@ -110,6 +113,7 @@ Bảng chọn profile (tiny/core/scale/contracts/ops/optimization/parallel → n
 | `audit.command.md.template` | `/audit` — chấm theo applicability, neo metric (12) |
 | `learn.command.md.template` | `/learn` — ghi learning event từ accepted diff, cầu vòng B (12 v3) |
 | `contract-doc.md.template` | Cross-repo contract (10) |
+| `security-review.md.template` | Security review có declared-coverage + map OWASP (14) — cổng máy `security-verify.sh` |
 
 ---
 

@@ -5,7 +5,7 @@ chỉ override khi DESIGN-SPEC ghi lý do.
 
 ## 1. Màu
 
-**Cấu trúc bắt buộc: 1 neutral ramp + 1 accent + 4 semantic. Không thêm họ màu thứ ba.**
+**Cấu trúc bắt buộc: 1 neutral ramp + 1 accent + 4 semantic. Không thêm họ màu trang trí.**
 
 - Neutral: dùng ramp xám của Tailwind (slate/zinc/stone — chọn 1, ghi vào spec). Nền trang
   `*-50`, card trắng, border `*-200`, text phụ `*-500`, text chính `*-900`
@@ -13,6 +13,10 @@ chỉ override khi DESIGN-SPEC ghi lý do.
   < 10% diện tích màn hình — accent tràn lan thì không còn gì nổi bật
 - Semantic cố định toàn app: success=green, warning=amber, danger=red, info=blue.
   Accent KHÔNG trùng họ với semantic (accent đỏ làm nút xoá mất nghĩa)
+- **Categorical palette cho chart** (chỉ khi app có chart nhiều series): 02 §1 bắt hue mã hoá
+  DANH MỤC — semantic KHÔNG được trưng dụng làm màu danh mục (phá nghĩa cố định của nó).
+  Khai riêng 4–6 màu chart trong spec (đủ khác hue, cùng độ bão hoà, phân biệt được với mù màu
+  — desaturate thử để kiểm); series thứ 7+ là dấu hiệu chart sai loại, không phải thiếu màu
 - Text contrast ≥ 4.5:1; text trên nền màu lấy stop đậm nhất cùng họ, không lấy đen tuyền
 
 ## 2. Hoà màu logo — quy trình 4 bước, chống "logo chỏi lỏi"
@@ -24,9 +28,12 @@ hoặc bỏ qua logo chọn màu vô can. Quy trình:
 B1. Lấy màu chủ đạo logo (hue H, saturation S, lightness L)
 B2. Phân loại:
     a) Màu "dùng được" (S 40–90%, L 35–60%, không phải vàng neon/xanh chuối)
-       → accent = chính nó, có thể chỉnh L về 45–55% cho đủ contrast với chữ trắng
+       → accent = chính nó, chỉnh L TỚI KHI ĐO ĐƯỢC contrast ≥ 4.5:1 với chữ trắng — ĐO,
+         không áng chừng: hue ấm (đỏ/cam/vàng, H 0–60°) thường phải xuống L 32–40% mới đạt
+         (hsl(25,60%,45%) + chữ trắng chỉ 4.18:1 = trượt gate BLOCK 06 §2); hue lạnh đạt ở L 45–55%.
+         Không muốn hạ L (mất chất logo) → đổi chữ trên accent sang đen/tối cùng họ và đo lại
     b) Màu quá chói/quá nhạt (vàng, cam neon, pastel)
-       → accent = giữ HUE, kéo S xuống 50–70%, L về 40–50% (phiên bản "trầm" của màu logo)
+       → accent = giữ HUE, kéo S xuống 50–70%, L hạ tới khi ĐO ĐƯỢC ≥ 4.5:1 theo quy tắc (a)
        → màu gốc logo chỉ xuất hiện trong chính logo và các điểm nhấn nhỏ (icon trang trí)
     c) Logo đen/trắng/xám → tự do chọn accent theo ngành (tài chính: xanh dương đậm;
        nông nghiệp: xanh lá trầm; trẻ em: coral...) — ghi lý do vào spec
@@ -39,15 +46,17 @@ B4. Logo luôn đặt trên nền neutral (trắng/xám nhạt/sidebar sẫm) v�
 
 ## 3. Typography
 
-- 1 font duy nhất cho UI nghiệp vụ — MẶC ĐỊNH SYSTEM FONT STACK (xem quy tắc cứng FONT
-  trong SKILL.md): `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`.
-  **CẤM Be Vietnam Pro / Plus Jakarta Sans / Fraunces**; không serif/display trang trí, không font
-  trendy cho UI sản phẩm. Font riêng (kể cả Inter) chỉ khi user YÊU CẦU rõ.
-  Landing page ĐƯỢC PHÉP thêm 1 display font cho hero — cũng chỉ khi user yêu cầu rõ.
+- 1 font duy nhất cho UI nghiệp vụ — MẶC ĐỊNH SYSTEM FONT STACK (rule FONT [DEF] trong SKILL.md):
+  `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`.
+  Không serif/display trang trí, không font trendy cho UI sản phẩm. Font riêng (kể cả Inter) chỉ khi
+  (a) user chỉ đích danh font, hoặc (b) design-spec ghi `## Ngoại lệ đã duyệt` với lý do
+  audience/kỹ thuật (xem SKILL.md — lý do "đẹp/trendy" không được tính). Font user đã chê đích danh
+  → mục Anti-references của spec project đó, không phải luật toàn cục.
+  Landing page ĐƯỢC PHÉP thêm 1 display font cho hero — cũng chỉ qua 2 cửa (a)/(b) trên.
   Được phép +1 font MONO chỉ cho code, ID, phím tắt, data label kỹ thuật (10–14px; label uppercase
   thì tracking +0.3 đến +1.5px) — chuẩn ngành Linear/Vercel. Không mono cho body. Tối đa 3 font/project
 - Scale: 12 (caption) / 13 (label phụ) / 14 (body UI) / 16 (body đọc dài) / 18 (section title)
-  / 22 (page title) / 20–24 (metric phụ) / 32–40 (hero KPI — luôn 2–3× cỡ label) / 40+ (chỉ landing hero)
+  / 22 (page title) / 20–24 (metric phụ — ≥ 1,5× cỡ label) / 32–40 (hero KPI — 2–3× cỡ label; tỷ lệ 2–3× CHỈ cho hero, xem 02 §5) / 40+ (chỉ landing hero)
 - Weight: 400 và 500–600. Không 300 cho chữ < 18px (mảnh quá), không 700+ trong UI (chỉ landing)
 - Line-height: 1.5 body, 1.2–1.3 heading. Đoạn đọc dài: max-width 65–75 ký tự
 - **Landing hero display**: tỷ lệ hero/body 8–12:1 (body 16 → hero 130–190px desktop);

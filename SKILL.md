@@ -1,11 +1,11 @@
 ---
 name: ai-simple-product-dev
-description: Methodology for organizing software projects to be AI-agent-friendly — an operating layer for codebases. Use when bootstrapping a new project, retrofitting docs for AI pair-programming, onboarding an AI agent to an existing codebase, or on symptoms like "AI hallucinates", "context too long", "docs out of sync with code", "schema change broke another repo", "AI asks me to confirm every little thing", "nobody knows how to restart the bot", "two AI sessions stepping on each other", "AI repeats mistakes I already corrected", "what should we optimize next", "dự án mới bắt đầu làm với AI", "AI đọc sai file/bịa tên hàm", "docs cũ không biết còn đúng không", "nhiều AI session cùng sửa repo", "bot/cron chết không ai biết restart". Provides 13 composable principles in 5 layers — hierarchical context, app-map, context routing, doc+test sync, LOGIC vs REQUEST, risk-tiered pre-flight, memory, enforcement hooks, generated-vs-authored docs, cross-repo contracts, ops runbooks, evidence-driven self-evolution (learning from accepted diffs), and Git-native parallel sessions (MECE lots, leased claims, worktrees, merge queue) — profile-gated so small projects pay near zero.
+description: Methodology for organizing software projects to be AI-agent-friendly — an operating layer for codebases. Use when bootstrapping a new project, retrofitting docs for AI pair-programming, onboarding an AI agent to an existing codebase, or on symptoms like "AI hallucinates", "context too long", "docs out of sync with code", "schema change broke another repo", "AI asks me to confirm every little thing", "nobody knows how to restart the bot", "two AI sessions stepping on each other", "AI repeats mistakes I already corrected", "what should we optimize next", "dự án mới bắt đầu làm với AI", "AI đọc sai file/bịa tên hàm", "docs cũ không biết còn đúng không", "nhiều AI session cùng sửa repo", "bot/cron chết không ai biết restart", "code này có lỗ hổng không", "lộ secret/API key vào git", "doc này có bị tiêm lệnh không". Provides 14 composable principles in 6 layers — hierarchical context, app-map, context routing, doc+test sync, LOGIC vs REQUEST, risk-tiered pre-flight, memory, enforcement hooks, generated-vs-authored docs, cross-repo contracts, ops runbooks, evidence-driven self-evolution (learning from accepted diffs), Git-native parallel sessions (MECE lots, leased claims, worktrees, merge queue), and a declared-coverage security gate (secret scan + doc prompt-injection lint, OWASP LLM Top-10 + web Top-10, never claims "secured ✓") — profile-gated so small projects pay near zero.
 ---
 
 # AI-Simple Product Dev
 
-> Hệ điều hành cho codebase: **Git lưu sự thật; AI Simple quản context, ý định, invariants, quyền ghi, tích hợp và học từ lịch sử đó.** 13 nguyên tắc composable — kích hoạt theo profile, KHÔNG ép project nào dùng cả 13. Index chi tiết: `methodology/README.md`. Thiết kế + roadmap: `docs/adr/001`.
+> Hệ điều hành cho codebase: **Git lưu sự thật; AI Simple quản context, ý định, invariants, quyền ghi, tích hợp, bảo mật và học từ lịch sử đó.** 14 nguyên tắc composable — kích hoạt theo profile, KHÔNG ép project nào dùng cả 14. Index chi tiết: `methodology/README.md`. Thiết kế + roadmap: `docs/adr/001`.
 
 ## Bước 0 — chọn profile
 
@@ -18,7 +18,8 @@ description: Methodology for organizing software projects to be AI-agent-friendl
 | ops | Có process chạy nền (cron/agent/pipeline) | + 11 |
 | optimization | Hệ chạy > 3 tháng / muốn học từ revisions | + 12 |
 | parallel | ≥ 2 session thường trực trên 1 repo | + 13 (CLI `ai-simple parallel` — đọc guard dưới) |
-| full | Bật tất cả không cần nghĩ (repo lớn, đội quen hệ) | 01–13 (về bộ file = core; khác biệt là nguyên tắc nào BẬT) |
+| security | Code chạm auth/payment/crypto/migration / có dependency ngoài / docs từ nhiều nguồn | + 14 (secret-scan + doc-injection lint máy; skill `security-logic`) |
+| full | Bật tất cả không cần nghĩ (repo lớn, đội quen hệ) | 01–14 (về bộ file = core; khác biệt là nguyên tắc nào BẬT) |
 
 `doctor` phát hiện trigger scale-up và đề xuất profile kế tiếp — hệ mở rộng theo tải, không theo trí nhớ người dùng.
 
@@ -26,9 +27,9 @@ description: Methodology for organizing software projects to be AI-agent-friendl
 
 1 Nhận yêu cầu → 2 Phân loại LOGIC/REQUEST/HYBRID (05) → 3 Xác định profile applicable → 4 Route minimal context (03) → 5 GREEN/YELLOW/RED (06) → 6 Parallel admission gate nếu nhiều session (13) → 7 Bảo vệ Git state hiện hữu (13 §tầng-0 — MỌI profile) → 8 Implement đúng scope → 9 Validate code/test/doc/contract (04, 10) → 10 Quan sát revisions của user → 11 Extract accepted decisions (12 §B) → 12 Persist đúng scope (07/12) → 13 Commit/tích hợp theo quyền được cấp → 14 Cập nhật metric → 15 Review learning candidates → 16 Promote/release/monitor (12 §C).
 
-**Đường tắt: Core profile + task GREEN = bước 1→2→4→5→8→9→13** (bước 2 LOGIC/REQUEST luôn chạy — nó quyết định có commit hay không). Các bước còn lại chỉ tồn tại khi profile tương ứng bật — không phải nghi thức phải đi đủ. Lưu ý CLI: `init --profile` nhận đủ 8 tên nhưng về BỘ FILE chỉ có 2 mức (tiny / còn-lại-như-core) — khác biệt giữa scale/ops/parallel... là nguyên tắc nào BẬT, sống ở đây và methodology.
+**Đường tắt: Core profile + task GREEN = bước 1→2→4→5→8→9→13** (bước 2 LOGIC/REQUEST luôn chạy — nó quyết định có commit hay không). Các bước còn lại chỉ tồn tại khi profile tương ứng bật — không phải nghi thức phải đi đủ. Lưu ý CLI: `init --profile` nhận đủ 9 tên nhưng về BỘ FILE chỉ có 2 mức (tiny / còn-lại-như-core) — khác biệt giữa scale/ops/parallel... là nguyên tắc nào BẬT, sống ở đây và methodology.
 
-## 13 nguyên tắc / 5 lớp
+## 14 nguyên tắc / 6 lớp
 
 **Core (01–07):**
 1. **Hierarchical Context** — root CLAUDE.md < 6K token, link xuống module → `methodology/01`
@@ -50,6 +51,8 @@ description: Methodology for organizing software projects to be AI-agent-friendl
 
 **Collaboration (13):** 13. **Git-Native Parallel Sessions** — lot MECE theo entity, claim có lease, worktree per lot, integration branch, merge queue tuần tự → `methodology/13`
 
+**Security (14):** 14. **Security as a Declared Gate** — cổng shift-left có KHAI BÁO phủ sóng (3 vùng A git-time / B CI point-to-tool / C production=NON-GOAL); secret-scan + doc prompt-injection lint (LLM01) enforced ở pre-commit; mọi finding map OWASP LLM Top-10 + OWASP Top-10 web (ngang hàng); KHÔNG "đã bảo mật ✓", KHÔNG thay pentest → `methodology/14`
+
 ## Hard safety rules (mọi profile, mọi lúc)
 
 - ĐỌC đủ Git state (branch/HEAD/status/dirty/untracked/worktrees) trước khi sửa code hay tạo worktree.
@@ -70,4 +73,5 @@ description: Methodology for organizing software projects to be AI-agent-friendl
   - "Màn này sai/lệch", screenshot + câu than, app thật lỗi → `ui-ux-triage`
   - Sự cố production/process nền, "bot chết", cron/log → nguyên tắc 11: runbook TRƯỚC code (`methodology/11`)
   - Nhiều session cùng sửa repo → NT13 `ai-simple parallel`; docs nghi ngờ cũ → doc-status/`/audit`
+  - "Có lỗ hổng không / review bảo mật / kiểm secret / doc này có bị inject không" → `security-logic` (NT14 — khai vùng phủ, KHÔNG "đã bảo mật ✓"); pentest production → runbook NT11 (ngoài scope)
 - Điểm móc 2 chiều định nghĩa tại file `references/*-integration*.md` của TỪNG skill — nguồn sự thật duy nhất, không lặp ở đây.

@@ -11,7 +11,7 @@ nhưng tích tụ thành cảm giác "app này rối". Tra bảng trước khi �
 | Nhiều bản ghi, mỗi cái chỉ cần 2–3 thuộc tính, đọc tuần tự (thông báo, tin) | **List** | Nhẹ hơn table, không cần header |
 | Ít bản ghi (≤ 12/trang), hình ảnh là thông tin chính (sản phẩm, dự án) | **Card grid** | Ảnh cần diện tích; > 20 card chữ là table trá hình — đổi sang table |
 | Thuộc tính quan trọng nhất là VỊ TRÍ địa lý | **Map** + list đồng bộ | Map luôn kèm list/panel — map một mình không quét nhanh được |
-| 2–5 con số tổng quan | **Metric card** | 1 số chính + ngữ cảnh của chính nó (`/tổng`, `%`, delta ▲▼) — nén theo khe chuẩn ở 02 mục 5. Hai chỉ số KHÔNG liên quan thì tách card |
+| 2–4 con số tổng quan (trần theo 02 §1 — nhà duy nhất của con số) | **Metric card** | 1 số chính + ngữ cảnh của chính nó (`/tổng`, `%`, delta ▲▼) — nén theo khe chuẩn ở 02 mục 5. Hai chỉ số KHÔNG liên quan thì tách card |
 
 ## 2. Cửa sổ con: modal / drawer / popover / page — cây quyết định
 
@@ -20,7 +20,7 @@ Nội dung là nhiệm vụ độc lập, cần URL/share/Back?            → P
 Form/detail liên quan ngữ cảnh hiện tại, cần đối chiếu nền? → DRAWER (sheet trượt phải; mobile: bottom sheet)
 Bắt user QUYẾT ĐỊNH trước khi tiếp tục (xác nhận xoá)?       → MODAL/DIALOG, ≤ 2 nút
 Thông tin phụ gắn 1 phần tử (giải thích, mini menu)?         → POPOVER/TOOLTIP
-Báo kết quả hành động, không cần phản hồi?                   → TOAST, tự tắt 4s
+Báo kết quả hành động, không cần phản hồi?                   → TOAST, tự tắt 4s (toast kèm Undo: 5s — khớp "Undo 5s" trong Action→Expectation 01 §7, đừng để Undo chết trước lời hứa)
 ```
 
 Quy tắc cứng cho mọi loại:

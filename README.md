@@ -7,7 +7,7 @@
 - **Giải lỗi gì?** AI hallucinate tên hàm/file, đọc lan man tốn token, doc lệch code rồi AI tin doc cũ, hỏi confirm lặt vặt, không ai biết restart con bot.
 - **Cài thế nào?** `npx ai-simple init` — cài hook + doc-health + templates + workflow, tự set hooksPath, tự chạy self-test. Fallback không dùng CLI: copy 3 template (CLAUDE.md, app-map, hook) + `git config core.hooksPath .githooks`.
 - **Được gì?** Session AI mới onboard < 1 phút; mọi doc gắn code có trạng thái VERIFIED/SUSPECT máy tính từ git — doc sai **không lọt vào suy luận của AI mà chưa qua đối chiếu**; commit đổi code mà quên doc bị chặn tại chỗ.
-- **5 lớp:** Core (context + routing + sync) → Scale (enforcement + generated docs + contract) → Ops (runbook + registry) → Optimization & Learning (coupling map + 2 cổng verify + học từ accepted diffs + /audit) → Collaboration (lot MECE + claim + worktree + merge queue cho nhiều session song song). Versions: xem [CHANGELOG.md](CHANGELOG.md).
+- **6 lớp:** Core (context + routing + sync) → Scale (enforcement + generated docs + contract) → Ops (runbook + registry) → Optimization & Learning (coupling map + 2 cổng verify + học từ accepted diffs + /audit) → Collaboration (lot MECE + claim + worktree + merge queue cho nhiều session song song) → Security (secret-scan + doc prompt-injection lint + declared-coverage, map OWASP LLM + web). Versions: xem [CHANGELOG.md](CHANGELOG.md).
 
 > **VI**: Phương pháp đơn giản để tổ chức một dự án phần mềm khi đồng hành cùng AI coding agent (Claude Code, Cursor, Aider, …). Không phải framework, không phải tool — là **bộ nguyên tắc + template + script đã test** giúp AI hiểu codebase nhanh, không hallucination, không bloat context.
 >
@@ -41,6 +41,9 @@ Phương pháp này giải 3 vấn đề trên bằng:
 **Lớp Collaboration** (vấn đề thứ 6: *hai session song song giẫm chân nhau — merge conflict, lost work, không ai biết ai đang sửa gì*):
 - **Git-native parallel sessions** — chia lot MECE theo business entity + DAG/waves, claim atomic có lease (CLI `ai-simple parallel`), worktree per lot, integration branch + merge queue tuần tự có journal/crash-recovery; dirty work của user là bất khả xâm phạm. Kèm bộ test nghiệm thu chạy được (`ai-simple parallel self-test` — race atomic 100 lượt, concurrent-merge không silent-loss, crash-resume, dirty-protection; số test hiện hành: CHANGELOG) + claim gate trong pre-commit hook.
 
+**Lớp Security** (vấn đề thứ 7: *"AI đọc docs rồi viết code" tạo/khuếch đại 3 lớp rủi ro — lỗ hổng trong code AI viết, docs độc tiêm lệnh vào AI (prompt-injection), CVE từ thư viện; và cám dỗ dán "đã bảo mật ✓" tạo cảm giác an toàn giả*):
+- **Security as a declared gate** — cổng shift-left có KHAI BÁO phủ sóng (3 vùng: A git-time enforced / B CI point-to-tool / C production=NON-GOAL). Enforced ở pre-commit: **secret-scan** (private key/AWS/PAT/token → BLOCK, loại placeholder) + **doc prompt-injection lint** (câu mệnh-lệnh-hướng-agent trong app-map/CLAUDE.md → BLOCK — LLM01, bề mặt tấn công độc nhất của hệ vì docs là input trực tiếp vào AI), cả hai có fixture `--self-test` chạy qua `npm test`. SCA dependency audit ở CI (point-to-tool). Mọi finding map **OWASP LLM Top-10 + OWASP Top-10 web** ngang hàng. Non-goal thẳng thắn: **KHÔNG thay pentest/DAST production** — hệ chỉ sinh runbook kích hoạt. Skill `security-logic` là phần "não".
+
 ### EN
 When pair-programming with an AI agent, 3 common pain points:
 1. **Cold start burns tokens** — every new session must re-explain the codebase
@@ -64,6 +67,9 @@ This methodology solves all 3 with:
 
 **Collaboration layer** (pain point #6: *parallel sessions stepping on each other — merge conflicts, lost work, nobody knows who's editing what*):
 - **Git-native parallel sessions** — MECE lots by business entity + DAG/waves, atomic leased claims (`ai-simple parallel` CLI), worktree per lot, integration branch + serial merge queue with journal/crash-recovery; the user's dirty work is inviolable. Ships with a runnable acceptance suite (`ai-simple parallel self-test` — 100-attempt atomic race, concurrent-merge no-silent-loss, crash-resume, dirty-protection; current count: CHANGELOG) + a claim gate in the pre-commit hook.
+
+**Security layer** (pain point #7: *an "AI reads docs then writes code" system creates/amplifies three risk classes — vulns in AI-written code, poisoned docs injecting instructions into the AI (prompt injection), CVEs from libraries; plus the temptation to stamp "secured ✓" which is itself false assurance*):
+- **Security as a declared gate** — a shift-left gate with DECLARED coverage (3 zones: A git-time enforced / B CI point-to-tool / C production=NON-GOAL). Enforced at pre-commit: **secret-scan** (private key/AWS/PAT/token → BLOCK, placeholders excluded) + **doc prompt-injection lint** (agent-directed imperatives in app-map/CLAUDE.md → BLOCK — LLM01, this system's unique attack surface since docs are direct input to the AI), both with `--self-test` fixtures run by `npm test`. SCA dependency audit in CI (point-to-tool). Every finding maps to **OWASP LLM Top-10 + OWASP Top-10 web** as equals. Honest non-goal: **does NOT replace production pentest/DAST** — the system only emits a runbook to trigger it. The `security-logic` skill is the reasoning layer.
 
 **Roadmap** (đang cân nhắc / under consideration): `examples/` repo before/after (Next.js+Supabase, Python agent) với số đo onboard-time và doc-lag thật; parallel benchmark đo speedup/overhead ex-post; scripts Phase 4–5 (decision-extract/compile tự động — xem `docs/adr/001`).
 
@@ -94,9 +100,9 @@ Sau `init`, hệ chạy theo **sự kiện** — không có lệnh nào phải n
 PR → CI fail nếu doc-lag; AI đọc doc → cổng đọc bắt verify. Phần "não" (`/fl`, `/audit`,
 verify-on-use) dùng qua Claude Code skill — CLI chỉ đóng gói phần máy chạy-không-cần-AI.
 
-### Cài 4 skill vào Claude Code (bắt buộc để có phần "não")
+### Cài 5 skill vào Claude Code (bắt buộc để có phần "não")
 
-`init` cài phần MÁY vào project; phần NÃO là 4 skill — Claude Code phải nhìn thấy chúng trong
+`init` cài phần MÁY vào project; phần NÃO là 5 skill — Claude Code phải nhìn thấy chúng trong
 `~/.claude/skills/`. Clone repo này rồi link (Windows dùng Git Bash, hoặc `mklink /J` trong cmd):
 
 ```bash
@@ -106,6 +112,7 @@ ln -s "$(pwd)" ~/.claude/skills/ai-simple-product-dev
 ln -s "$(pwd)/skills/ba-flow-logic" ~/.claude/skills/ba-flow-logic
 ln -s "$(pwd)/skills/ui-design-logic" ~/.claude/skills/ui-design-logic
 ln -s "$(pwd)/skills/ui-ux-triage" ~/.claude/skills/ui-ux-triage
+ln -s "$(pwd)/skills/security-logic" ~/.claude/skills/security-logic
 ```
 
 Link (không copy) để `git pull` là mọi project nhận bản skill mới. Mở phiên Claude Code mới là
@@ -133,7 +140,7 @@ message `re-verify(...)`) rồi commit lại là qua.
 3. Tạo `.claude/commands/fl.md` từ `templates/fl.command.md.template`
 4. Tạo `.claude/agents/context-router.md` từ `templates/context-router.agent.md.template`
 5. Cài hook versioned: `mkdir .githooks` → copy `templates/pre-commit.hook.template` vào `.githooks/pre-commit` → `git config core.hooksPath .githooks` → commit folder `.githooks` (sửa 3 biến CONFIG nếu không phải Supabase; verify: `sh .githooks/pre-commit --self-test`)
-6. Đọc `methodology/README.md` để hiểu 13 nguyên tắc
+6. Đọc `methodology/README.md` để hiểu 14 nguyên tắc
 
 ### EN
 1. Copy `templates/CLAUDE.md.template` → project root, rename to `CLAUDE.md`
@@ -141,7 +148,7 @@ message `re-verify(...)`) rồi commit lại là qua.
 3. Create `.claude/commands/fl.md` from `templates/fl.command.md.template`
 4. Create `.claude/agents/context-router.md` from `templates/context-router.agent.md.template`
 5. Install the versioned hook: `mkdir .githooks` → copy `templates/pre-commit.hook.template` to `.githooks/pre-commit` → `git config core.hooksPath .githooks` → commit `.githooks` (edit the 3 CONFIG vars if not Supabase; verify: `sh .githooks/pre-commit --self-test`)
-6. Read `methodology/README.md` to grasp the 13 principles
+6. Read `methodology/README.md` to grasp the 14 principles
 
 ---
 
@@ -155,8 +162,8 @@ ai-simple--skill-product-dev/
 ├── bin/ai-simple.js             # CLI zero-dependency: init/doctor/update/doc-status/doc-health/parallel
 ├── lib/parallel.js              # Nguyên tắc 13: claim atomic + merge queue CAS + test nghiệm thu (số: CHANGELOG)
 ├── docs/adr/                    # ADR-001: thiết kế vNext (Git-native parallel + learning) + roadmap 5 phase
-├── skills/                      # 3 skill con: ba-flow-logic, ui-design-logic, ui-ux-triage
-├── methodology/                 # 13 principles, deep-dive
+├── skills/                      # 4 skill con: ba-flow-logic, ui-design-logic, ui-ux-triage, security-logic
+├── methodology/                 # 14 principles, deep-dive
 │   ├── README.md                # Principles index
 │   ├── 01-hierarchical-context.md
 │   ├── 02-app-map-pattern.md
@@ -170,7 +177,8 @@ ai-simple--skill-product-dev/
 │   ├── 10-cross-repo-contract.md        # v2 — schema chung = contract đánh version
 │   ├── 11-ops-layer.md                  # v2.2 — runbook, state registry, routing sự cố
 │   ├── 12-self-optimization.md          # v3 — 3 vòng: coupling map + 2 cổng; học từ accepted diffs; skill evolution
-│   └── 13-parallel-sessions.md          # v1 shipped — lot MECE, claim atomic, worktree, merge queue CAS + test suite (số: CHANGELOG)
+│   ├── 13-parallel-sessions.md          # v1 shipped — lot MECE, claim atomic, worktree, merge queue CAS + test suite (số: CHANGELOG)
+│   └── 14-security-gate.md              # v1 shipped — secret-scan + doc prompt-injection lint (LLM01) + declared-coverage, map OWASP LLM+web
 └── templates/                   # Drop-in files. Quy ước placeholder: {{TÊN_HOA}} = trường BẮT BUỘC
                                  # điền khi copy; <chữ-thường> = ví dụ minh họa hoặc biến — thay bằng
                                  # nội dung thật khi viết, giữ nguyên nếu là pattern runtime (src/<module>/).
@@ -187,10 +195,11 @@ ai-simple--skill-product-dev/
     ├── state-registry.md.template       # v2.2 — registry canonical cho state files
     ├── ops-schedules.md.template        # v3.0 — registry mọi cron/scheduled job
     ├── ops-external-services.md.template# v3.0 — registry API ngoài (token, rate limit, khi chết)
-    ├── audit.command.md.template        # /audit: chấm 13 nguyên tắc theo applicability → backlog tối ưu
+    ├── audit.command.md.template        # /audit: chấm 14 nguyên tắc theo applicability → backlog tối ưu
     ├── learn.command.md.template        # /learn: learning event từ accepted diff (12 v3 vòng B)
-    ├── doc-health.workflow.yml.template # GitHub Actions: self-test + --status + --ci gate + artifact
-    └── contract-doc.md.template         # cross-repo contract
+    ├── doc-health.workflow.yml.template # GitHub Actions: self-test + --status + --ci gate + SCA audit + artifact
+    ├── contract-doc.md.template         # cross-repo contract
+    └── security-review.md.template      # v1 — security review declared-coverage + map OWASP (14), cổng security-verify.sh
 ```
 
 ---
@@ -208,6 +217,7 @@ Cài xong, cứ **nói tự nhiên** — skill tự kích hoạt theo tình hu�
 | "Bấm nút duyệt bị lỗi" + screenshot | `ui-ux-triage` — test như user thật, fix qua cổng risk |
 | "Bot chết lúc 2h sáng / cron không chạy" | Nguyên tắc 11 — runbook trước code |
 | "Repo này nhiều AI session cùng sửa" | Nguyên tắc 13 — `ai-simple parallel` |
+| "Chỗ này có lỗ hổng không / review bảo mật / doc này có bị inject không" | `security-logic` (NT14) — khai vùng phủ, map OWASP, KHÔNG "đã bảo mật ✓" |
 
 Slash command chỉ là đường tắt cho 3 quy trình máy: `/fl` (routing log), `/audit` (verify quý), `/learn` (học từ diff đã accept).
 

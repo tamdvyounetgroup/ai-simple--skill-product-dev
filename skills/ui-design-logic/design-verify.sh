@@ -22,7 +22,9 @@
 #   sh design-verify.sh --staged   # lint NỘI DUNG ĐÃ STAGE (git show :file) — cho pre-commit
 #   sh design-verify.sh --self-test
 #
-# WIRE VÀO PRE-COMMIT (chặn thật) — thêm vào .githooks/pre-commit của project:
+# WIRE VÀO PRE-COMMIT: từ hook template v1.8.0, mục 1d2 TỰ GỌI file này qua junction
+#   .claude/skills/ui-design-logic/ (do `ai-simple init` tạo) — không cần wire tay nữa.
+#   Project KHÔNG dùng ai-simple: thêm tay vào pre-commit của bạn:
 #   if ! sh .claude/skills/ui-design-logic/design-verify.sh --staged; then FAIL=1; fi
 # (qua junction → bản global mới nhất; KHÔNG copy thư mục → tránh drift, bài học ai-simple #08/#10.)
 
@@ -70,9 +72,12 @@ lint_one() {
       echo "  BLOCK: Screen map khong co bang | ... | -> man hinh chua duoc liet ke dang bang"; rc=1
     else
       # cột bắt buộc trên header (01 §4-5): vào từ / đến để làm gì / step tiếp theo / primary action
+      # Alias RỘNG theo khái niệm, không bắt đúng từng chữ — BLOCK oan project dogfood vì header
+      # viết "Step tiếp mong muốn" thay vì "Step tiếp theo" là FP của cổng, không phải lỗi spec
+      # (hội đồng 2026-08-13). Khi thêm alias: thêm cả fixture ở --self-test.
       echo "$HDR" | grep -qiE 'vào từ|vao tu|entry' || { echo "  BLOCK: Screen map thieu cot 'Vao tu' (entry point, 01 §4)"; rc=1; }
       echo "$HDR" | grep -qiE 'làm gì|lam gi|đến để|den de|goal|mục đích|muc dich' || { echo "  BLOCK: Screen map thieu cot 'den de lam gi' (user goal, 01 §4)"; rc=1; }
-      echo "$HDR" | grep -qiE 'tiếp theo|tiep theo|next step' || { echo "  BLOCK: Screen map thieu cot 'Step tiep theo' (desired next step, 01 §4)"; rc=1; }
+      echo "$HDR" | grep -qiE 'tiếp theo|tiep theo|step tiếp|step tiep|tiếp mong muốn|tiep mong muon|next step' || { echo "  BLOCK: Screen map thieu cot 'Step tiep theo' (desired next step, 01 §4)"; rc=1; }
       echo "$HDR" | grep -qiE 'primary|hành động chính|hanh dong chinh' || { echo "  BLOCK: Screen map thieu cot 'Primary action' (1 man = 1 primary, 01 §5)"; rc=1; }
       # đếm dòng dữ liệu: bỏ header (dòng 1) + bỏ dòng separator (chỉ | - : space)
       ROWS=$(echo "$TBL" | awk 'NR==1{next} { t=$0; gsub(/[ \t|:-]/,"",t); if(t!="") print }')
@@ -149,6 +154,13 @@ if [ "$MODE" = "--self-test" ]; then
   if echo "$R" | grep -q "thieu muc 'Visual fingerprint'"; then
     echo "$R" | grep -q BLOCK && { echo "FAIL: WARN fingerprint keo theo BLOCK oan"; RC=1; } || echo "PASS: marketing-public thieu fingerprint -> chi WARN"
   else echo "FAIL: marketing-public thieu fingerprint khong WARN"; RC=1; fi
+
+  # 10) alias cột: header kiểu ForFish ("User đến để" / "Step tiếp mong muốn" / "Primary") → KHÔNG BLOCK oan
+  SMHDR_FF='## Screen map\n| # | Màn | Vào từ | User đến để | Step tiếp mong muốn | Primary | Density |\n|---|---|---|---|---|---|---|\n'
+  SMROW_FF='| 1 | Trang chủ | dock, login | Coi việc cần làm | chạm việc khẩn | (không) | M |\n'
+  printf "# x\n${FM}${LADDER}${SMHDR_FF}${SMROW_FF}${STATE}" > "$T/alias.md"
+  R=$(lint_one "$T/alias.md")
+  echo "$R" | grep -q "BLOCK" && { echo "FAIL: header alias hop le (kieu ForFish) van bi BLOCK:"; echo "$R"; RC=1; } || echo "PASS: alias cot — header 'Step tiep mong muon' qua, het FP dogfood"
 
   rm -rf "$T"
   [ "$RC" -eq 0 ] && echo "design-verify self-test: ALL PASS" || echo "design-verify self-test: CO FAIL"

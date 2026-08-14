@@ -62,7 +62,11 @@ Khớp với 01 §8: màn hình mới phá budget → đề xuất tái cấu tr
   covers-sync của 12 v2 làm hộ, mạnh hơn (block, có `gate: warn` knob, có fixture) — chỉ cần
   khai `covers:` đúng ở mục 1, KHÔNG viết check riêng (2 cơ chế cùng việc = drift đôi)
 - Vẫn thêm các pattern UI-riêng vào hook của project:
-  - `grep -E 'className="[^"]*\[[0-9]+px\]'` trên file staged → BLOCK: vi phạm thang spacing (04 §5)
+  - Grep spacing arbitrary — CHỈ scope prefix spacing, CẤM blanket mọi `[..px]`:
+    `grep -E 'className="[^"]*\b(p|px|py|pt|pb|pl|pr|m|mx|my|mt|mb|ml|mr|gap|gap-x|gap-y|space-x|space-y)-\[[0-9]'`
+    trên file staged → BLOCK: vi phạm thang spacing (04 §5). KHÔNG match `min-h-`/`h-`/`w-`/`text-`:
+    blanket từng đếm `min-h-[2.75rem]` (= touch target 44px SKILL.md BẮT BUỘC) thành vi phạm
+    (hội đồng 2026-08-13) — sizing là thang riêng, cỡ chữ đã có gate type-ramp (hook 1d)
   - Route/page mới trong code mà screen map không có dòng tương ứng → WARN (đối chiếu
     `_generated/routes.md`, xem mục 6)
   - Anti-slop máy-check (nguồn: Hallmark gate 48/34 — xem contract ref 08): **ĐÃ SHIP trong
@@ -74,8 +78,11 @@ Khớp với 01 §8: màn hình mới phá budget → đề xuất tái cấu tr
 - **`design-verify.sh --staged`** là cổng thứ hai, KHÁC việc với covers-sync ở trên — không drift đôi:
   covers-sync enforce *code ⇄ doc coupling* (UI đổi thì spec phải re-verify); design-verify enforce
   *spec đầy đủ* (thang user / screen map đủ cột + ≥1 dòng / ma trận trạng thái / frontmatter). Một cái
-  giữ doc khỏi mục, cái kia giữ doc khỏi rỗng. Wire cả hai vào `.githooks/pre-commit`:
-  `if ! sh .claude/skills/ui-design-logic/design-verify.sh --staged; then FAIL=1; fi`
+  giữ doc khỏi mục, cái kia giữ doc khỏi rỗng. Wire: hook template v1.8.0 mục 1d2 tự gọi qua junction
+  `.claude/skills/ui-design-logic/` do `ai-simple init` tạo — không còn bước wire tay
+- **Gate type-ramp (hook 1d, v1.8.0)**: design-system doc khai 1 dòng `type-ramp: <bậc1> <bậc2> ...`
+  (cùng đơn vị với code) → hook WARN mọi `text-[...]` ngoài ramp. Không khai → gate tắt, không đoán hộ.
+  Nguồn: hội đồng 2026-08-13, port ý tưởng rule design-system-font-size (Impeccable) tự viết
 
 ## 6. Generated vs authored cho UI (móc nguyên tắc 9 + 12)
 

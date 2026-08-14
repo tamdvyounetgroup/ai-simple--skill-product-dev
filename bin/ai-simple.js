@@ -100,6 +100,7 @@ const FILES = [
   { tpl: 'ops-schedules.md.template',        dest: 'docs/_templates/ops-schedules.md.template',        stackable: false },
   { tpl: 'ops-external-services.md.template',dest: 'docs/_templates/ops-external-services.md.template',stackable: false },
   { tpl: 'contract-doc.md.template',         dest: 'docs/_templates/contract-doc.md.template',         stackable: false },
+  { tpl: 'security-review.md.template',      dest: 'docs/_templates/security-review.md.template',      stackable: false },
 ];
 
 function runSelfTests() {
@@ -123,7 +124,7 @@ function cmdInit(args) {
   // M7: nhận ĐỦ các tên profile trong SKILL.md — về bộ file, mọi profile ≠ tiny cài như core
   // (khác biệt giữa scale/contracts/ops/optimization/parallel nằm ở NGUYÊN TẮC KÍCH HOẠT
   // trong SKILL.md/methodology, không phải ở file cài — in note cho rõ, đừng FAIL người dùng).
-  const PROFILES = ['tiny', 'core', 'full', 'scale', 'contracts', 'ops', 'optimization', 'parallel'];
+  const PROFILES = ['tiny', 'core', 'full', 'scale', 'contracts', 'ops', 'optimization', 'parallel', 'security'];
   const profile = (args.profile || '').toLowerCase();
   if (profile && !PROFILES.includes(profile)) { console.error(`FAIL: --profile phải là ${PROFILES.join('|')}`); process.exit(1); }
   if (profile && !['tiny', 'core', 'full', ''].includes(profile))
@@ -155,6 +156,27 @@ function cmdInit(args) {
 
   const hp = git(['config', 'core.hooksPath', '.githooks']);
   console.log(`  ${hp.status === 0 ? 'OK   ' : 'FAIL '} git config core.hooksPath .githooks`);
+
+  // Phần NÃO: junction 4 skill vào .claude/skills — hội đồng 2026-08-13: init chưa từng cài skill,
+  // project tiêu thụ chỉ có mỗi ai-simple-product-dev trong .claude/skills, còn dòng wire
+  // design-verify trỏ đường dẫn không ai tạo. JUNCTION, KHÔNG COPY (bài học #08/#10: copy = drift).
+  const skillsSrc = path.join(PKG_ROOT, 'skills');
+  if (fs.existsSync(skillsSrc)) {
+    fs.mkdirSync(path.join('.claude', 'skills'), { recursive: true });
+    for (const s of fs.readdirSync(skillsSrc)) {
+      const src = path.join(skillsSrc, s);
+      if (!fs.statSync(src).isDirectory()) continue;
+      const dst = path.join('.claude', 'skills', s);
+      let already = false; try { fs.lstatSync(dst); already = true; } catch { /* chưa có */ }
+      if (already) { console.log(`  SKIP  .claude/skills/${s} — đã tồn tại`); continue; }
+      try {
+        fs.symlinkSync(src, dst, 'junction'); // Windows: junction không cần admin; POSIX: dir symlink
+        console.log(`  OK    .claude/skills/${s} (junction → package — không copy, chống drift)`);
+      } catch (e) {
+        console.log(`  WARN  .claude/skills/${s}: không tạo được junction (${e.code || e.message}) — tạo tay theo README §Cài 5 skill`);
+      }
+    }
+  }
 
   console.log('\nSelf-test (tin instrument sau khi nó tự chứng minh):');
   let failed = false;
@@ -221,6 +243,26 @@ function cmdDoctor() {
     add(`app-map: ${docs.length} docs, ${withCovers.length} có covers`, withCovers.length > 0 || docs.length <= 1 ? 'PASS' : 'WARN', withCovers.length === 0 && docs.length > 1 ? 'doc gắn code chưa khai covers: — nằm ngoài 2 cổng bảo vệ (nguyên tắc 12)' : '');
     add('doc-status.md', fs.existsSync('docs/app-map/_generated/doc-status.md') ? 'PASS' : 'WARN', fs.existsSync('docs/app-map/_generated/doc-status.md') ? '' : 'chưa sinh — chạy `ai-simple doc-status` (cổng đọc cần file này)');
   } else add('docs/app-map', 'WARN', 'chưa có — chạy `ai-simple init`');
+
+  // Lớp DESIGN (hội đồng 2026-08-13): doctor trước đây 0/10 check chạm lớp design —
+  // cổng design tắt hay bật không ai biết. 3 check, guarded để repo không-UI im lặng.
+  const uiSignals = fs.readdirSync('.').some((f) => f.startsWith('tailwind.config.'))
+    || fs.existsSync('src/app/globals.css') || fs.existsSync('app/globals.css');
+  const dvPath = path.join('.claude', 'skills', 'ui-design-logic', 'design-verify.sh');
+  let dvExists = false; try { dvExists = fs.statSync(dvPath).isFile(); } catch { /* junction chưa có */ }
+  if (uiSignals || dvExists) {
+    add('skill ui-design-logic (junction .claude/skills)', dvExists ? 'PASS' : 'WARN',
+      dvExists ? '' : 'repo có dấu hiệu UI mà skill chưa cài — `ai-simple init` tạo junction (design-verify + hook 1d2 đang tắt)');
+    if (dvExists) {
+      const r = sh([dvPath, '--self-test']);
+      add('design-verify --self-test', r.status === 0 ? 'PASS' : 'FAIL', r.status === 0 ? '' : (r.stdout + r.stderr).split('\n').find((l) => l.includes('FAIL')) || 'xem output');
+    }
+    if (uiSignals && fs.existsSync('docs/app-map')) {
+      const hasDesignSpec = fs.readdirSync('docs/app-map').some((f) => /design-spec/i.test(f)) || fs.existsSync('DESIGN-SPEC.md');
+      add('design-spec tồn tại', hasDesignSpec ? 'PASS' : 'WARN',
+        hasDesignSpec ? '' : 'repo có UI (tailwind/globals.css) mà chưa có design-spec trong app-map — pipeline ui-design-logic bước 1 chưa chạy');
+    }
+  }
 
   // NT13 — claims registry (guarded: chỉ khi tồn tại, repo không parallel thì im lặng)
   const common = git(['rev-parse', '--git-common-dir']);
@@ -299,13 +341,64 @@ function passthrough(scriptArgs) {
   process.exit(r.status);
 }
 
-function cmdSelfTest() { // dùng cho `npm test` của chính package: chạy self-test 2 template từ package
+function cmdSelfTest() { // dùng cho `npm test` của chính package: chạy self-test template + skill-verifier
   let failed = false;
   for (const [label, file, arg] of [['hook', TPL('pre-commit.hook.template'), '--self-test'], ['report', TPL('doc-health-report.sh.template'), '--self-test']]) {
     const r = sh([file, arg], { cwd: PKG_ROOT });
     console.log(`${r.status === 0 ? 'PASS' : 'FAIL'} template ${label} --self-test`);
     if (r.status !== 0) { failed = true; console.log(r.stdout + r.stderr); }
   }
+  // Skill-verifier fixtures (G1 bộ chấm điểm — self-test hợp nhất): MỌI skills/*/*-verify.sh có
+  // --self-test phải chạy trong `npm test`, không suite mồ côi (trước đây chỉ security-verify được nối,
+  // 3 cái kia PASS nhưng ngoài gate -> rot lúc nào không biết). Auto-discover, không hardcode tên.
+  const skillsDir = path.join(PKG_ROOT, 'skills');
+  const verifiers = fs.existsSync(skillsDir)
+    ? fs.readdirSync(skillsDir)
+        .map((s) => {
+          const dir = path.join(skillsDir, s);
+          if (!fs.statSync(dir).isDirectory()) return null;
+          // -verify.sh (cổng spec) + -lane.sh (classifier — hội đồng 2026-08-13): mọi script
+          // có --self-test trong skill đều vào gate, không script nào rot ngoài tầm nhìn
+          const vfs = fs.readdirSync(dir).filter((f) => /-(verify|lane)\.sh$/.test(f));
+          return vfs.length ? vfs.map((vf) => ({ skill: s, file: path.join(dir, vf) })) : null;
+        })
+        .filter(Boolean)
+        .flat()
+        .sort((a, b) => a.skill.localeCompare(b.skill) || a.file.localeCompare(b.file))
+    : [];
+  for (const { skill, file } of verifiers) {
+    const r = sh([file, '--self-test'], { cwd: PKG_ROOT });
+    console.log(`${r.status === 0 ? 'PASS' : 'FAIL'} skill ${skill} ${path.basename(file)} --self-test`);
+    if (r.status !== 0) { failed = true; console.log(r.stdout + r.stderr); }
+  }
+  // Identity-numbers guard (hội đồng Fable, đề xuất #3): các "số bản sắc" (số nguyên tắc/lớp/skill)
+  // drift ở ~8 chỗ mỗi lần thêm nguyên tắc. Fail khi doc HIỆN HÀNH còn số cũ. Scope CHỈ các file
+  // sống (README/SKILL/methodology-README/skills) — CHANGELOG/ADR là lịch sử, được phép giữ số cũ.
+  const STALE = [/1[0-3] nguyên tắc/, /1[0-3] (core )?principles/i, /[45] lớp/, /[45] layers/i, /[34]-skill/, /composable principles in [45] layers/i];
+  const LIVE = ['README.md', 'SKILL.md', 'methodology/README.md',
+    ...['ba-flow-logic', 'ui-design-logic', 'ui-ux-triage', 'security-logic'].map(s => `skills/${s}/SKILL.md`)];
+  for (const f of LIVE) {
+    const p = path.join(PKG_ROOT, f);
+    if (!fs.existsSync(p)) continue;
+    const body = fs.readFileSync(p, 'utf8');
+    for (const re of STALE) {
+      const m = body.match(re);
+      if (m) { failed = true; console.log(`FAIL identity-numbers: '${m[0]}' còn trong ${f} — số bản sắc đã drift (hiện hành: 14 nguyên tắc / 6 lớp / 5-skill)`); }
+    }
+  }
+  if (!LIVE.some(f => STALE.some(re => fs.existsSync(path.join(PKG_ROOT, f)) && fs.readFileSync(path.join(PKG_ROOT, f), 'utf8').match(re))))
+    console.log('PASS identity-numbers (14 nguyên tắc / 6 lớp / 5-skill nhất quán trong docs sống)');
+  // Cross-cut coverage guard: 4 skill anh em PHẢI nhắc security-logic (sơ đồ 5-skill / handoff) —
+  // identity-numbers chỉ đếm số, guard này bắt "skill thiếu sơ đồ" (reviewer cuối trừ điểm đúng lỗ này).
+  let xcutOk = true;
+  for (const s of ['ba-flow-logic', 'ui-design-logic', 'ui-ux-triage']) {
+    const p = path.join(PKG_ROOT, 'skills', s, 'SKILL.md');
+    if (fs.existsSync(p) && !fs.readFileSync(p, 'utf8').includes('security-logic')) {
+      failed = true; xcutOk = false;
+      console.log(`FAIL cross-cut: skills/${s}/SKILL.md không nhắc security-logic — thiếu sơ đồ 5-skill/handoff (NT14)`);
+    }
+  }
+  if (xcutOk) console.log('PASS cross-cut (cả 3 skill anh em khai security-logic cắt ngang)');
   process.exit(failed ? 1 : 0);
 }
 
@@ -327,7 +420,7 @@ const HELP = `ai-simple v${PKG.version} — lớp máy của phương pháp ai-s
 (não — /fl, /audit, verify-on-use — sống trong Claude Code skill cùng repo)
 
 Usage:
-  npx ai-simple init [--stack supabase|prisma|custom] [--profile tiny|core|full|scale|contracts|ops|optimization|parallel] [--force] [--no-workflow]
+  npx ai-simple init [--stack supabase|prisma|custom] [--profile tiny|core|full|scale|contracts|ops|optimization|parallel|security] [--force] [--no-workflow]
       Cài hook + doc-health + templates + workflow, set hooksPath, chạy self-test.
       --profile tiny: chỉ CLAUDE.md + risk tier (project < 10 file); repo nhỏ được tự gợi ý.
       Các profile ngoài tiny: bộ file cài giống core — khác biệt là nguyên tắc nào BẬT (SKILL.md §Bước 0).

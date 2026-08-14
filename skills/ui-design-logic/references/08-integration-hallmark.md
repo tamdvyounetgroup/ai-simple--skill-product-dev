@@ -1,7 +1,9 @@
 # 08 — Contract với Hallmark (anti-slop layer cho landing/marketing page)
 
-[Hallmark](https://github.com/Nutlope/hallmark) (MIT, đối chiếu bản v1.1.0) là design skill
-chống "AI-looking UI" — mạnh ở macrostructure, theme, visual fingerprint, slop-test 58 gate
+[Hallmark](https://github.com/Nutlope/hallmark) (MIT, đối chiếu commit `13ac0ec` 2026-08 — upstream
+KHÔNG có tag/version pin được, chuỗi "1.1.0" trong repo họ đứng yên qua nhiều commit và số gate
+tự khai lệch nhau giữa 2 file cùng cây; vì vậy KHÔNG ghi version/số gate của họ ở đây) là design
+skill chống "AI-looking UI" — mạnh ở macrostructure, theme, visual fingerprint, bộ slop-test
 cho **landing/marketing page**. Đây là file CONTRACT: route + precedence + handoff.
 **KHÔNG copy nội dung Hallmark vào repo này** (bài học #08/#10: copy = drift; Hallmark v1.1
 vừa tách monolith thành lazy-load index — fork tóm tắt là dựng lại đúng cái nó vừa bỏ).
@@ -26,10 +28,12 @@ thì Hallmark mới được vào. Không khai = mặc định product UI = Hall
 
 Khi Hallmark chạy trong project dùng skill này:
 
-- **Font**: rule FONT trong SKILL.md override toàn bộ theme catalog. System font stack mặc định;
-  CẤM Be Vietnam Pro / Plus Jakarta Sans (= theme Hum của Hallmark — không dùng theme này) /
-  Fraunces; display font chỉ khi user YÊU CẦU rõ và chỉ cho hero landing. Theme Hallmark
-  nhập theo kiểu **palette-only**: lấy paper/accent OKLCH, bỏ trường font.
+- **Font**: rule FONT [DEF] trong SKILL.md override toàn bộ theme catalog. System font stack mặc định;
+  font từ theme Hallmark KHÔNG tự động được nhập — muốn dùng phải qua đúng 2 cửa của [DEF]
+  (user chỉ đích danh, hoặc `## Ngoại lệ đã duyệt` với lý do audience/kỹ thuật); font nằm trong
+  Anti-references của spec project (vd theme Hum = Plus Jakarta Sans nếu project đã chê) → bỏ theme đó.
+  Display font chỉ cho hero landing, cùng cơ chế. Theme Hallmark nhập theo kiểu **palette-only**:
+  lấy paper/accent OKLCH, bỏ trường font.
 - **Màu**: "1 neutral ramp + 1 accent + 4 semantic. Hết" + thuật toán hoà màu logo (04 §2)
   thắng palette theme khi có logo/brand. Map palette vào shadcn variables (04 §5), không
   emit `tokens.css` ở root.
@@ -55,7 +59,7 @@ Sau khi Hallmark build/redesign một landing page, ghi ngược vào DESIGN-SPE
 ## Visual fingerprint — <tên màn hình> (type: marketing-public)
 - Macrostructure: <tên>          - Theme gốc: <tên, palette-only>
 - Paper/accent: <OKLCH → biến shadcn đã map>
-- Enrichment: <E# hoặc none>     - Slop-test: <N>/58 pass (gate fail còn lại: ...)
+- Enrichment: <E# hoặc none>     - Slop-test: pass/fail theo bộ gate bản Hallmark ĐANG CÀI (ghi commit; không ghi tổng số gate — số đó trôi theo upstream)
 - Mobile verify: 320 / 375 / 768 / 1440 ✓
 ```
 

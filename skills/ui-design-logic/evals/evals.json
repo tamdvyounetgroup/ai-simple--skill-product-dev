@@ -26,7 +26,7 @@
       "id": 3,
       "eval_name": "font-ban-and-ai-text",
       "prompt": "Làm màn hình cài đặt tài khoản cho app nội bộ của công ty. Chọn font nào đẹp đẹp trendy chút, thêm mô tả dưới mỗi mục cho người dùng dễ hiểu nhé.",
-      "expected_output": "Từ chối font trendy — dùng system font stack theo rule FONT (SKILL.md); tuyệt đối không Be Vietnam Pro / Plus Jakarta Sans / Fraunces kể cả khi user nói 'trendy chút' (chỉ dùng font riêng khi user chỉ đích danh font). Không viết subtitle/văn thuyết minh dưới mỗi mục — UI chỉ có nhãn chức năng ngắn; giải thích nếu thật cần thì tooltip. Nêu rõ 2 quyết định này với user thay vì im lặng làm theo.",
+      "expected_output": "Giữ system font stack theo rule FONT [DEF] (SKILL.md): 'trendy chút' KHÔNG phải lý do hợp lệ — [DEF] chỉ mở khi user chỉ đích danh font, hoặc có dòng '## Ngoại lệ đã duyệt' trong design-spec với lý do audience/kỹ thuật (vd chữ to cho user lớn tuổi, subset tiếng Việt). Nêu rõ đường ngoại lệ đó cho user thay vì cấm suông. Không viết subtitle/văn thuyết minh dưới mỗi mục — UI chỉ có nhãn chức năng ngắn; giải thích nếu thật cần thì tooltip. Nêu rõ 2 quyết định này với user thay vì im lặng làm theo.",
       "files": []
     },
     {

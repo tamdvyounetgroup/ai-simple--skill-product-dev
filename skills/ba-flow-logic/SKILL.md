@@ -16,10 +16,11 @@ USER → nghiệp vụ của user → cross-user handoff → flow (Input→Outpu
 
 ---
 
-## 0. Vị trí trong hệ 4-skill (ĐỌC TRƯỚC)
+## 0. Vị trí trong hệ 5-skill (ĐỌC TRƯỚC)
 
 ```
 [ba-flow-logic] (nhu cầu→ba-spec) → ui-design-logic (→design-spec) → build → ui-ux-triage (vận hành/sửa)
+        │←──────────── security-logic rà soát CẮT NGANG mọi pha (code/doc/dep — NT14) ────────────→│
         └──────────────── tất cả trên nền ai-simple (rail + truth + tier + memory + verify) ────────────┘
 ```
 
@@ -37,8 +38,10 @@ Kích hoạt khi user:
 - "làm BA", "phân tích nghiệp vụ", "viết yêu cầu / spec / SRS", "vẽ flow", "tối ưu flow/quy trình"
 - Mô tả một nhu cầu/tính năng MỚI còn mơ hồ ("tôi muốn làm app X", "thêm mảng Y cho hệ thống")
 - "acceptance criteria", "định nghĩa đúng-sai cho tính năng"
-- Nhận **handoff ngược** từ `ui-ux-triage` (code khớp spec mà HÀNH VI vẫn sai) hoặc từ
-  `ui-design-logic` (06 §3 case C — đang design phát hiện spec THIẾU hành vi; xem ref 04)
+- Nhận **handoff ngược** từ `ui-ux-triage` (code khớp spec mà HÀNH VI vẫn sai), từ
+  `ui-design-logic` (06 §3 case C — đang design phát hiện spec THIẾU hành vi; xem ref 04),
+  hoặc từ `security-logic` (AC cho phép hành vi KHÔNG AN TOÀN — vd thiếu ràng buộc quyền/xác thực
+  trong flow → sửa AC theo §7, không chỉ vá code; format HANDOFF như W3)
 
 KHÔNG kích hoạt (→ skill khác):
 - Thiết kế màn, layout, "làm đẹp", chọn component/màu → **ui-design-logic**

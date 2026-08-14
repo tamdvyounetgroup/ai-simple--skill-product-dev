@@ -7,19 +7,23 @@ Cả hai đều là bug đo đếm được, không phải gu.
 
 | Mức | Dùng cho | Giới hạn cứng trên 1 viewport (chưa scroll) |
 |---|---|---|
-| **L** (thoáng) | Landing, onboarding, empty state, auth | 1 thông điệp chính + 1 primary action. Hero chiếm ≥ 50% viewport |
+| **L** (thoáng) | Landing, onboarding, empty state, auth | 1 thông điệp chính + 1 primary action. Hero ≥ 50% viewport CHỈ áp cho landing/onboarding — auth/empty state không cần hero, chỉ cần 1 thông điệp + 1 CTA (empty state theo câu chuẩn 03 §4) |
 | **M** (vừa) | Dashboard, detail, settings | ≤ 6 khối thông tin (metric card, chart, list...) + 1 primary action |
 | **H** (đặc) | Table nghiệp vụ, admin, công cụ chuyên dùng hằng ngày | 1 widget chủ đạo (table/map) chiếm ≥ 60% diện tích + toolbar; KHÔNG thêm khối trang trí |
 
 Quy tắc chọn: user dùng màn hình này **mỗi ngày nhiều giờ** → H (họ cần dữ liệu, không cần khoảng thở).
 User **thỉnh thoảng ghé** → M. User **lần đầu gặp** → L.
 
-- Trên 1 màn hình M: tối đa 4 metric card. Metric thứ 5+ → màn hình báo cáo riêng
+- Trên 1 màn hình M: **tối đa 4 metric card** — ĐÂY LÀ NHÀ DUY NHẤT của con số này
+  (03 §1 và kim tự tháp dưới đều trỏ về đây). Metric thứ 5+ → màn hình báo cáo riêng (density H)
 - "Khối thông tin" đếm cả banner, tip, quảng cáo tính năng — chúng ăn budget như widget thật
 - Mobile: budget giảm một nửa (M = 3 khối/viewport), vì viewport chỉ bằng 1/3
-- **Kim tự tháp dashboard**: hàng 1 = 4–6 KPI; hàng 2 = 1–2 chart lớn; hàng 3 = table.
+- **Kim tự tháp dashboard (khớp budget M ≤ 6 khối, không phải luật riêng)**: hàng 1 = 4 KPI
+  (trần metric card ở trên); hàng 2 = 1 chart lớn; hàng 3 = 1 table → đúng 6 khối.
+  Màn báo cáo chuyên dụng (density H) mới được 5–6 KPI + 2 chart.
   KPI quan trọng nhất đặt GÓC TRÊN-TRÁI — 80% thời gian nhìn dồn vào nửa trái + đỉnh viewport (NN/g).
-  Chart chỉ dùng bar (so độ dài) và line (vị trí) — cấm pie/gauge/3D; hue mã hoá DANH MỤC, không mã hoá độ lớn
+  Chart chỉ dùng bar (so độ dài) và line (vị trí) — cấm pie/gauge/3D; hue mã hoá DANH MỤC
+  bằng **categorical palette khai riêng trong spec (04 §1)** — không trưng dụng 4 màu semantic
 - **Density H là enum, không phải hằng số**: table nghiệp vụ ship 3 nấc chiều cao hàng
   nén 40 / chuẩn 48 / thoáng 56px, user chuyển được và lựa chọn PHẢI được nhớ qua session
   (chuẩn ngành: Carbon 5 nấc 24–64, Airtable 4 nấc mặc định nấc ngắn nhất)
@@ -88,7 +92,8 @@ Nén:    ┌──────────────────────�
 Thứ tự đọc: Label → Value → Delta → Timeframe (Kuznetsova, KPI card anatomy):
 0. Mốc thời gian dữ liệu ("30 ngày qua") — 12px, góc trên phải hoặc cạnh label
 1. Label (13px, neutral-500)
-2. Số chính + đơn vị — **hero KPI 32–40px, metric phụ 20–24px; luôn 2–3× cỡ label** —
+2. Số chính + đơn vị — **hero KPI 32–40px (2–3× cỡ label); metric phụ 20–24px (≥ 1,5× cỡ label —
+   tỷ lệ 2–3× CHỈ áp cho hero, 20/13 = 1,5× là đúng chuẩn cho metric phụ, không phải vi phạm)** —
    và NGAY CẠNH nó: `/tổng` hoặc `(%)` nếu số chỉ có nghĩa khi so với tổng
 3. Delta: DẤU + mũi tên + mốc so sánh tường minh (`▲ +12,5% so với tháng trước`) — số tuyệt đối
    không có mốc so sánh là số mồ côi. Màu: green/red theo nghĩa tốt/xấu; delta trung tính hướng

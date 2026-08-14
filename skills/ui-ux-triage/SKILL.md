@@ -5,19 +5,21 @@ description: "Team-agent UI/UX triage + fix loop — pha VẬN HÀNH của pipel
 
 # UI/UX Triage — Team Agent (composable, repo-agnostic)
 
-Triage UI/UX chạy qua **team agent** (không phải 1 agent đơn): test từng bước → quan sát → phân loại → fix → test lại. Không chắc → telegram user kèm ảnh. Skill này **repo-agnostic** (chạy mọi repo) và là **một mắt trong hệ 4-skill** — nó không tự quyết cái thuộc skill khác.
+Triage UI/UX chạy qua **team agent** (không phải 1 agent đơn): test từng bước → quan sát → phân loại → fix → test lại. Không chắc → telegram user kèm ảnh. Skill này **repo-agnostic** (chạy mọi repo) và là **một mắt trong hệ 5-skill** — nó không tự quyết cái thuộc skill khác.
 
 ---
 
-## 0. Vị trí trong hệ 4-skill (ĐỌC TRƯỚC)
+## 0. Vị trí trong hệ 5-skill (ĐỌC TRƯỚC)
 
 ```
 BA (nhu cầu→ba-spec) → ui-design-logic (→design-spec) → build → [ui-ux-triage] (VẬN HÀNH/sửa)
+        │←──────────── security-logic rà soát CẮT NGANG mọi pha (code/doc/dep — NT14) ────────────→│
         └──────────────── tất cả trên nền ai-simple (rail + truth + tier + memory + verify) ────────────┘
 ```
 
 - **Skill này = pha VẬN HÀNH.** Code đã có, đang chạy → nó test, bắt drift, sửa.
 - **Oracle của nó đến từ pha trên** (xem §3): `ba-spec` = "đúng hành vi chưa", `design-spec` = "đúng giao diện chưa".
+- **Handoff sang security-logic**: defect có mùi AN TOÀN (lộ data, bypass quyền, injection nghi ngờ) → không tự vá kiểu triage; chuyển `security-logic` review (NT14) rồi fix qua tier.
 - **Defer sang ai-simple** (§7): risk-tier 06, memory 07, verify 12, gate 08 — KHÔNG tự chế lại.
 - **Handoff NGƯỢC về BA** (§5 bước 4c): nếu defect hóa ra là *nhu cầu thiếu/sai* (code khớp spec, nhưng spec sai) → đó là việc BA, không phải fix triage.
 

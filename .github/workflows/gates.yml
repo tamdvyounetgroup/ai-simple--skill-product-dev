@@ -1,0 +1,59 @@
+# G5 của bộ chấm điểm — CI matrix 2 OS chạy G1–G4 + G2 stranger-path.
+# Lý do 2 OS: cả wave W1 v1.5.0 là bug CHỈ-Windows (path `C:\` không match `case /*)`).
+# Timing hook chỉ ĐO-VÀ-GHI (advisory), KHÔNG assert — CI runner dao động.
+name: gates
+
+on:
+  push:
+    branches: [main]
+  pull_request: {}
+
+jobs:
+  gates:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # dogfood-gate/self-test đọc git; parallel self-test cần lịch sử
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Dogfood: bật hook của chính repo trên runner (hooksPath là per-máy, không commit được)
+      - name: Dogfood — set hooksPath
+        run: git config core.hooksPath .githooks
+
+      # G1 self-test hợp nhất (hook 21 fixture + report + 4 skill-verifier + identity + cross-cut)
+      - name: G1 — npm test (self-test hợp nhất)
+        run: npm test
+
+      # G1 phần NT13 (42 test nghiệm thu parallel) — tách vì chậm (~2-4 phút Windows)
+      - name: G1b — parallel self-test (NT13)
+        run: node bin/ai-simple.js parallel self-test
+
+      # G3 ship-gate (require-coverage + template-coverage + link-check trên tarball)
+      - name: G3 — ship-gate
+        run: npm run ship-gate
+
+      # G4 dogfood-gate (hook tự cài + đồng bộ template + docs không over-claim)
+      - name: G4 — dogfood-gate
+        run: npm run dogfood-gate
+
+      # G2 stranger-path E2E (pack -> cài tarball -> init -> hook chặn thật + precision + migrate)
+      - name: G2 — stranger-path E2E
+        run: npm run stranger-path
+
+      # ADVISORY: đo timing hook, chỉ GHI, không assert (chống flake CI runner)
+      - name: Advisory — timing hook (đo-và-ghi, không chặn)
+        continue-on-error: true
+        shell: bash
+        run: |
+          t0=$(date +%s%N)
+          sh templates/pre-commit.hook.template --self-test >/dev/null 2>&1 || true
+          t1=$(date +%s%N)
+          echo "::notice::hook --self-test ~$(( (t1 - t0) / 1000000 ))ms trên ${{ matrix.os }} (advisory)"

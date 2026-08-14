@@ -21,7 +21,7 @@ có chủ đích, không phải hệ quả của CSS.
 
 | Desktop | Tablet | Mobile |
 |---|---|---|
-| Sidebar đầy đủ (icon + label) | Sidebar thu rail (icon, tooltip) | Bottom tabs ≤ 5 (job chính) + tab "Menu" |
+| Sidebar đầy đủ (icon + label) | Sidebar thu rail (icon, tooltip) | Bottom tabs 4 job chính + tab "Menu" (TỔNG ≤ 5 — M3 hard max, khớp SKILL.md và 01 §6) |
 | Table đầy đủ cột | Table ẩn cột phụ (ưu tiên trong spec) | List card: mỗi hàng thành card 2–3 dòng (title + 2 thuộc tính + badge). KHÔNG scroll ngang table |
 | Drawer phải 480px | Drawer phải full-height | Bottom sheet (kéo lên), không drawer ngang |
 | Modal giữa màn hình | Modal | Modal nhỏ giữ nguyên; modal form → full-screen page có Back |

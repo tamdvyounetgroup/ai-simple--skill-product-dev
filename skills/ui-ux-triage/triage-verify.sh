@@ -248,7 +248,32 @@ case "${1:-}" in
     rm "$TH2/.ai-simple/config"
     printf '2020-01-01 | r | iter=1 | buckets=D:1 | decided=x | verify=p | telegram=ok\n' > "$TP/test-reports/triage/triage-log.md"
     if HOME="$TH2" AI_SIMPLE_NOTIFY= check_reads "$TP" >/dev/null; then echo "PASS: chống-oan log lịch sử — telegram=ok cũ không FAIL"; else echo "FAIL: log lịch sử bị hậu-kiểm chặn oan"; RC2=1; fi
-    rm -rf "$T" "$T2" "$T3" "$T4" "$TH" "$TH2" "$TU5" "$TP"
+    # 13) Wave 2a — doc-lint telegram THUẦN 2-marker [DETECTED] + assertion default-path [ENFORCED].
+    # Path resolve theo dirname "$0" — sống được qua junction ở repo tiêu thụ.
+    DDIR=$(dirname "$SELF")
+    doclint_telegram() { grep -rni telegram "$1" --include='*.md' 2>/dev/null | grep -v 'NOTIFY-gated\|telegram-ref' || true; }
+    TDL=$(mktemp -d) || exit 1
+    printf 'gui telegram khi consent hoi du [NOTIFY-gated]\n' > "$TDL/a.md"
+    [ -z "$(doclint_telegram "$TDL")" ] && echo "PASS: doc-lint — dong gui co marker → im lang" || { echo "FAIL: doc-lint WARN oan dong co marker"; RC2=1; }
+    printf 'hay gui telegram ngay cho user\n' > "$TDL/a.md"
+    [ -n "$(doclint_telegram "$TDL")" ] && echo "PASS: doc-lint — chi dao gui KHONG marker bi phat hien" || { echo "FAIL: doc-lint bo sot dong khong marker"; RC2=1; }
+    printf 'log telegram=ok|fail|degraded|off [telegram-ref]\n' > "$TDL/a.md"
+    [ -z "$(doclint_telegram "$TDL")" ] && echo "PASS: doc-lint — [telegram-ref] im lang (chong nhieu)" || { echo "FAIL: doc-lint WARN oan telegram-ref"; RC2=1; }
+    REALHITS=$(doclint_telegram "$DDIR")
+    if [ -n "$REALHITS" ]; then echo "WARN: doc-lint telegram (DETECTED, khong FAIL) — dong thieu marker:"; echo "$REALHITS" | head -5
+    else echo "PASS: doc-lint — moi dong telegram trong *.md cua skill co marker"; fi
+    N_MD=$( cd / && grep -rli telegram "$DDIR" --include='*.md' 2>/dev/null | wc -l )
+    [ "$N_MD" -ge 1 ] && echo "PASS: doc-lint resolve theo dirname — quet dung file tu cwd khac" || { echo "FAIL: doc-lint khong thay file khi cwd khac"; RC2=1; }
+    # assertion default-path — pattern GHÉP lúc chạy (literal tự-match chính dòng này đã bị máy bác)
+    P='scripts/notify-'; P="${P}telegram.sh"
+    if ! grep -rq --include='*.md' "$P" "$DDIR" 2>/dev/null && ! grep -q "$P" "$DDIR/triage-verify.sh" "$DDIR/triage.config.template" 2>/dev/null; then
+      echo "PASS: assertion default-path — path cu da sach khoi md + verifier + config-template"
+    else echo "FAIL: assertion default-path — path cu con xuat hien trong skill"; RC2=1; fi
+    printf 'dung %s nhe [telegram-ref]\n' "$P" > "$TDL/b.md"
+    grep -rq --include='*.md' "$P" "$TDL" && echo "PASS: assertion bat path cu trong md DU co marker (lint lot, assertion bat)" || { echo "FAIL: assertion khong bat path cu"; RC2=1; }
+    rm -f "$TDL/b.md"; printf 'sach\n' > "$TDL/a.md"
+    grep -rq --include='*.md' "$P" "$TDL" && { echo "FAIL: assertion FAIL oan tap hau-PR sach"; RC2=1; } || echo "PASS: assertion tap hau-PR sach → im lang"
+    rm -rf "$T" "$T2" "$T3" "$T4" "$TH" "$TH2" "$TU5" "$TP" "$TDL"
     echo "--- self-test: $([ $RC2 -eq 0 ] && echo ALL PASS || echo CÓ FAIL) ---"; exit $RC2 ;;
 esac
 

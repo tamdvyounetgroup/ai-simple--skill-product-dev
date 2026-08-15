@@ -1,0 +1,6 @@
+{
+  "_comment": "NGUỒN DUY NHẤT của số bản sắc (Wave 2a) — đổi số ở đây PHẢI kèm đổi thực tế (số file methodology/, số skill) cùng commit; enforcer trong npm test so cả hai chiều: manifest vs thực-tế-đếm-được, và manifest vs mọi biến-thể số+danh-từ trong docs sống.",
+  "principles": 15,
+  "layers": 6,
+  "skills": 5
+}

@@ -4,6 +4,33 @@ Toàn bộ lịch sử tiến hóa của phương pháp. README/methodology dùn
 
 Convention từ v1.10.0: mỗi mục version có thể chứa dòng `**RE-APPLY**: <việc project tiêu thụ cần làm lại sau update>` — `ai-simple update` tự trích các dòng này trong khoảng (bản-cũ → bản-mới] in thành checklist. Không có dòng RE-APPLY = update xong là xong.
 
+## v1.12.0 — 2026-08-15 (Wave 2a — deterministic core kiểm NỘI DUNG: gate hết kiểm-hình-thức, mutation suite 0 false-pass)
+
+Đóng chẩn đoán nền thứ hai của hội đồng: "deterministic gate mới kiểm hình thức, chưa kiểm nội dung".
+
+- **ba-verify 4 luật nội dung [ENFORCED]**: AC-ID duy nhất · `Test:` ∈ {e2e,integration,unit,manual} ·
+  đúng MỘT cụm Given/When/Then · `Maps to: <ID>` phải có định nghĩa trong file (không có Maps-to thì
+  không bắt). Assert-định-lượng giữ WARN [DETECTED — heuristic ngôn ngữ cấm nâng BLOCK, án lệ BLOCK-oan].
+  Fixture chống-oan = đúng format ba-spec ForFish thật (đã lint file 08: 0 BLOCK).
+- **security-verify parse GIÁ TRỊ declared-coverage [ENFORCED]**: đủ A=/B=/C= không rỗng —
+  `declared-coverage: xyz` hết PASS giả; over-claim giữ WARN, nhãn DETECTED ghi vào SKILL.md.
+- **Space-safe toàn tuyến [ENFORCED]**: 3 verifier `--staged`/all-mode chuyển while-read + fail-closed
+  khi `git show` fail; hook chuyển word-split NEWLINE-only + `core.quotepath=false` (đã kiểm 14 vòng
+  for đều duyệt dữ liệu newline/glob) — file tên dấu cách/tiếng Việt hết bị skip im lặng; fixture:
+  secret trong file tên-có-dấu-cách bị BLOCK, ba-spec "my feature.md" nội dung sai bị BLOCK.
+- **Identity-manifest [ENFORCED]**: `system-manifest.json` là nguồn số bản sắc duy nhất; enforcer
+  đếm THỰC-TẾ (15 file methodology, 5 skill) so manifest + whitelist mọi biến-thể "N nguyên
+  tắc/principles/lớp/layers/N-skill" trong docs sống (ranh giới chống-oan: cụm subset "1 nguyên tắc",
+  "3 lớp" hợp lệ); guard blacklist 2 đời regex đã GỠ sau khi enforcer xanh.
+- **Doc-lint telegram thuần 2-marker [DETECTED]** + assertion default-path dạng ghép-pattern [ENFORCED]
+  trong triage-verify --self-test; path resolve qua dirname (sống qua junction), fixture cwd-khác.
+- **Mutation suite** `scripts/mutation-suite.sh` (chặng 1): 10 ca — 7 chặn-đúng + 3 chống-oan,
+  0 FALSE-PASS / 0 FALSE-BLOCK; chạy đủ bảng trong npm test.
+- **Session-audit 2 pha**: CẮT ra PR riêng theo đúng điều khoản "hạng mục CÓ THỂ CẮT của 2a"
+  (kế hoạch hội đồng) — tầng ADVISORY patch-file + PreToolUse opt-in đã ship từ v1.11.0.
+- **RE-APPLY**: repo nào wire `ba-verify --staged` qua exit-gate: spec MỚI từ nay cần đủ 1 cụm
+  Given/When/Then + Test đúng enum + AC-ID duy nhất (spec đã commit không bị đụng — gate chỉ chặn nội dung staged mới).
+
 ## v1.11.0 — 2026-08-15 (Safety release Wave 1 — hội đồng 13 vòng 99.23/100: mktemp fail-fast, consent NOTIFY, eol=lf)
 
 Số MINOR (không phải patch): chứa behavior change cố ý consumer-visible — **default-flip NOTIFY tắt

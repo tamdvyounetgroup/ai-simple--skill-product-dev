@@ -49,6 +49,14 @@ lint_one() {
   echo "$FM" | grep -qiE '^last_verified:'    || { echo "  BLOCK: thieu 'last_verified:'"; rc=1; }
   echo "$FM" | grep -qiE '^ttl_days:'         || { echo "  BLOCK: thieu 'ttl_days:'"; rc=1; }
   echo "$FM" | grep -qiE '^declared.coverage:' || { echo "  BLOCK: thieu 'declared-coverage:' -> phai khai 3 vung A(git)/B(CI)/C(NON-GOAL) (methodology/14)"; rc=1; }
+  # Wave 2a [ENFORCED]: parse GIA TRI declared-coverage — du CA BA vung A=/B=/C= khong rong
+  # (truoc day chi grep prefix: 'declared-coverage: xyz' van PASS -> false assurance).
+  DCLINE=$(echo "$FM" | grep -iE '^declared.coverage:' | head -1)
+  if [ -n "$DCLINE" ]; then
+    for zone in A B C; do
+      echo "$DCLINE" | grep -qE "(^|[| \t])$zone=[^| \t]" || { echo "  BLOCK: declared-coverage thieu vung $zone= co gia tri -> khai du A=<phu>/B=<point-to-tool>/C=NON-GOAL(...)"; rc=1; }
+    done
+  fi
 
   # Map khung chuan: it nhat 1 ma OWASP LLM (LLM01-LLM10) HOAC web (A01-A10) trong toan file.
   # Phai match CA ma 2-chu-so LLM10 (Unbounded Consumption) + A10 (SSRF) — methodology/14 hang 10 map toi.
@@ -78,6 +86,11 @@ if [ "$MODE" = "--self-test" ]; then
   FM2='> Load khi: t\ncovers: src/x\nlast_verified: 2026-01-01\nttl_days: 90\n'
   printf "# sec\n${FM2}## Findings\n- F1 (LLM01): x\n> KHONG thay the pentest.\n" > "$T/nocov.md"
   R=$(lint_one "$T/nocov.md"); echo "$R" | grep -q "declared-coverage" && echo "PASS: bat thieu declared-coverage" || { echo "FAIL: thieu declared-coverage LOT"; RC=1; }
+  # Wave 2a: parse GIA TRI A=/B=/C= — prefix suong / thieu vung phai BLOCK; du 3 vung phai PASS (chong-oan o ok.md)
+  printf "# sec\n> Load khi: t\ncovers: src/x\nlast_verified: 2026-01-01\nttl_days: 90\ndeclared-coverage: xyz khong co vung nao\n## Findings\n- F1 (LLM01): x. tier=RED\n> KHONG thay the pentest.\n" > "$T/dcval.md"
+  R=$(lint_one "$T/dcval.md"); echo "$R" | grep -q 'thieu vung A=' && echo "PASS: declared-coverage 'xyz' (prefix suong) bi BLOCK" || { echo "FAIL: declared-coverage prefix suong LOT"; RC=1; }
+  printf "# sec\n> Load khi: t\ncovers: src/x\nlast_verified: 2026-01-01\nttl_days: 90\ndeclared-coverage: A=secret | B=SCA\n## Findings\n- F1 (LLM01): x. tier=RED\n> KHONG thay the pentest.\n" > "$T/dcc.md"
+  R=$(lint_one "$T/dcc.md"); echo "$R" | grep -q 'thieu vung C=' && echo "PASS: declared-coverage thieu C= bi BLOCK" || { echo "FAIL: thieu C= LOT"; RC=1; }
   # 3) thieu ma OWASP -> BLOCK
   printf "# sec\n${FM}## Findings\n- F1: co ve nguy hiem\n> KHONG thay the pentest.\n" > "$T/noowasp.md"
   R=$(lint_one "$T/noowasp.md"); echo "$R" | grep -q "OWASP" && echo "PASS: bat thieu ma OWASP" || { echo "FAIL: thieu OWASP LOT"; RC=1; }
@@ -125,13 +138,18 @@ if [ "$MODE" = "--self-test" ]; then
 fi
 
 if [ "$MODE" = "--staged" ]; then
-  FILES=$(git diff --cached --name-only 2>/dev/null | grep -iE 'security-review.*\.md$' || true)
+  FILES=$(git -c core.quotepath=false diff --cached --name-only 2>/dev/null | grep -iE 'security-review.*\.md$' || true)
   [ -z "$FILES" ] && { echo "security-verify: khong co security-review staged -> skip (exit 0)"; exit 0; }
   FAIL=0; TMP=$(mktemp) || exit 1
-  for f in $FILES; do
-    git show ":$f" > "$TMP" 2>/dev/null || continue
+  # Wave 2a [ENFORCED]: while-read thay for-word-split — ten file co DAU CACH/tieng Viet khong bi SKIP
+  # im lang; git show fail -> BLOCK fail-closed.
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    if ! git show ":$f" > "$TMP" 2>/dev/null; then echo "  BLOCK: khong doc duoc noi dung staged cua '$f'"; FAIL=1; continue; fi
     lint_one "$TMP" "$f" || FAIL=1
-  done
+  done <<EOF_STAGED
+$FILES
+EOF_STAGED
   rm -f "$TMP"
   [ "$FAIL" -eq 1 ] && { echo "security-verify: FAIL -> security-review staged thieu declared-coverage/OWASP/contract, KHONG cho commit"; exit 1; }
   echo "security-verify: PASS"; exit 0
@@ -140,7 +158,12 @@ fi
 FILES=$(find "$APP_MAP_DIR" -maxdepth 2 -name '*.md' 2>/dev/null | grep -iE 'security-review' || true)
 [ -z "$FILES" ] && { echo "security-verify: khong thay security-review (mode=$MODE) -> skip (exit 0)"; exit 0; }
 FAIL=0
-for f in $FILES; do lint_one "$f" || FAIL=1; done
+while IFS= read -r f; do
+  [ -n "$f" ] || continue
+  lint_one "$f" || FAIL=1
+done <<EOF_ALL
+$FILES
+EOF_ALL
 [ "$FAIL" -eq 1 ] && { echo "security-verify: FAIL -> security-review thieu khai bao phu song, KHONG cho qua"; exit 1; }
 echo "security-verify: PASS"
 exit 0

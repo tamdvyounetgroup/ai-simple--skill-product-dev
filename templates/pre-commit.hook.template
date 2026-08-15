@@ -1,5 +1,5 @@
 #!/bin/sh
-# ai-simple-version: 1.11.0
+# ai-simple-version: 1.12.0
 # pre-commit — Automated enforcement (nguyên tắc 08 / principle 08)
 #
 # CHẠY ĐƯỢC NGAY với default Supabase + Next.js. Sửa 3 biến CẤU HÌNH bên dưới cho project khác.
@@ -389,11 +389,29 @@ if [ "$1" = "--self-test" ]; then
   OUTN9=$(git commit -m eolchurn 2>&1); RCN9=$?
   [ "$RCN9" -eq 0 ] && echo "PASS: consent 3c — churn eol toan file giu gia tri khong token -> PASS" || { echo "FAIL: 3c churn eol bi chan oan (exit=$RCN9): $OUTN9"; RC=1; }
   cd "$OPW" && rm -rf "$TN"
+  # Wave 2a: secret trong file TEN CO DAU CACH phai bi bat — word-split cu tach ten lam doi ->
+  # moi gate skip im lang -> secret LOT. Fixture secret LAP LUC CHAY (ghep chuoi — chinh file hook
+  # khong duoc chua literal khop pattern, luat CLAUDE.md).
+  TSC=$(mktemp -d) && cd "$TSC" && git init -q . && git config user.email t@t.t && git config user.name t || exit 1
+  mkdir -p .githooks src
+  cp "$HOOK_SELF" .githooks/pre-commit && git config core.hooksPath .githooks
+  git commit -qm init --allow-empty >/dev/null 2>&1
+  SKX="sk_"; SKX="${SKX}live_abcdefghij123456"
+  printf 'const k = "%s"\n' "$SKX" > "src/a b.ts"
+  git add -A
+  OUTSC=$(git commit -m sp 2>&1); RCSC=$?
+  if [ "$RCSC" -ne 0 ] && echo "$OUTSC" | grep -q 'secret HIGH-CONFIDENCE'; then echo "PASS: 2a — secret trong file ten-co-dau-cach bi BLOCK (het skip word-split)"; else echo "FAIL: 2a — secret file ten dau cach LOT (exit=$RCSC)"; RC=1; fi
+  cd "$OPW" && rm -rf "$TSC"
   exit $RC
 fi
 
-CHANGED=$(git diff --cached --name-only)
+CHANGED=$(git -c core.quotepath=false diff --cached --name-only)
 FAIL=0
+# Wave 2a [ENFORCED — space-safe]: word-split theo NEWLINE-only cho TOÀN BỘ vòng duyệt filename
+# của gate (8 vòng `for f in $(...)`): tên file có DẤU CÁCH không còn bị tách đôi → skip im lặng.
+# An toàn vì mọi for-loop trong hook đều duyệt dữ liệu newline-separated hoặc glob (đã kiểm từng vòng
+# + grep 0 lệnh dựa unquoted-space-split); quotepath=false để tên tiếng Việt không bị git escape.
+IFS=$(printf '\nx'); IFS=${IFS%x}
 
 # ── 1. Migration đổi → doc database phải đổi cùng commit ──────────────
 if echo "$CHANGED" | grep -qE "$MIGRATIONS_PATTERN"; then

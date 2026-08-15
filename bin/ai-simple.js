@@ -499,6 +499,13 @@ async function cmdSelfTest() { // dùng cho `npm test` của chính package: ch�
     console.log(`${(r.status === 0) ? 'PASS' : 'FAIL'} script metadata-words --self-test`);
     if (r.status !== 0) { failed = true; console.log((r.stdout || '') + (r.stderr || '')); }
   }
+  // Mutation suite (Wave 2a chặng 1): thước đo false-pass/false-block của verifier — chạy ĐỦ BẢNG
+  // trong npm test (kỳ vọng 0/0), self-test riêng cho harness.
+  for (const arg of ['--self-test', '']) {
+    const r = sh(arg ? [path.join(PKG_ROOT, 'scripts', 'mutation-suite.sh'), arg] : [path.join(PKG_ROOT, 'scripts', 'mutation-suite.sh')], { cwd: PKG_ROOT });
+    console.log(`${r.status === 0 ? 'PASS' : 'FAIL'} script mutation-suite ${arg || '(full: 0 false-pass/0 false-block)'}`);
+    if (r.status !== 0) { failed = true; console.log(r.stdout + r.stderr); }
+  }
   // Skill-verifier fixtures (G1 bộ chấm điểm — self-test hợp nhất): MỌI skills/*/*-verify.sh có
   // --self-test phải chạy trong `npm test`, không suite mồ côi (trước đây chỉ security-verify được nối,
   // 3 cái kia PASS nhưng ngoài gate -> rot lúc nào không biết). Auto-discover, không hardcode tên.
@@ -522,33 +529,11 @@ async function cmdSelfTest() { // dùng cho `npm test` của chính package: ch�
     console.log(`${r.status === 0 ? 'PASS' : 'FAIL'} skill ${skill} ${path.basename(file)} --self-test`);
     if (r.status !== 0) { failed = true; console.log(r.stdout + r.stderr); }
   }
-  // Identity-numbers guard (hội đồng Fable, đề xuất #3): các "số bản sắc" (số nguyên tắc/lớp/skill)
-  // drift ở ~8 chỗ mỗi lần thêm nguyên tắc. Fail khi doc HIỆN HÀNH còn số cũ. Scope CHỈ các file
-  // sống (README/SKILL/methodology-README/skills) — CHANGELOG/ADR là lịch sử, được phép giữ số cũ.
-  // v1.11.0: nới bắt biến-thể-từ-chen-giữa ("14 composable principles" từng lọt regex (core )? — bug thật)
-  const STALE = [/1[0-4] nguyên tắc/, /1[0-4]( \w+)? principles/i, /[45] lớp/, /[45] layers/i, /[34]-skill/, /principles in [45] layers/i];
+  // Identity: guard blacklist số-cũ (2 đời regex) đã GỠ ở Wave 2a — thay bằng identity-manifest
+  // enforcer WHITELIST bên dưới (đếm thực-tế + so manifest; bắt MỌI số lệch, không chỉ số cũ đã biết;
+  // ca FAIL bắt buộc "14 composable principles" nằm trong fixture ranh giới của enforcer).
   const LIVE = ['README.md', 'SKILL.md', 'methodology/README.md',
     ...['ba-flow-logic', 'ui-design-logic', 'ui-ux-triage', 'security-logic'].map(s => `skills/${s}/SKILL.md`)];
-  for (const f of LIVE) {
-    const p = path.join(PKG_ROOT, f);
-    if (!fs.existsSync(p)) continue;
-    const body = fs.readFileSync(p, 'utf8');
-    for (const re of STALE) {
-      const m = body.match(re);
-      if (m) { failed = true; console.log(`FAIL identity-numbers: '${m[0]}' còn trong ${f} — số bản sắc đã drift (hiện hành: 15 nguyên tắc / 6 lớp / 5-skill)`); }
-    }
-  }
-  if (!LIVE.some(f => STALE.some(re => fs.existsSync(path.join(PKG_ROOT, f)) && fs.readFileSync(path.join(PKG_ROOT, f), 'utf8').match(re))))
-    console.log('PASS identity-numbers (15 nguyên tắc / 6 lớp / 5-skill nhất quán trong docs sống)');
-  // Fixture identity (v1.11.0): "14 composable principles" là ca FAIL BẮT BUỘC — bug thật từng lọt
-  // regex (core )? vì từ chen giữa; kèm chống-oan cho số hiện hành.
-  let idFxOk = true;
-  for (const [s, mustHit] of [['14 composable principles', true], ['14 principles', true],
-    ['15 composable principles', false], ['15 nguyên tắc', false], ['13 nguyên tắc', true]]) {
-    const hit = STALE.some(re => s.match(re));
-    if (hit !== mustHit) { failed = true; idFxOk = false; console.log(`FAIL identity-fixture: '${s}' ${mustHit ? 'phải bị bắt mà lọt' : 'bị bắt oan'}`); }
-  }
-  if (idFxOk) console.log('PASS identity-fixture (biến-thể-từ-chen-giữa bị bắt; số hiện hành không bị bắt oan)');
   // Cross-cut mktemp fail-fast (v1.11.0 — Lỗ an toàn số 1): tập quét ĐỘNG git ls-files '*.sh' '*.sh.template'
   // + template hook. Dòng chứa $(mktemp thiếu CẢ '|| exit' LẪN '|| return' cùng dòng → FAIL
   // (mktemp fail mà chạy tiếp = self-test ghi ~40 commit lạ + đổi branch NGAY TRONG repo thật — đã repro).
@@ -569,6 +554,45 @@ async function cmdSelfTest() { // dùng cho `npm test` của chính package: ch�
     if (noGuard(l)) { failed = true; mkOk = false; console.log('FAIL mktemp-guard-fixture: dòng guard hợp lệ bị bắt oan'); }
   if (!noGuard('T=$(mktemp -d); RC=0')) { failed = true; mkOk = false; console.log('FAIL mktemp-guard-fixture: dòng thiếu guard không bị bắt'); }
   if (mkOk) console.log('PASS mktemp-guard (tập quét động .sh/.sh.template: mọi $(mktemp có fail-fast cùng dòng; fixture chống-oan xanh)');
+  // Identity manifest enforcer (Wave 2a — thay guard blacklist số-cũ bằng WHITELIST đếm-thực-tế):
+  // (1) manifest vs THỰC TẾ: đếm file methodology/NN-*.md == principles; đếm skill (4 con + root) == skills.
+  // (2) manifest vs DOCS SỐNG: mọi biến-thể "N nguyên tắc/principles/lớp/layers/N-skill" phải khớp số manifest.
+  //     Ranh giới chống-oan (đo 2026-08-15): cụm subset hợp lệ dùng số nhỏ ("1 nguyên tắc", "3 lớp") →
+  //     chỉ bắt N≥10 cho principles-VN, N≥4 cho layers; English + N-skill bắt mọi N lệch.
+  {
+    let idmOk = true;
+    const MF = JSON.parse(fs.readFileSync(path.join(PKG_ROOT, 'system-manifest.json'), 'utf8'));
+    const nPrin = fs.readdirSync(path.join(PKG_ROOT, 'methodology')).filter(f => /^\d{2}-.*\.md$/.test(f)).length;
+    const nSkills = fs.readdirSync(path.join(PKG_ROOT, 'skills')).filter(s => fs.statSync(path.join(PKG_ROOT, 'skills', s)).isDirectory()).length + 1;
+    if (nPrin !== MF.principles) { failed = true; idmOk = false; console.log(`FAIL identity-manifest: methodology/ có ${nPrin} nguyên tắc ≠ manifest ${MF.principles}`); }
+    if (nSkills !== MF.skills) { failed = true; idmOk = false; console.log(`FAIL identity-manifest: đếm được ${nSkills} skill (4 con + root) ≠ manifest ${MF.skills}`); }
+    const idmScan = (text, rel) => {
+      const bad = [];
+      for (const m of text.matchAll(/(\d+)(?: \w+)? principles/gi)) if (+m[1] !== MF.principles) bad.push(m[0]);
+      for (const m of text.matchAll(/(\d+) nguyên tắc/g)) if (+m[1] >= 10 && +m[1] !== MF.principles) bad.push(m[0]);
+      for (const m of text.matchAll(/(\d+) (?:lớp|layers)/gi)) if (+m[1] >= 4 && +m[1] !== MF.layers) bad.push(m[0]);
+      for (const m of text.matchAll(/(\d+)-skill/gi)) if (+m[1] !== MF.skills) bad.push(m[0]);
+      for (const b of bad) { failed = true; idmOk = false; console.log(`FAIL identity-manifest: '${b}' trong ${rel} lệch manifest (${MF.principles} nguyên tắc / ${MF.layers} lớp / ${MF.skills}-skill)`); }
+    };
+    for (const f of LIVE) {
+      const p = path.join(PKG_ROOT, f);
+      if (fs.existsSync(p)) idmScan(fs.readFileSync(p, 'utf8'), f);
+    }
+    // Fixture ranh giới (chạy trên chuỗi tổng hợp, không đụng file thật):
+    const mustCatch = ['14 nguyên tắc', '14 composable principles', '16 principles', '5 lớp', '4 layers', '4-skill', '6-skill'];
+    const mustPass = ['15 nguyên tắc', '15 core principles', '6 lớp', '6 layers', '5-skill', '1 nguyên tắc', '3 lớp'];
+    const hits = (s) => {
+      let n = 0;
+      for (const m of s.matchAll(/(\d+)(?: \w+)? principles/gi)) if (+m[1] !== MF.principles) n++;
+      for (const m of s.matchAll(/(\d+) nguyên tắc/g)) if (+m[1] >= 10 && +m[1] !== MF.principles) n++;
+      for (const m of s.matchAll(/(\d+) (?:lớp|layers)/gi)) if (+m[1] >= 4 && +m[1] !== MF.layers) n++;
+      for (const m of s.matchAll(/(\d+)-skill/gi)) if (+m[1] !== MF.skills) n++;
+      return n;
+    };
+    for (const s of mustCatch) if (hits(s) === 0) { failed = true; idmOk = false; console.log(`FAIL identity-manifest-fixture: '${s}' phải bị bắt mà lọt`); }
+    for (const s of mustPass) if (hits(s) !== 0) { failed = true; idmOk = false; console.log(`FAIL identity-manifest-fixture: '${s}' bị bắt oan`); }
+    if (idmOk) console.log(`PASS identity-manifest (thực-tế ${nPrin} nguyên tắc/${nSkills} skill khớp manifest; whitelist docs sống + fixture ranh giới xanh)`);
+  }
   // Cross-cut coverage guard: 4 skill anh em PHẢI nhắc security-logic (sơ đồ 5-skill / handoff) —
   // identity-numbers chỉ đếm số, guard này bắt "skill thiếu sơ đồ" (reviewer cuối trừ điểm đúng lỗ này).
   let xcutOk = true;

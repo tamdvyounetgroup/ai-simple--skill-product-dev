@@ -197,13 +197,18 @@ if [ "$MODE" = "--self-test" ]; then
 fi
 
 if [ "$MODE" = "--staged" ]; then
-  FILES=$(git diff --cached --name-only 2>/dev/null | grep -iE '(design-spec.*\.md|DESIGN-SPEC\.md)$' || true)
+  FILES=$(git -c core.quotepath=false diff --cached --name-only 2>/dev/null | grep -iE '(design-spec.*\.md|DESIGN-SPEC\.md)$' || true)
   [ -z "$FILES" ] && { echo "design-verify: khong co design-spec staged -> skip (exit 0)"; exit 0; }
   FAIL=0; TMP=$(mktemp) || exit 1
-  for f in $FILES; do
-    git show ":$f" > "$TMP" 2>/dev/null || continue   # lint NỘI DUNG ĐÃ STAGE, không phải worktree
+  # Wave 2a [ENFORCED]: while-read thay for-word-split — ten file co DAU CACH/tieng Viet khong bi SKIP
+  # im lang; git show fail -> BLOCK fail-closed.
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    if ! git show ":$f" > "$TMP" 2>/dev/null; then echo "  BLOCK: khong doc duoc noi dung staged cua '$f'"; FAIL=1; continue; fi
     lint_one "$TMP" "$f" || FAIL=1
-  done
+  done <<EOF_STAGED
+$FILES
+EOF_STAGED
   rm -f "$TMP"
   [ "$FAIL" -eq 1 ] && { echo "design-verify: FAIL -> design-spec staged thieu phan bat buoc, KHONG cho commit"; exit 1; }
   echo "design-verify: PASS"; exit 0
@@ -215,7 +220,12 @@ DESIGN-SPEC.md"
 FILES=$(echo "$FILES" | grep -v '^$' || true)
 [ -z "$FILES" ] && { echo "design-verify: khong thay design-spec (mode=$MODE) -> skip (exit 0)"; exit 0; }
 FAIL=0
-for f in $FILES; do lint_one "$f" || FAIL=1; done
+while IFS= read -r f; do
+  [ -n "$f" ] || continue
+  lint_one "$f" || FAIL=1
+done <<EOF_ALL
+$FILES
+EOF_ALL
 [ "$FAIL" -eq 1 ] && { echo "design-verify: FAIL -> design-spec thieu phan bat buoc, KHONG cho qua"; exit 1; }
 echo "design-verify: PASS"
 exit 0

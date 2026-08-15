@@ -115,7 +115,7 @@ lint_one() {
 }
 
 if [ "$MODE" = "--self-test" ]; then
-  RC=0; T=$(mktemp -d)
+  RC=0; T=$(mktemp -d) || exit 1
   FM='> Load khi: task chạm UI\ncovers: src/app\nlast_verified: 2026-01-01\nttl_days: 90\n'
   LADDER='## Thang người dùng\n| Loại user | Muốn thấy gì | Truyền tải | Action tiếp |\n|---|---|---|---|\n| Public | demo | x | Đăng ký |\n'
   STATE='## Ma trận trạng thái\n| Màn hình | Chưa login | Trống | Lỗi |\n|---|---|---|---|\n| Dashboard | redirect | onboarding | retry |\n'
@@ -181,6 +181,16 @@ if [ "$MODE" = "--self-test" ]; then
   R=$(lint_one "$T/type-ok.md")
   echo "$R" | grep -q "ngoai enum" && { echo "FAIL: enum Type bat oan gia tri hop le:"; echo "$R"; RC=1; } || echo "PASS: enum Type — product/read/marketing-public deu qua"
 
+  # v1.11.0 (Lo an toan so 1): mktemp fail tren nhanh --staged (production-facing) PHAI exit 1.
+  SELFV="$0"; case "$SELFV" in /*|[A-Za-z]:*) ;; *) SELFV="$(pwd)/$SELFV";; esac
+  TS9=$(mktemp -d) || exit 1
+  mkdir -p "$TS9/stub" "$TS9/r/docs/app-map"
+  printf '#!/bin/sh\nexit 1\n' > "$TS9/stub/mktemp"; chmod +x "$TS9/stub/mktemp"
+  ( cd "$TS9/r" && git init -q . && git config user.email t@t.t && git config user.name t \
+    && printf 'noi dung sai\n' > docs/app-map/design-spec-x.md && git add -A ) >/dev/null 2>&1
+  ( cd "$TS9/r" && PATH="$TS9/stub:$PATH" sh "$SELFV" --staged ) >/dev/null 2>&1; RC9=$?
+  [ "$RC9" -ne 0 ] && echo "PASS: mktemp fail nhanh --staged -> exit $RC9 (fail-fast, khong PASS gia)" || { echo "FAIL: mktemp fail nhanh --staged van PASS gia"; RC=1; }
+  rm -rf "$TS9"
   rm -rf "$T"
   [ "$RC" -eq 0 ] && echo "design-verify self-test: ALL PASS" || echo "design-verify self-test: CO FAIL"
   exit $RC
@@ -189,7 +199,7 @@ fi
 if [ "$MODE" = "--staged" ]; then
   FILES=$(git diff --cached --name-only 2>/dev/null | grep -iE '(design-spec.*\.md|DESIGN-SPEC\.md)$' || true)
   [ -z "$FILES" ] && { echo "design-verify: khong co design-spec staged -> skip (exit 0)"; exit 0; }
-  FAIL=0; TMP=$(mktemp)
+  FAIL=0; TMP=$(mktemp) || exit 1
   for f in $FILES; do
     git show ":$f" > "$TMP" 2>/dev/null || continue   # lint NỘI DUNG ĐÃ STAGE, không phải worktree
     lint_one "$TMP" "$f" || FAIL=1

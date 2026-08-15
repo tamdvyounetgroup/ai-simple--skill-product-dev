@@ -4,6 +4,43 @@ Toàn bộ lịch sử tiến hóa của phương pháp. README/methodology dùn
 
 Convention từ v1.10.0: mỗi mục version có thể chứa dòng `**RE-APPLY**: <việc project tiêu thụ cần làm lại sau update>` — `ai-simple update` tự trích các dòng này trong khoảng (bản-cũ → bản-mới] in thành checklist. Không có dòng RE-APPLY = update xong là xong.
 
+## v1.11.0 — 2026-08-15 (Safety release Wave 1 — hội đồng 13 vòng 99.23/100: mktemp fail-fast, consent NOTIFY, eol=lf)
+
+Số MINOR (không phải patch): chứa behavior change cố ý consumer-visible — **default-flip NOTIFY tắt
+luồng gửi Telegram** của triage (an-toàn-hoá theo hướng tắt; "có script Telegram" không đồng nghĩa
+user đã consent, reversible ≠ authorized — methodology/06 thêm trục authority).
+
+- **Guard mktemp fail-fast [ENFORCED]** — Lỗ an toàn số 1 đã repro: mktemp fail → hook self-test chạy
+  tiếp NGAY TRONG repo thật (~40 commit lạ + đổi branch); nhánh `--staged` của ba/security/design-verify
+  false-PASS im lặng. Vá 17/17 hit theo mẫu chuẩn `X=$(mktemp -d) && ... || exit 1`; assertion bất biến
+  tập-quét-động `git ls-files '*.sh' '*.sh.template'` + fixture chống-oan trong npm test; fixture
+  mktemp-stub cho nhánh `--staged` cả 3 verifier production-facing.
+- **Consent gate NOTIFY 4 lớp** (đặc tả: skills/ui-ux-triage/SKILL.md §8): tri-state {on,off,unset}
+  hợp nhất 3 nguồn — on đòi ≥1 nguồn NGOÀI-repo (`~/.ai-simple/config` / env `AI_SIMPLE_NOTIFY`) on
+  và không nguồn nào off; repo chỉ được thu hẹp [ADVISORY có nhãn]. Verifier degrade-theo-consent +
+  hậu-kiểm log telegram=ok [ENFORCED hậu-kiểm] + mode `--config-check` ghi dòng `consent |` (append-khi-đổi,
+  luôn exit 0, `--lint-log` nhận format consent riêng) [DETECTED]. Hook 3c token-trong-staged-diff:
+  gỡ `NOTIFY=off` (đổi HOẶC xoá, so GIÁ TRỊ HIỆU LỰC head-1 — decoy trùng-key bị bắt, đảo-dòng/churn-eol
+  không bị oan) thiếu dòng token mới `# user-consent: notify-on <ngày>` → BLOCK [ENFORCED phạm-vi-hẹp].
+  Script notify-telegram.sh định chỗ tầng user `~/.ai-simple/`. 10 fixture hook + 13 fixture verifier.
+- **Bảo vệ dirty user (NT13/ADR-001)**: fixer revert CHỈ qua patch-file của chính mình, CẤM
+  reset/checkout --/stash/restore [ADVISORY]; `templates/pretooluse-git-guard.sh` opt-in chặn các lệnh đó
+  ở vị trí subcommand [ENFORCED phạm-vi-hẹp, rào vô ý] — init chỉ IN hướng dẫn, KHÔNG tự cài; 11 fixture
+  standalone (deny + 4 ca chống-BLOCK-oan: checkout -b, --grep reset, -m "reset...", non-git).
+- **Security-logic thu hẹp đúng lỗ**: 3 dòng mệnh lệnh secret → "sinh runbook rotate + history-rewrite
+  cho USER thực thi" (history-rewrite = RED tier, task riêng); skill vẫn review-only như đã tuyên bố.
+- **`.gitattributes` eol=lf [ENFORCED — git ép]** cho `*.sh` / `*.sh.template` / `pre-commit*` +
+  renormalize theo đúng scope; assertion D2c trong dogfood-gate bắt regression CRLF (contamination đã
+  đo thật: ba-verify.sh từng `i/lf w/crlf`).
+- **Identity guard nới regex** bắt biến-thể-từ-chen-giữa ("14 composable principles" từng lọt — đã sửa
+  drift + fixture FAIL bắt buộc); version-stamp nguồn template được dogfood so với package.json (D2b);
+  CLAUDE.md sửa over-claim "so byte" → "so nội dung sau khi bỏ version-stamp".
+- **Wave 0 baseline** commit vào docs/baseline/: timings (npm test, hook, verifier, stranger-path),
+  script đo metadata duy nhất `scripts/metadata-words.js`, routing snapshot + giao thức k≥3, 3 fixture
+  false-pass đã tái hiện.
+- **RE-APPLY**: muốn GIỮ hành vi gửi Telegram cũ của triage → user tự đặt `NOTIFY=on` trong `~/.ai-simple/config` (hoặc env `AI_SIMPLE_NOTIFY=on`) TRƯỚC khi update — mặc định mới là degrade ghi report local; script telegram chuyển về `~/.ai-simple/notify-telegram.sh`.
+- **RE-APPLY**: chạy `ai-simple update` để `.githooks/pre-commit` nhận guard mktemp + gate consent 3c/3d (update tự refresh hook, giữ config key, bản cũ lưu .bak).
+
 ## v1.10.0 — 2026-08-14 (Kênh update cho project tiêu thụ — "OS-style": biết có bản mới + biết phải làm lại gì)
 
 Đóng lỗ phân phối: project đã `init` không có cách nào tự biết skill/hook có bản mới (doctor chỉ so

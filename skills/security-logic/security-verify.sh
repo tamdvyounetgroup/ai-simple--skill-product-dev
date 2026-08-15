@@ -68,7 +68,7 @@ lint_one() {
 }
 
 if [ "$MODE" = "--self-test" ]; then
-  RC=0; T=$(mktemp -d)
+  RC=0; T=$(mktemp -d) || exit 1
   FM='> Load khi: review bao mat orders\ncovers: src/orders\nlast_verified: 2026-01-01\nttl_days: 90\ndeclared-coverage: A=secret+injection | B=SCA(npm audit) | C=NON-GOAL(pentest/DAST)\n'
   # 1) review hop le -> PASS
   printf "# sec\n${FM}## Findings\n- F1 (LLM01/A03): input chua escape -> exploit: SQLi qua orderId. tier=RED\n> KHONG thay the pentest production.\n" > "$T/ok.md"
@@ -109,6 +109,16 @@ if [ "$MODE" = "--self-test" ]; then
   printf "# sec\n${FM}## Findings\n- F1 (A02): ĐÃ BẢO MẬT ✓, hệ thống an toàn\n> KHONG thay the pentest.\n" > "$T/overhoa.md"
   R=$(lint_one "$T/overhoa.md")
   echo "$R" | grep -q "over-claim" && echo "PASS: WARN over-claim VIET HOA co dau (ĐÃ BẢO MẬT ✓)" || { echo "FAIL: over-claim VIET HOA co dau LOT phat hien:"; echo "$R"; RC=1; }
+  # v1.11.0 (Lo an toan so 1): mktemp fail tren nhanh --staged (production-facing) PHAI exit 1.
+  SELFV="$0"; case "$SELFV" in /*|[A-Za-z]:*) ;; *) SELFV="$(pwd)/$SELFV";; esac
+  TS9=$(mktemp -d) || exit 1
+  mkdir -p "$TS9/stub" "$TS9/r/docs/app-map"
+  printf '#!/bin/sh\nexit 1\n' > "$TS9/stub/mktemp"; chmod +x "$TS9/stub/mktemp"
+  ( cd "$TS9/r" && git init -q . && git config user.email t@t.t && git config user.name t \
+    && printf 'noi dung sai\n' > docs/app-map/security-review-x.md && git add -A ) >/dev/null 2>&1
+  ( cd "$TS9/r" && PATH="$TS9/stub:$PATH" sh "$SELFV" --staged ) >/dev/null 2>&1; RC9=$?
+  [ "$RC9" -ne 0 ] && echo "PASS: mktemp fail nhanh --staged -> exit $RC9 (fail-fast, khong PASS gia)" || { echo "FAIL: mktemp fail nhanh --staged van PASS gia"; RC=1; }
+  rm -rf "$TS9"
   rm -rf "$T"
   [ "$RC" -eq 0 ] && echo "security-verify self-test: ALL PASS" || echo "security-verify self-test: CO FAIL"
   exit $RC
@@ -117,7 +127,7 @@ fi
 if [ "$MODE" = "--staged" ]; then
   FILES=$(git diff --cached --name-only 2>/dev/null | grep -iE 'security-review.*\.md$' || true)
   [ -z "$FILES" ] && { echo "security-verify: khong co security-review staged -> skip (exit 0)"; exit 0; }
-  FAIL=0; TMP=$(mktemp)
+  FAIL=0; TMP=$(mktemp) || exit 1
   for f in $FILES; do
     git show ":$f" > "$TMP" 2>/dev/null || continue
     lint_one "$TMP" "$f" || FAIL=1

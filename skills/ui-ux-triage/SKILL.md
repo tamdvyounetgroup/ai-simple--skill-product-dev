@@ -5,7 +5,7 @@ description: "Team-agent UI/UX triage + fix loop — pha VẬN HÀNH của pipel
 
 # UI/UX Triage — Team Agent (composable, repo-agnostic)
 
-Triage UI/UX chạy qua **team agent** (không phải 1 agent đơn): test từng bước → quan sát → phân loại → fix → test lại. Không chắc → telegram user kèm ảnh. Skill này **repo-agnostic** (chạy mọi repo) và là **một mắt trong hệ 5-skill** — nó không tự quyết cái thuộc skill khác.
+Triage UI/UX chạy qua **team agent** (không phải 1 agent đơn): test từng bước → quan sát → phân loại → fix → test lại. Không chắc → hỏi user: telegram kèm ảnh khi consent NOTIFY hội đủ [NOTIFY-gated], ngược lại ghi PENDING-ASK vào report local (§8). Skill này **repo-agnostic** (chạy mọi repo) và là **một mắt trong hệ 5-skill** — nó không tự quyết cái thuộc skill khác.
 
 ---
 
@@ -54,7 +54,7 @@ Gate đọc `./.claude/triage.config` nếu có; KHÔNG có → **auto-discover*
 - ba-spec / design-spec: glob trong app-map (xem §3); thiếu → degrade
 - Test cmd: từ `package.json` scripts (typecheck/test/e2e) nếu có
 - **E2E harness** (nếu repo có `tests/e2e/` + helpers): account-matrix theo VAI TRÒ, helper auth/create-family/add-member/join/approve/link, dual-context multi-user, **test-data tracker** (log entity tạo ra, vd JSONL) + **cleanup cmd** (vd `test:e2e:cleanup`). → Flow-tester TÁI DÙNG (§4.2), KHÔNG tự clicking ad-hoc. Thiếu → degrade flow thủ công.
-- Telegram: `scripts/notify-telegram.sh` nếu có; thiếu → degrade ghi file
+- Telegram: script tầng user `~/.ai-simple/notify-telegram.sh` (token qua env user) [telegram-ref]; thiếu script HOẶC consent chưa hội đủ → degrade ghi file (§8)
 
 → Cùng một skill global chạy đúng ở *từng* repo vì ref được **khám phá**, không **đóng cứng**. (Bài học ai-simple #08 CONFIG-per-repo, #09 generic-vs-project.)
 
@@ -88,7 +88,7 @@ TeamCreate team_name=ui-triage-<n>      (tên BẮT BUỘC prefix "ui-triage" �
 ```
 
 ### 4.1 team-lead (general-purpose)
-Parse feedback → test plan; giao Tester; nhận Observer → giao Fixer; không chắc → Advisor → vẫn không chắc → telegram (§8). Không tự code.
+Parse feedback → test plan; giao Tester; nhận Observer → giao Fixer; không chắc → Advisor → vẫn không chắc → telegram khi consent hội đủ [NOTIFY-gated], off → PENDING-ASK trong report (§8). Không tự code.
 
 ### 4.2 flow-tester — test NHƯ USER THẬT, tái dùng harness repo (KHÔNG clicking ad-hoc)
 **Bước 0 — tái dùng harness**: repo có E2E harness (§2) → DÙNG LẠI helper sẵn (login, account-matrix theo vai, create-family/add-member/join/approve/link, dual-context) để dựng user + chạy hành trình; KHÔNG tự viết selector rời. Đây là cách đi đúng "đường người dùng thật" mà E2E chính thức đã đi → bắt được lỗi mà 1-session-1-user bỏ sót.
@@ -112,7 +112,7 @@ Chụp **MỌI bước** vào `test-reports/triage/<iter>/`. **Allowlist** rever
 Pre-load `triage-log` nếu có (skip nếu run đầu) → ưu tiên bucket hay tái diễn. Đối chiếu oracle (§3). Output mỗi defect: `[bucket] mô tả | screenshot | suspected file:line | severity P0/P1/P2 | oracle vi phạm (spec:dòng) | suggested fix`.
 
 ### 4.4 fixer
-ĐỌC file trước khi sửa. Minimal diff. Preserve i18n keys / data-testid / data-hint-key. Verify sau fix (test cmd từ §2). Verify fail → revert + báo Lead. **KHÔNG git commit** (ai-simple #08).
+ĐỌC file trước khi sửa. Minimal diff. Preserve i18n keys / data-testid / data-hint-key. Verify sau fix (test cmd từ §2). **Revert = qua patch-file của CHÍNH MÌNH** [ADVISORY]: trước khi apply, loop BẮT BUỘC lưu patch (`git diff > <patch-của-loop>`); verify fail → `git apply -R <patch-của-loop>` + báo Lead. **CẤM `git reset` / `git checkout --` / `git stash` / `git restore`** trên working tree — chỉ được reverse đúng patch/hunk do chính mình tạo, không phục hồi toàn file đè dirty sẵn có của user (NT13/ADR-001). **KHÔNG git commit** (ai-simple #08).
 
 ### 4.5 advisor (read-only)
 Tư vấn khi nhiều option/risk. Dựa decision-pattern §6 (đọc bản mới nhất). Format: Options A/B + risk + recommend + red flags. Không tự apply.
@@ -129,7 +129,7 @@ iter N:
  3. OBSERVER classify theo oracle (§3)
  4. LEAD review:
       - clear → 5
-      - ambiguous → ADVISOR → vẫn ambiguous → gộp 1 TELEGRAM ASK (§8) + pause
+      - ambiguous → ADVISOR → vẫn ambiguous → gộp 1 TELEGRAM ASK khi consent hội đủ [NOTIFY-gated], off → PENDING-ASK trong report (§8) + pause
       - stale-pause >24h không hồi → nhắc 1 lần → TeamDelete (không giữ team zombie)
  4b. CAPTURE (đóng vòng học): user trả lời ASK → ghi [date] tình-huống→quyết-định→heuristic vào §6 +
       memory feedback_triage_decisions.md; mâu thuẫn heuristic cũ → [stale]; ≥2x → promote rule (ai-simple #07)
@@ -137,16 +137,16 @@ iter N:
       `HANDOFF | to=<BA|design> | spec=<file + AC/mục bị nghi> | ca=<spec-sai|nhu-cầu-thiếu|nhu-cầu-mới> | bằng-chứng=<screenshot/log> | đề-xuất=<1 câu>`
       — sai HÀNH VI → to=BA (ba-flow-logic ref 04 nhận đúng format này); sai GIAO DIỆN tại design-spec → to=design (ui-design-logic đọc spec + sửa theo pipeline nó)
  5. LEAD brief FIXER (request cụ thể)
- 6. FIXER apply + verify; không rõ → hỏi Lead; verify fail → revert + escalate
+ 6. FIXER apply + verify; không rõ → hỏi Lead; verify fail → revert qua patch-file của chính mình (§4.4, CẤM reset/checkout/stash/restore) + escalate
  7. TESTER rerun từ step 1 (regression) — tái dùng pattern bug-fix-verify spec của repo nếu có
  8. hết defect:
-      - tóm tắt + TELEGRAM done (§8)
+      - tóm tắt + TELEGRAM done khi consent hội đủ [NOTIFY-gated], off → report local (§8)
       - update doc/memory nếu có LOGIC mới
       - append 1 dòng STRUCTURED vào triage-log:
-        `<ISO> | <repo> | iter=N | buckets=LOGIC:a,TEXT:b,DESIGN:c,FLOW:d | decided=<1 dòng> | verify=tsc:pass,... | telegram=ok|fail|degraded`
+        `<ISO> | <repo> | iter=N | buckets=LOGIC:a,TEXT:b,DESIGN:c,FLOW:d | decided=<1 dòng> | verify=tsc:pass,... | telegram=ok|fail|degraded|off` [telegram-ref]
       - exit
  9. còn defect + iter<3 → về 1 (scope hẹp hơn)
-10. iter≥3 → TELEGRAM xin hướng
+10. iter≥3 → TELEGRAM xin hướng khi consent hội đủ [NOTIFY-gated], off → PENDING-ASK trong report + pause
 ```
 
 ---
@@ -177,8 +177,20 @@ ai-simple/BA/ui-design-logic **vắng** trong repo → degrade: tier áp cục b
 
 ---
 
-## 8. Telegram + degrade
-3 template ASK/DONE/STUCK. ≤2 ảnh, text thuần. **Redaction trước --photo**: che SĐT/email/token/PII member khác. **DEGRADE**: thiếu telegram script → ghi `test-reports/triage/report-<date>.txt`, KHÔNG crash; log `telegram=degraded` (cấm ghi `ok` khi thật ra fail/degrade).
+## 8. Consent NOTIFY + Telegram + degrade [telegram-ref]
+
+**Degrade là HÀNH VI MẶC ĐỊNH** (v1.11.0): luôn tạo local report trước; chỉ gửi telegram khi consent NOTIFY hội đủ [NOTIFY-gated]. "Có script telegram" KHÔNG đồng nghĩa user đã consent; reversible KHÔNG đồng nghĩa authorized.
+
+**Consent hội đủ** = phép hợp nhất tri-state {on, off, unset} của 3 nguồn (máy: `triage-verify.sh` hàm `consent_resolve`):
+- Nguồn ngoài-repo: `~/.ai-simple/config` (NOTIFY=) hoặc env `AI_SIMPLE_NOTIFY` — do **user tự đặt**. Env là per-session; consent bền qua verify-time dùng `~/.ai-simple/config`.
+- Nguồn repo `.claude/triage.config` chỉ được **thu hẹp**: `NOTIFY=off` trong repo phủ quyết mọi override.
+- off tường minh ở BẤT KỲ nguồn nào → off; on đòi ≥1 nguồn ngoài-repo on VÀ không nguồn nào off.
+
+**[ADVISORY — luật hành vi agent, cùng hạng luật cấm stash NT13]**: agent bị CẤM set env `AI_SIMPLE_NOTIFY`, CẤM ghi `~/.ai-simple/config`, CẤM tự thêm dòng token `# user-consent: notify-on` thay user. Máy không phân biệt được ai ghi — consent thật nằm ở hành vi user.
+
+**Máy liên quan** [telegram-ref]: verifier degrade-theo-consent + hậu-kiểm log telegram=ok [ENFORCED hậu-kiểm]; hook pre-commit chặn commit gỡ `NOTIFY=off` thiếu token [ENFORCED phạm-vi-hẹp]; `--config-check` ghi dòng `consent |` vào triage-log [DETECTED].
+
+3 template ASK/DONE/STUCK. ≤2 ảnh, text thuần. **Redaction trước --photo**: che SĐT/email/token/PII member khác. **DEGRADE** [telegram-ref]: consent chưa hội đủ HOẶC thiếu telegram script → ghi `test-reports/triage/report-<date>.txt` (câu hỏi đang chờ ghi mục **PENDING-ASK**), KHÔNG crash; log `telegram=off` khi consent off, `telegram=degraded` khi thiếu script (cấm ghi `ok` khi thật ra fail/degrade/off).
 
 ---
 
@@ -188,7 +200,7 @@ ai-simple/BA/ui-design-logic **vắng** trong repo → degrade: tier áp cục b
 - [ ] Verify pass (capture exit code, không "chắc pass")
 - [ ] Decision-pattern §6 updated nếu user dạy khác (§4b)
 - [ ] triage-log dòng mới qua `triage-verify.sh --lint-log`
-- [ ] Telegram exit 0 HOẶC degrade-ghi-file
+- [ ] Telegram: consent hội đủ + exit 0 [NOTIFY-gated] HOẶC degrade-ghi-file (off/degraded ghi đúng trạng thái)
 - [ ] Test-data tạo ra đã ghi sổ tracker + biết đường clear trước production (§4.2 luật 3)
 - [ ] TeamDelete sau khi user confirm done · KHÔNG auto-commit · KHÔNG đụng DB production
 
@@ -210,7 +222,8 @@ ai-simple/BA/ui-design-logic **vắng** trong repo → degrade: tier áp cục b
 | §6 không update sau ASK | §4b CAPTURE bắt buộc |
 | Bê pattern lunar sang repo khác | Seed §6 rỗng mỗi repo |
 | Hardcode ref repo cụ thể | Auto-discover / triage.config (§2) |
-| Log telegram=ok khi fail/degrade | Ghi đúng trạng thái |
+| Log telegram=ok khi fail/degrade/off [telegram-ref] | Ghi đúng trạng thái |
+| Agent tự set AI_SIMPLE_NOTIFY / ghi ~/.ai-simple/config / thêm token consent | Consent là của user (§8) |
 | Tự chế escalation/no-commit | Defer ai-simple (§7) |
 
 ---

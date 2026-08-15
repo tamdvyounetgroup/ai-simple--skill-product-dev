@@ -285,6 +285,11 @@ function cmdInit(args) {
   if (stack === 'custom') console.log('\nLƯU Ý stack custom: sửa CONFIG trong .githooks/pre-commit (MIGRATIONS_PATTERN, SELF_TEST_*) rồi chạy `ai-simple doctor`.');
   console.log('\nTiếp theo: điền placeholder {{...}} trong CLAUDE.md; doc gắn code khai covers:/last_verified:/ttl_days:;');
   console.log('máy clone mới chỉ cần chạy lại: git config core.hooksPath .githooks (hoặc `ai-simple doctor` sẽ nhắc).');
+  // v1.11.0 — PreToolUse guard là OPT-IN: chỉ IN hướng dẫn, KHÔNG tự cài (SKILL.md ui-ux-triage §12: "cần user đồng ý").
+  console.log('\n(Tuỳ chọn, KHÔNG tự cài) Guard chặn lệnh git phá dirty (reset/checkout --/stash/restore) cho Claude Code:');
+  console.log('  1. cp node_modules/ai-simple/templates/pretooluse-git-guard.sh .claude/  (hoặc từ repo nguồn)');
+  console.log('  2. Thêm vào .claude/settings.json: {"hooks":{"PreToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"sh .claude/pretooluse-git-guard.sh"}]}]}}');
+  console.log('  Đây là rào VÔ Ý (pattern-match, không chặn lách chủ đích) — đọc header script trước khi bật.');
   process.exit(failed ? 1 : 0);
 }
 
@@ -482,10 +487,17 @@ function passthrough(scriptArgs) {
 
 async function cmdSelfTest() { // dùng cho `npm test` của chính package: chạy self-test template + skill-verifier
   let failed = false;
-  for (const [label, file, arg] of [['hook', TPL('pre-commit.hook.template'), '--self-test'], ['report', TPL('doc-health-report.sh.template'), '--self-test']]) {
+  for (const [label, file, arg] of [['hook', TPL('pre-commit.hook.template'), '--self-test'], ['report', TPL('doc-health-report.sh.template'), '--self-test'], ['pretooluse-guard', TPL('pretooluse-git-guard.sh'), '--self-test']]) {
     const r = sh([file, arg], { cwd: PKG_ROOT });
     console.log(`${r.status === 0 ? 'PASS' : 'FAIL'} template ${label} --self-test`);
     if (r.status !== 0) { failed = true; console.log(r.stdout + r.stderr); }
+  }
+  // Script đo lường có --self-test (v1.11.0): metadata-words là NGUỒN ĐO DUY NHẤT token metadata —
+  // self-test của nó vào gate để cách đếm không rot (CLAUDE.md mục 8).
+  {
+    const r = spawnSync(process.execPath, [path.join(PKG_ROOT, 'scripts', 'metadata-words.js'), '--self-test'], { encoding: 'utf8', cwd: PKG_ROOT });
+    console.log(`${(r.status === 0) ? 'PASS' : 'FAIL'} script metadata-words --self-test`);
+    if (r.status !== 0) { failed = true; console.log((r.stdout || '') + (r.stderr || '')); }
   }
   // Skill-verifier fixtures (G1 bộ chấm điểm — self-test hợp nhất): MỌI skills/*/*-verify.sh có
   // --self-test phải chạy trong `npm test`, không suite mồ côi (trước đây chỉ security-verify được nối,
@@ -513,7 +525,8 @@ async function cmdSelfTest() { // dùng cho `npm test` của chính package: ch�
   // Identity-numbers guard (hội đồng Fable, đề xuất #3): các "số bản sắc" (số nguyên tắc/lớp/skill)
   // drift ở ~8 chỗ mỗi lần thêm nguyên tắc. Fail khi doc HIỆN HÀNH còn số cũ. Scope CHỈ các file
   // sống (README/SKILL/methodology-README/skills) — CHANGELOG/ADR là lịch sử, được phép giữ số cũ.
-  const STALE = [/1[0-4] nguyên tắc/, /1[0-4] (core )?principles/i, /[45] lớp/, /[45] layers/i, /[34]-skill/, /composable principles in [45] layers/i];
+  // v1.11.0: nới bắt biến-thể-từ-chen-giữa ("14 composable principles" từng lọt regex (core )? — bug thật)
+  const STALE = [/1[0-4] nguyên tắc/, /1[0-4]( \w+)? principles/i, /[45] lớp/, /[45] layers/i, /[34]-skill/, /principles in [45] layers/i];
   const LIVE = ['README.md', 'SKILL.md', 'methodology/README.md',
     ...['ba-flow-logic', 'ui-design-logic', 'ui-ux-triage', 'security-logic'].map(s => `skills/${s}/SKILL.md`)];
   for (const f of LIVE) {
@@ -527,6 +540,35 @@ async function cmdSelfTest() { // dùng cho `npm test` của chính package: ch�
   }
   if (!LIVE.some(f => STALE.some(re => fs.existsSync(path.join(PKG_ROOT, f)) && fs.readFileSync(path.join(PKG_ROOT, f), 'utf8').match(re))))
     console.log('PASS identity-numbers (15 nguyên tắc / 6 lớp / 5-skill nhất quán trong docs sống)');
+  // Fixture identity (v1.11.0): "14 composable principles" là ca FAIL BẮT BUỘC — bug thật từng lọt
+  // regex (core )? vì từ chen giữa; kèm chống-oan cho số hiện hành.
+  let idFxOk = true;
+  for (const [s, mustHit] of [['14 composable principles', true], ['14 principles', true],
+    ['15 composable principles', false], ['15 nguyên tắc', false], ['13 nguyên tắc', true]]) {
+    const hit = STALE.some(re => s.match(re));
+    if (hit !== mustHit) { failed = true; idFxOk = false; console.log(`FAIL identity-fixture: '${s}' ${mustHit ? 'phải bị bắt mà lọt' : 'bị bắt oan'}`); }
+  }
+  if (idFxOk) console.log('PASS identity-fixture (biến-thể-từ-chen-giữa bị bắt; số hiện hành không bị bắt oan)');
+  // Cross-cut mktemp fail-fast (v1.11.0 — Lỗ an toàn số 1): tập quét ĐỘNG git ls-files '*.sh' '*.sh.template'
+  // + template hook. Dòng chứa $(mktemp thiếu CẢ '|| exit' LẪN '|| return' cùng dòng → FAIL
+  // (mktemp fail mà chạy tiếp = self-test ghi ~40 commit lạ + đổi branch NGAY TRONG repo thật — đã repro).
+  let mkOk = true;
+  const noGuard = (line) => line.includes('$(mktemp') && !/\|\|\s*exit/.test(line) && !/\|\|\s*return/.test(line);
+  const lsr = spawnSync('git', ['ls-files', '*.sh', '*.sh.template'], { encoding: 'utf8', cwd: PKG_ROOT });
+  const mkFiles = new Set((lsr.stdout || '').split('\n').map(s => s.trim()).filter(Boolean));
+  mkFiles.add('templates/pre-commit.hook.template');
+  for (const f of mkFiles) {
+    const p = path.join(PKG_ROOT, f);
+    if (!fs.existsSync(p)) continue;
+    fs.readFileSync(p, 'utf8').split('\n').forEach((line, i) => {
+      if (noGuard(line)) { failed = true; mkOk = false; console.log(`FAIL mktemp-guard: ${f}:${i + 1} có $(mktemp thiếu '|| exit'/'|| return' cùng dòng`); }
+    });
+  }
+  // Fixture chống-oan của chính assertion + ca FAIL bắt buộc
+  for (const l of ['T=$(mktemp -d) || exit 1', 'T=$(mktemp -d) && cd "$T" || exit 1', 'X=$(mktemp) || return 1'])
+    if (noGuard(l)) { failed = true; mkOk = false; console.log('FAIL mktemp-guard-fixture: dòng guard hợp lệ bị bắt oan'); }
+  if (!noGuard('T=$(mktemp -d); RC=0')) { failed = true; mkOk = false; console.log('FAIL mktemp-guard-fixture: dòng thiếu guard không bị bắt'); }
+  if (mkOk) console.log('PASS mktemp-guard (tập quét động .sh/.sh.template: mọi $(mktemp có fail-fast cùng dòng; fixture chống-oan xanh)');
   // Cross-cut coverage guard: 4 skill anh em PHẢI nhắc security-logic (sơ đồ 5-skill / handoff) —
   // identity-numbers chỉ đếm số, guard này bắt "skill thiếu sơ đồ" (reviewer cuối trừ điểm đúng lỗ này).
   let xcutOk = true;

@@ -1,5 +1,5 @@
 #!/bin/sh
-# ai-simple-version: 1.10.0
+# ai-simple-version: 1.11.0
 # pre-commit — Automated enforcement (nguyên tắc 08 / principle 08)
 #
 # CHẠY ĐƯỢC NGAY với default Supabase + Next.js. Sửa 3 biến CẤU HÌNH bên dưới cho project khác.
@@ -52,8 +52,8 @@ if [ "$1" = "--self-test" ]; then
   [ -n "$M" ] && echo "PASS: matcher contract — child (src/lib/x) khop" || { echo "FAIL: matcher miss child"; RC=1; }
   # Fixture gate: warn — chạy flow thật trong temp repo, WARN nhưng KHÔNG chặn
   HOOK_SELF="$0"; case "$HOOK_SELF" in /*|[A-Za-z]:*) ;; *) HOOK_SELF="$(pwd)/$HOOK_SELF";; esac
-  TW=$(mktemp -d); OPW=$(pwd)
-  cd "$TW" && git init -q . && git config user.email t@t.t && git config user.name t
+  TW=$(mktemp -d) && OPW=$(pwd) || exit 1
+  cd "$TW" && git init -q . && git config user.email t@t.t && git config user.name t || exit 1
   mkdir -p .githooks src/w docs/app-map
   cp "$HOOK_SELF" .githooks/pre-commit && git config core.hooksPath .githooks
   echo "a" > src/w/a.ts
@@ -69,7 +69,7 @@ if [ "$1" = "--self-test" ]; then
   cd "$OPW" && rm -rf "$TW"
   # Fixture claim gate (NT13): claim cua BRANCH KHAC giu src/c -> commit dung vao bi BLOCK;
   # commit tu CHINH branch cua lot -> di qua.
-  TC=$(mktemp -d); cd "$TC" && git init -q . && git config user.email t@t.t && git config user.name t
+  TC=$(mktemp -d) && cd "$TC" && git init -q . && git config user.email t@t.t && git config user.name t || exit 1
   mkdir -p .githooks src/c
   cp "$HOOK_SELF" .githooks/pre-commit && git config core.hooksPath .githooks
   echo x > src/c/h.ts && git add -A && git commit -qm setup >/dev/null 2>&1
@@ -91,7 +91,7 @@ if [ "$1" = "--self-test" ]; then
   fi
   cd "$OPW" && rm -rf "$TC"
   # Fixture UI anti-slop gate (1d): mau hard-code -> BLOCK; mau token -> qua
-  TU=$(mktemp -d); cd "$TU" && git init -q . && git config user.email t@t.t && git config user.name t
+  TU=$(mktemp -d) && cd "$TU" && git init -q . && git config user.email t@t.t && git config user.name t || exit 1
   mkdir -p .githooks src/ui
   cp "$HOOK_SELF" .githooks/pre-commit && git config core.hooksPath .githooks
   echo "module.exports={}" > tailwind.config.js
@@ -180,7 +180,7 @@ if [ "$1" = "--self-test" ]; then
   else echo "FAIL: 1d-p sai (exit=$RCU12): $OUTU12"; RC=1; fi
   cd "$OPW" && rm -rf "$TU"
   # 1f (NT15): no-marker 2 ve, export trung, page thieu state, lane-vs-spec — moi WARN khong duoc keo FAIL
-  TB=$(mktemp -d); cd "$TB" && git init -q . && git config user.email t@t.t && git config user.name t
+  TB=$(mktemp -d) && cd "$TB" && git init -q . && git config user.email t@t.t && git config user.name t || exit 1
   mkdir -p .githooks src/lib src/app/foo docs/app-map
   cp "$HOOK_SELF" .githooks/pre-commit && git config core.hooksPath .githooks
   printf 'export function dupFn(a){return a}\n' > src/lib/a.ts
@@ -219,7 +219,7 @@ if [ "$1" = "--self-test" ]; then
   else echo "FAIL: 1f chan oan khi da du (exit=$RCB5): $OUTB5"; RC=1; fi
   cd "$OPW" && rm -rf "$TB"
   # 1b moi: gate: warn nam SAU dong 10 nhung trong frontmatter (truoc heading ## dau) -> van WARN, khong BLOCK
-  TG=$(mktemp -d); cd "$TG" && git init -q . && git config user.email t@t.t && git config user.name t
+  TG=$(mktemp -d) && cd "$TG" && git init -q . && git config user.email t@t.t && git config user.name t || exit 1
   mkdir -p .githooks src/g docs/app-map
   cp "$HOOK_SELF" .githooks/pre-commit && git config core.hooksPath .githooks
   echo "a" > src/g/a.ts
@@ -236,7 +236,7 @@ if [ "$1" = "--self-test" ]; then
   fi
   cd "$OPW" && rm -rf "$TG"
   # Fixture Security gate (1e): secret hard-code -> BLOCK; placeholder -> qua; doc injection -> BLOCK
-  TS=$(mktemp -d); cd "$TS" && git init -q . && git config user.email t@t.t && git config user.name t
+  TS=$(mktemp -d) && cd "$TS" && git init -q . && git config user.email t@t.t && git config user.name t || exit 1
   mkdir -p .githooks src docs/app-map
   cp "$HOOK_SELF" .githooks/pre-commit && git config core.hooksPath .githooks
   echo "export const ok = 1" > src/clean.ts
@@ -330,7 +330,7 @@ if [ "$1" = "--self-test" ]; then
   cd "$OPW" && rm -rf "$TS"
   # Fixture B1/M4 (hoi dong Fable): doc-change CHI GOM dong DOC-STATUS may-ghi KHONG duoc tinh
   # la "da sua doc" -> cong covers van BLOCK (vá false-pass 'git add -A' trong First-win README).
-  TB=$(mktemp -d); cd "$TB" && git init -q . && git config user.email t@t.t && git config user.name t
+  TB=$(mktemp -d) && cd "$TB" && git init -q . && git config user.email t@t.t && git config user.name t || exit 1
   mkdir -p .githooks src/b docs/app-map
   cp "$HOOK_SELF" .githooks/pre-commit && git config core.hooksPath .githooks
   echo "a" > src/b/a.ts
@@ -351,6 +351,44 @@ if [ "$1" = "--self-test" ]; then
   OUTB2=$(git commit -m "re-verify(docs/app-map/01-b.md): checked" 2>&1); RCB2=$?
   [ "$RCB2" -eq 0 ] && echo "PASS: covers gate cho qua khi doc duoc sua that (bump last_verified)" || { echo "FAIL: covers gate chan oan doc sua that (exit=$RCB2)"; RC=1; }
   cd "$OPW" && rm -rf "$TB"
+  # Fixture consent NOTIFY vet-audit (v1.11.0 — 3c): token-trong-staged-diff, so GIA TRI HIEU LUC.
+  # Moi ca chay KHONG co junction .claude/skills -> dong thoi chung minh fresh-clone khong gay (3d guard).
+  TN=$(mktemp -d) && cd "$TN" && git init -q . && git config user.email t@t.t && git config user.name t || exit 1
+  mkdir -p .githooks .claude
+  cp "$HOOK_SELF" .githooks/pre-commit && git config core.hooksPath .githooks
+  printf 'NOTIFY=off\n' > .claude/triage.config
+  git add -A; OUTN0=$(git commit -m first 2>&1); RCN0=$?
+  [ "$RCN0" -eq 0 ] && echo "PASS: consent 3c — unborn HEAD, commit dau co triage.config -> sach" || { echo "FAIL: 3c unborn HEAD bi chan (exit=$RCN0): $OUTN0"; RC=1; }
+  printf 'NOTIFY=on\n' > .claude/triage.config; git add .claude/triage.config
+  OUTN1=$(git commit -m flip 2>&1); RCN1=$?
+  if [ "$RCN1" -ne 0 ] && echo "$OUTN1" | grep -q 'user-consent'; then echo "PASS: consent 3c — off->on khong token -> BLOCK"; else echo "FAIL: 3c off->on khong token lot (exit=$RCN1)"; RC=1; fi
+  printf '# user-consent: notify-on 2026-08-15\nNOTIFY=on\n' > .claude/triage.config; git add .claude/triage.config
+  OUTN2=$(git commit -m fliptoken 2>&1); RCN2=$?
+  [ "$RCN2" -eq 0 ] && echo "PASS: consent 3c — off->on kem token moi -> PASS" || { echo "FAIL: 3c flip hop le bi chan oan (exit=$RCN2): $OUTN2"; RC=1; }
+  printf 'NOTIFY=off\n' > .claude/triage.config; git add .claude/triage.config
+  OUTN3=$(git commit -m narrow 2>&1); RCN3=$?
+  [ "$RCN3" -eq 0 ] && echo "PASS: consent 3c — on->off (thu hep) khong token -> PASS" || { echo "FAIL: 3c thu hep bi chan oan (exit=$RCN3)"; RC=1; }
+  printf 'TELEGRAM=\n' > .claude/triage.config; git add .claude/triage.config
+  OUTN4=$(git commit -m delline 2>&1); RCN4=$?
+  if [ "$RCN4" -ne 0 ] && echo "$OUTN4" | grep -q 'user-consent'; then echo "PASS: consent 3c — XOA dong NOTIFY=off khong token -> BLOCK (go phu quyet dang vang-mat)"; else echo "FAIL: 3c xoa dong off lot (exit=$RCN4)"; RC=1; fi
+  printf 'NOTIFY=off\nTELEGRAM=\n' > .claude/triage.config; git add .claude/triage.config; git commit -qm twokeys >/dev/null 2>&1
+  printf 'TELEGRAM=\nNOTIFY=off\n' > .claude/triage.config; git add .claude/triage.config
+  OUTN5=$(git commit -m reorder 2>&1); RCN5=$?
+  [ "$RCN5" -eq 0 ] && echo "PASS: consent 3c — dao thu tu dong giu NOTIFY=off khong token -> PASS (hieu luc khong doi)" || { echo "FAIL: 3c dao dong bi chan oan (exit=$RCN5): $OUTN5"; RC=1; }
+  printf 'TELEGRAM=x\nNOTIFY=off\n' > .claude/triage.config; git add .claude/triage.config
+  OUTN6=$(git commit -m otherkey 2>&1); RCN6=$?
+  [ "$RCN6" -eq 0 ] && echo "PASS: consent 3c — sua key khac giu off khong token -> PASS" || { echo "FAIL: 3c sua key khac bi chan oan (exit=$RCN6)"; RC=1; }
+  printf 'NOTIFY=on\nTELEGRAM=x\nNOTIFY=off\n' > .claude/triage.config; git add .claude/triage.config
+  OUTN7=$(git commit -m decoy 2>&1); RCN7=$?
+  if [ "$RCN7" -ne 0 ] && echo "$OUTN7" | grep -q 'user-consent'; then echo "PASS: consent 3c — decoy trung-key (on dau + off duoi) -> BLOCK theo hieu luc head-1"; else echo "FAIL: 3c decoy trung-key lot (exit=$RCN7)"; RC=1; fi
+  printf '# user-consent: notify-on 2026-08-16\nNOTIFY=on\nTELEGRAM=x\n' > .claude/triage.config; git add .claude/triage.config
+  OUTN8=$(git commit -m reflip 2>&1); RCN8=$?
+  [ "$RCN8" -eq 0 ] && echo "PASS: consent 3c — re-flip kem DONG token MOI (ngay khac) -> PASS" || { echo "FAIL: 3c re-flip token moi bi chan (exit=$RCN8): $OUTN8"; RC=1; }
+  git config core.autocrlf false   # autocrlf=true tự chuẩn hoá CRLF khi add → churn eol phải tắt mới thành diff thật
+  printf '# user-consent: notify-on 2026-08-16\r\nNOTIFY=on\r\nTELEGRAM=x\r\n' > .claude/triage.config; git add .claude/triage.config
+  OUTN9=$(git commit -m eolchurn 2>&1); RCN9=$?
+  [ "$RCN9" -eq 0 ] && echo "PASS: consent 3c — churn eol toan file giu gia tri khong token -> PASS" || { echo "FAIL: 3c churn eol bi chan oan (exit=$RCN9): $OUTN9"; RC=1; }
+  cd "$OPW" && rm -rf "$TN"
   exit $RC
 fi
 
@@ -716,6 +754,33 @@ for f in $(echo "$CHANGED" | grep -E '\.(md|template)$' || true); do
     FAIL=1
   fi
 done
+
+# ── 3c. Consent NOTIFY vết-audit (v1.11.0 — ENFORCED phạm-vi-hẹp tại commit-time) ──
+# Token-trong-staged-diff: so GIÁ TRỊ HIỆU LỰC (head -1, cùng phép chiếu cfg của triage-verify)
+# staged vs HEAD. HEAD=off mà staged≠off (on hoặc VẮNG dòng) = gỡ phủ quyết repo → đòi dòng token
+# MỚI trong staged diff. Cặp -/+ cùng giá trị (di-chuyển-dòng/churn-eol) không đổi hiệu lực → PASS.
+# Nguồn không đọc được (unborn HEAD / file vắng, exit 128) := unset → không chặn (thêm-mới off là thu hẹp).
+# Phạm-vi-hẹp: chỉ chặn commit THIẾU token — không chặn agent tự viết token (luật cấm đó là ADVISORY
+# trong skills/ui-ux-triage/SKILL.md §8). Vai trò: vết audit trong lịch sử file + rào vô ý.
+if echo "$CHANGED" | grep -q '^\.claude/triage\.config$'; then
+  NH=$(git show HEAD:.claude/triage.config 2>/dev/null | grep -E '^NOTIFY=' | head -1 | sed -E 's/^NOTIFY=//; s/[[:space:]]+#.*$//; s/^[[:space:]]+//; s/[[:space:]]+$//')
+  NS=$(git show :0:.claude/triage.config 2>/dev/null | grep -E '^NOTIFY=' | head -1 | sed -E 's/^NOTIFY=//; s/[[:space:]]+#.*$//; s/^[[:space:]]+//; s/[[:space:]]+$//')
+  case "$NH" in on|off) ;; *) NH=unset;; esac
+  case "$NS" in on|off) ;; *) NS=unset;; esac
+  if [ "$NH" = "off" ] && [ "$NS" != "off" ]; then
+    if ! git diff --cached -U0 -- .claude/triage.config 2>/dev/null | grep -q '^+# user-consent: notify-on'; then
+      echo "BLOCK: staged go NOTIFY=off (hieu luc off -> $NS) ma THIEU dong token moi '# user-consent: notify-on <ngay>'."
+      echo "  -> User dat dong token NGAY CANH thay doi NOTIFY trong .claude/triage.config, stage cung nhau. Moi lan flip THEM mot dong token MOI (kem ngay)."
+      FAIL=1
+    fi
+  fi
+fi
+
+# ── 3d. Consent --config-check (DETECTED — ghi trạng thái consent vào triage-log, KHÔNG kéo FAIL hook) ──
+# Guard tồn-tại-file theo mẫu design-verify ($DV): junction .claude/skills là per-machine bị auto-gitignore —
+# fresh clone chưa `ai-simple init` không có verifier → skip im lặng, hook không gãy.
+TV=".claude/skills/ui-ux-triage/triage-verify.sh"
+if [ -f "$TV" ]; then sh "$TV" --config-check >/dev/null 2>&1 || true; fi
 
 # ── 4. WARN (không chặn): app-map file thiếu chuẩn ────────────────────
 for f in $(echo "$CHANGED" | grep -E 'docs/app-map/.*\.md$' | grep -v '_generated/' || true); do

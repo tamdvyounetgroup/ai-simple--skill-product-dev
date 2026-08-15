@@ -1,0 +1,9 @@
+# v1.11.0 — máy thực thi của repo là POSIX sh: chốt LF cho mọi file sh-content ở MỌI depth
+# (pattern không-slash match basename mọi depth — `pre-commit*` phủ cả .githooks/pre-commit).
+# Contamination đã đo thật trước khi có file này: ba-verify.sh working tree i/lf w/crlf do core.autocrlf=true.
+# Attr chỉ hiệu lực khi Git touch lại file → đổi file này phải kèm git add --renormalize theo đúng scope
+# (KHÔNG renormalize toàn repo — stage nhầm dirty thật của user). Lưới giữ bất biến: assertion D2c trong
+# scripts/dogfood-gate.js (npm run gates) FAIL khi file trong scope không còn w/lf.
+*.sh text eol=lf
+*.sh.template text eol=lf
+pre-commit* text eol=lf

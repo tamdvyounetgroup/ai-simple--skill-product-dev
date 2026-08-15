@@ -22,8 +22,9 @@ Giải pháp: phân tầng theo **khả năng đảo ngược**, không phải t
 | 🟢 **GREEN** | Đảo ngược bằng git: code, UI, doc, test, file mới, read-only query, **viết file migration** (chưa apply) | **Đi thẳng**, không hỏi, không cần liệt kê |
 | 🟡 **YELLOW** | Đảo ngược có chủ đích: bảng mới, cột nullable mới **chưa có data**, index (`CONCURRENTLY` — xem note), RLS siết thêm trên bảng **chưa phục vụ production**, role mới chưa gắn user, 2-3 module, cron/job mới chưa bật | **Tự làm theo phương án an toàn nhất** + bắt buộc reversible (down migration / feature flag) + ghi vào mục **Assumptions** của báo cáo cuối. KHÔNG hỏi trước |
 | 🔴 **RED** | Không thể quay đầu hoặc nổ ở prod: DROP/ALTER mất data, **mọi thay đổi RLS trên bảng đang phục vụ user** (nới lỏng = lộ data, siết = lock out user — đều nổ), đổi role matrix đang dùng, mutate data prod, xóa/sửa cron-edge fn **đang chạy**, breaking change schema liên repo (nguyên tắc 10) | **Dừng, hỏi đúng 1 câu gộp** kèm phương án đề xuất, đợi trả lời |
+| 📤 **External side-effect** | Gửi tin (telegram/email/SMS), publish, deploy — nội dung đã rời máy là không thu hồi được, và cần trục **AUTHORITY** (user đã cấp quyền chưa) độc lập với trục risk | **Chỉ làm khi user đã consent tường minh** qua kênh user tự đặt (vd NOTIFY qua `~/.ai-simple/config` — xem skill ui-ux-triage §8); "có script/tool" không phải consent |
 
-Mẹo phân tầng nhanh: tự hỏi *"nếu sai, undo mất bao lâu?"* — vài giây (git revert) = GREEN; một lệnh có chuẩn bị sẵn (down migration) = YELLOW; phải restore backup hoặc không undo được = RED.
+Mẹo phân tầng nhanh: tự hỏi *"nếu sai, undo mất bao lâu?"* — vài giây (git revert) = GREEN; một lệnh có chuẩn bị sẵn (down migration) = YELLOW; phải restore backup hoặc không undo được = RED. **Reversible ≠ authorized**: một việc dễ undo về mặt kỹ thuật (bật cờ gửi tin) vẫn cần user cấp quyền — hai trục risk và authority chấm độc lập.
 
 **4 ranh giới hay bị chấm nhầm:**
 1. **Viết file ≠ apply**: viết migration file là GREEN (git revert được); tier chỉ tính tại thời điểm **apply lên prod**.

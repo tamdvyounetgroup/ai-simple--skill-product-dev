@@ -27,7 +27,7 @@ ai-simple--skill-product-dev/
 5. Gặp hành vi chưa có trong spec: CẤM bỏ qua im lặng. Trạng thái thuộc ma trận mục 4 → làm mặc định an toàn nhất + ghi `## Assumptions` + bổ sung 1 dòng vào spec CÙNG COMMIT; hành vi nghiệp vụ → handoff ngược BA; HOW-nhìn → handoff design.
 6. Vùng miễn test giữ đúng 3 ca của nguyên tắc 04 (pure UI tweak / config-only / doc-only). "Sửa 1 dòng nên khỏi test" KHÔNG phải một ca.
 7. Cắt góc có trần biết trước → để lại `// nợ: <trần là gì>, <điều kiện nâng cấp>`. Thiếu vế thứ hai thì nợ sẽ mục.
-8. Riêng repo này: mọi script gate mới PHẢI có `--self-test` và được auto-discover vào `npm test`; sửa `templates/pre-commit.hook.template` thì `.githooks/pre-commit` đồng bộ CÙNG COMMIT (dogfood-gate so byte); số bản sắc (15 nguyên tắc / 6 lớp / 5-skill) chỉ đổi kèm identity-numbers guard trong `bin/ai-simple.js`.
+8. Riêng repo này: mọi script gate mới PHẢI có `--self-test` và được auto-discover vào `npm test`; sửa `templates/pre-commit.hook.template` thì `.githooks/pre-commit` đồng bộ CÙNG COMMIT (dogfood-gate so nội dung sau khi bỏ version-stamp); số bản sắc (15 nguyên tắc / 6 lớp / 5-skill) chỉ đổi kèm identity-numbers guard trong `bin/ai-simple.js`.
 
 ## Commit convention
 ```

@@ -80,7 +80,7 @@ lint_one() {
 }
 
 if [ "$MODE" = "--self-test" ]; then
-  RC=0; T=$(mktemp -d)
+  RC=0; T=$(mktemp -d) || exit 1
   FM='> Load khi: t\ncovers: src/x\nlast_verified: 2026-01-01\nttl_days: 90\n'
   printf "# x\n${FM}## 10. Acceptance\n### AC-1 a\n- Given x\n- Then y\n" > "$T/a.md"
   R=$(lint_one "$T/a.md")
@@ -96,6 +96,17 @@ if [ "$MODE" = "--self-test" ]; then
   R=$(lint_one "$T/e.md"); echo "$R" | grep -q 'thieu dong Assert' && echo "PASS: khong nham 'assert' trong Then" || { echo "FAIL: nham assert trong Then -> false-pass"; RC=1; }
   printf "# x\n${FM}## 10. Acceptance\n### AC-1 a · Test: e2e\n- Then mo popup va bam nut Duyet\n- **Assert** status==1\n" > "$T/g.md"
   R=$(lint_one "$T/g.md"); echo "$R" | grep -q 'component UI' && echo "PASS: BLOCK component UI tieng Anh (popup)" || { echo "FAIL: UI tieng Anh LOT"; RC=1; }
+  # v1.11.0 (Lo an toan so 1): mktemp fail tren nhanh --staged (production-facing) PHAI exit 1 —
+  # truoc day TMP rong -> git show fail -> || continue -> moi file staged bi skip im lang -> PASS GIA.
+  SELFV="$0"; case "$SELFV" in /*|[A-Za-z]:*) ;; *) SELFV="$(pwd)/$SELFV";; esac
+  TS9=$(mktemp -d) || exit 1
+  mkdir -p "$TS9/stub" "$TS9/r/docs/app-map"
+  printf '#!/bin/sh\nexit 1\n' > "$TS9/stub/mktemp"; chmod +x "$TS9/stub/mktemp"
+  ( cd "$TS9/r" && git init -q . && git config user.email t@t.t && git config user.name t \
+    && printf 'noi dung sai\n' > docs/app-map/ba-spec-x.md && git add -A ) >/dev/null 2>&1
+  ( cd "$TS9/r" && PATH="$TS9/stub:$PATH" sh "$SELFV" --staged ) >/dev/null 2>&1; RC9=$?
+  [ "$RC9" -ne 0 ] && echo "PASS: mktemp fail nhanh --staged -> exit $RC9 (fail-fast, khong PASS gia)" || { echo "FAIL: mktemp fail nhanh --staged van PASS gia"; RC=1; }
+  rm -rf "$TS9"
   rm -rf "$T"
   [ "$RC" -eq 0 ] && echo "ba-verify self-test: ALL PASS" || echo "ba-verify self-test: CO FAIL"
   exit $RC
@@ -104,7 +115,7 @@ fi
 if [ "$MODE" = "--staged" ]; then
   FILES=$(git diff --cached --name-only 2>/dev/null | grep -iE 'ba-spec.*\.md$' || true)
   [ -z "$FILES" ] && { echo "ba-verify: khong co ba-spec staged -> skip (exit 0)"; exit 0; }
-  FAIL=0; TMP=$(mktemp)
+  FAIL=0; TMP=$(mktemp) || exit 1
   for f in $FILES; do
     git show ":$f" > "$TMP" 2>/dev/null || continue   # lint NỘI DUNG ĐÃ STAGE, không phải worktree
     lint_one "$TMP" "$f" || FAIL=1

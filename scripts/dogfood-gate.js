@@ -30,6 +30,28 @@ if (!fs.existsSync(installed)) {
     fail('.githooks/pre-commit LỆCH templates/pre-commit.hook.template (bỏ version-stamp) — sync lại trong cùng commit sửa template (kỷ luật doc-đi-cùng-code)');
 }
 
+// D2b (v1.11.0) — version-stamp NGUỒN không được drift: template phải mang đúng PKG.version
+// (stampVersion() ghi đè lúc init/update nên drift vô hại lúc cài, nhưng nguồn mục dần — Fable m1).
+const PKG = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+if (fs.existsSync(template)) {
+  const m = fs.readFileSync(template, 'utf8').match(/^#\s*ai-simple-version:\s*(\S+)/m);
+  if (!m) fail('templates/pre-commit.hook.template thiếu dòng version-stamp');
+  else if (m[1] !== PKG.version) fail(`version-stamp nguồn '${m[1]}' ≠ package.json '${PKG.version}' — sửa stamp template cùng commit bump version`);
+}
+
+// D2c (v1.11.0) — EOL guard: máy thực thi là POSIX sh, mọi file .sh/.sh.template + hook phải w/lf
+// (contamination CRLF đã đo thật: ba-verify.sh từng i/lf w/crlf vì core.autocrlf=true; .gitattributes
+// chốt eol=lf, assertion này bắt regression tương lai ở đúng tập file attr nhắm tới).
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync('git', ['ls-files', '--eol', '--', '*.sh', '*.sh.template', '.githooks/pre-commit', 'templates/pre-commit.hook.template'], { encoding: 'utf8', cwd: ROOT });
+  for (const ln of (r.stdout || '').split('\n')) {
+    if (!ln.trim()) continue;
+    const wm = ln.match(/w\/(\S+)/);
+    if (wm && wm[1] !== 'lf' && wm[1] !== 'none') fail(`EOL không phải LF ở working tree: ${ln.trim()} — chạy git add --renormalize + re-checkout theo scope .gitattributes`);
+  }
+}
+
 // D3 — over-claim scan trên docs SỐNG (surface tuyên bố hiện hành). CHANGELOG/ADR bị LOẠI: là
 // LỊCH SỬ thảo luận về chính luật (luôn trích "đã bảo mật ✓" như thứ bị cấm) — cùng cách
 // identity-numbers guard miễn trừ chúng.
@@ -48,5 +70,5 @@ for (const rel of LIVE) {
   });
 }
 
-if (failed === 0) console.log('PASS dogfood-gate (hook tự cài + đồng bộ template + docs không over-claim)');
+if (failed === 0) console.log('PASS dogfood-gate (hook tự cài + đồng bộ template + version-stamp nguồn + EOL lf + docs không over-claim)');
 process.exit(failed ? 1 : 0);

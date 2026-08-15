@@ -8,8 +8,16 @@ APP_MAP_DIR=docs/app-map
 # Dùng khi muốn gate đúng một tập doc cốt lõi thay vì mọi .md.
 READ_REFS=
 
-# Script gửi telegram. Thiếu file → DEGRADE (ghi report ra file). Mặc định: scripts/notify-telegram.sh
-TELEGRAM=scripts/notify-telegram.sh
+# Script gửi telegram — sống ở TẦNG USER ngoài repo (token qua env user, project không tự chế bản riêng).
+# Thiếu file HOẶC consent chưa hội đủ → DEGRADE (ghi report ra file). Mặc định: ~/.ai-simple/notify-telegram.sh
+TELEGRAM=
+
+# Consent gửi tin NOTIFY — tri-state {on, off, unset}; KHÔNG ship giá trị sẵn (mặc định off là KẾT QUẢ
+# hợp nhất khi không nguồn ngoài-repo nào on, không phải giá trị ghi ở đây). Bật: user tự đặt NOTIFY=on
+# trong ~/.ai-simple/config hoặc env AI_SIMPLE_NOTIFY=on. Dòng NOTIFY=off ghi TẠI ĐÂY = phủ quyết cứng
+# của repo (thắng mọi override ngoài-repo). Gỡ dòng off phải kèm dòng token mới
+# '# user-consent: notify-on <ngày>' stage cùng commit — hook pre-commit chặn commit thiếu token.
+# Agent bị CẤM tự set env/ghi config/thêm token thay user (ADVISORY — SKILL.md §8).
 
 # Nơi append triage-log. Mặc định: test-reports/triage/triage-log.md
 TRIAGE_LOG=test-reports/triage/triage-log.md

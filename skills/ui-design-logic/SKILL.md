@@ -1,6 +1,6 @@
 ---
 name: ui-design-logic
-description: Thiết kế UI/UX top-down hướng-người-dùng — pha HOW-NHÌN của pipeline BA→design→build→triage. Sinh design-spec (thang người dùng, screen map, ma trận trạng thái, ngân sách IA, bảng quyết định component) rồi build UI theo stack đã khoá React+Tailwind+shadcn/ui, kết bằng vòng QA screenshot. Luật anti-AI-slop là first-party, ép ở pre-commit (màu hard-code, glow, gradient-trên-chữ, focus ring, tracking). Kích hoạt khi: 'thiết kế màn/dashboard/landing/form', 'build UI/thêm màn hình', 'màn này xấu/rối/nhìn như AI', 'redesign giữ nguyên chức năng', kể cả khi user chỉ nói 'làm cho đẹp'. KHÔNG kích hoạt cho: defect app đang chạy — nút lỗi, sai dữ liệu, sai role (→ui-ux-triage); nhu cầu nghiệp vụ mới còn mơ hồ (→ba-flow-logic); đổi text nhỏ không đổi layout (→build thẳng). Defer ai-simple cho risk-tier/verify/coupling.
+description: Thiết kế UI/UX top-down hướng-người-dùng: sinh design-spec (thang người dùng, screen map, ma trận trạng thái) rồi build UI, kết bằng QA screenshot; luật anti-AI-slop ép ở pre-commit. Kích hoạt: thiết kế màn/dashboard/landing/form, build UI, thêm màn hình, màn xấu/rối/nhìn như AI, redesign giữ chức năng, làm cho đẹp. KHÔNG: defect app đang chạy (→ui-ux-triage), nhu cầu nghiệp vụ mới (→ba-flow-logic).
 ---
 
 # UI Design Logic

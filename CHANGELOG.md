@@ -4,6 +4,33 @@ Toàn bộ lịch sử tiến hóa của phương pháp. README/methodology dùn
 
 Convention từ v1.10.0: mỗi mục version có thể chứa dòng `**RE-APPLY**: <việc project tiêu thụ cần làm lại sau update>` — `ai-simple update` tự trích các dòng này trong khoảng (bản-cũ → bản-mới] in thành checklist. Không có dòng RE-APPLY = update xong là xong.
 
+## v1.17.0 — 2026-08-15 (Metadata về dải mục tiêu 331 từ + án lệ "bài đo phải tách trước khi giao")
+
+- **Metadata 611 → 331 từ** (cắt cả 5 skill: foundation 154→75, ba-flow 121→65, security 133→63,
+  ui-design 124→62, triage 79→66) — vào dải mục tiêu ~300; giữ trọn trigger + ranh giới âm.
+- **ÁN LỆ PHƯƠNG PHÁP — huỷ 2 lần đo routing trước đó**: bài giao cho agent là chính file snapshot,
+  mà cột Kỳ vọng nằm CÙNG HÀNG với Prompt và bảng kết quả nằm cùng file → agent thấy đáp án, bài mất
+  tính mù (chính agent lượt sau tự khai báo). Kết quả 25/25 của hai lần ấy bị đánh dấu KHÔNG có giá trị
+  chứng minh; giao thức nay bắt buộc TÁCH BÀI trước khi giao (lệnh awk ghi trong snapshot). Cùng lớp lỗi
+  với luật tách prompt/expected của eval-runner — nay áp cho cả lưới routing.
+- **Lần đo 3, MÙ THẬT, hai mốc**: mốc 611 và mốc 331 mỗi mốc k=3 agent context sạch, bài đã tách,
+  cấm đọc repo → mỗi mốc 25/25 đồng thuận, và **331 khớp 611 đúng 25/25** → đủ điều kiện merge.
+- **VÁ 2 LỖ do chính security-logic tìm ra khi tự review repo** (bài eval with_skill — agent chạy máy
+  thật rồi repro, không phán suông):
+  1. **Lint prompt-injection bỏ sót đúng các file NẠP THẲNG vào context agent** — hook chỉ quét CLAUDE.md
+     + docs/app-map; payload trong `skills/*/SKILL.md` và `.claude/commands|agents/*.md` LỌT (đã repro:
+     cùng payload BLOCK ở app-map, lọt ở SKILL.md). Nguy hiểm đặc thù: junction `.claude/skills/*` trỏ vào
+     package nên payload đi theo publish xuống MỌI project tiêu thụ. Nay scope phủ cả 4 nhóm file + AGENTS.md;
+     3 fixture gồm ca chống-oan (SKILL.md bình thường không bị chặn).
+  2. **`security-verify.sh` chưa từng được wire vào pre-commit** (design-verify và triage-verify có, security
+     0 hit) — đúng khoảng cách "tuyên bố vs máy" mà hệ tồn tại để đóng: gate chặn security-review thiếu
+     declared-coverage/A=B=C= chỉ chạy --self-test, không chạy git-time. Nay wire theo khuôn design-verify
+     (`SEC_CHECKS != off` + guard tồn-tại-file → fresh clone chưa init vẫn skip im lặng).
+- **Semantic lần đo 2 (with_skill)**: 3 bài chạy với SKILL.md thật được load. Kết quả nổi bật: ca consent
+  Telegram — agent tự chạy `--config-check` trên máy, phát hiện consent=off + script notify không tồn tại,
+  TỪ CHỐI tự bật consent và trích đúng luật cấm agent set env; baseline (không skill) chỉ đạt partial ở ca này.
+  `eval-runner --report`: 4/5 pass. Ngưỡng semantic VẪN chưa chốt — đúng luật ≥2 lần đo đã có, nhưng cỡ mẫu
+  còn nhỏ (5 verdict/34 case).
 ## v1.16.0 — 2026-08-15 (Wave 3 phần cuối — rút metadata SAU KHI lưới routing xanh: 840 → 611 từ)
 
 - **Lưới chống routing-regression chạy THẬT, 2 lần đo** (docs/baseline/routing-snapshot.md): k=3 agent

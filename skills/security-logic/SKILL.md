@@ -1,6 +1,6 @@
 ---
 name: security-logic
-description: "Security review hướng-khung-chuẩn — pha RÀ SOÁT BẢO MẬT chạy song song pipeline BA→design→build→triage. Biến 'code này có an toàn không?' thành security-review có KHAI BÁO phủ sóng: mỗi finding gắn tier (NT06) + gate (máy/CI/người) + mã OWASP LLM Top-10 VÀ OWASP Top-10 web app (ngang hàng). Kích hoạt khi: 'review bảo mật', 'có lỗ hổng không', 'security check', 'audit an toàn', 'kiểm secret', 'doc này có bị inject không', trước khi merge code chạm auth/payment/crypto/migration, hoặc khi dependency có CVE. Cổng độc nhất: doc-as-input prompt-injection (LLM01). KHÔNG kích hoạt cho: pentest/DAST production (ngoài scope — chỉ sinh runbook NT11), thiết kế UI (→ui-design-logic), defect chức năng không liên quan bảo mật (→ui-ux-triage). Defer ai-simple cho tier/enforcement/coupling; KHÔNG hứa 'đã bảo mật ✓' — chỉ khai 'phủ A/B, KHÔNG phủ C'."
+description: Security review hướng-khung-chuẩn: sinh security-review khai phủ sóng, mỗi finding gắn tier + gate + mã OWASP LLM và web Top-10. Kích hoạt: review bảo mật, có lỗ hổng không, security check, kiểm secret, doc có bị inject không, merge code chạm auth/payment/crypto. KHÔNG: pentest/DAST production (ngoài scope, chỉ sinh runbook), defect chức năng (→ui-ux-triage). Chỉ khai phủ A/B, KHÔNG phủ C.
 ---
 
 # Security Logic — rà soát bảo mật có khai báo phủ sóng (không dấu tick giả)

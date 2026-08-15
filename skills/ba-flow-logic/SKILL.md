@@ -1,6 +1,6 @@
 ---
 name: ba-flow-logic
-description: "BA hướng-người-dùng — pha PHÂN TÍCH NGHIỆP VỤ đầu pipeline BA→design→build→triage. Biến nhu cầu mơ hồ thành ba-spec (acceptance criteria = oracle hành vi) qua trục USER → nghiệp vụ → cross-user handoff → flow (Input/Output) → tối ưu flow bằng team-agent (suggest + đánh giá + chuyên gia nghiệp vụ) → AC. Kích hoạt khi: 'làm BA', 'phân tích nghiệp vụ', 'viết yêu cầu/spec', 'vẽ/tối ưu flow', nhu cầu/tính năng mới còn mơ hồ, hoặc nhận handoff ngược từ triage (spec sai/thiếu) / từ ui-design-logic (đang design phát hiện spec thiếu hành vi). KHÔNG kích hoạt cho thiết kế UI (→ui-design-logic), triage defect (→ui-ux-triage), đổi nhỏ đã rõ (→build). Defer ai-simple cho risk-tier/memory/coupling/verify; dừng ở WHAT+WHY, KHÔNG đụng UI/screen/code."
+description: Phân tích nghiệp vụ hướng-người-dùng, pha đầu pipeline BA→design→build→triage: nhu cầu mơ hồ thành ba-spec (USER → nghiệp vụ → handoff → flow Input/Output → acceptance criteria làm oracle). Kích hoạt: làm BA, phân tích nghiệp vụ, viết yêu cầu/spec, vẽ hoặc tối ưu flow, tính năng mới còn mơ hồ. KHÔNG: thiết kế UI (→ui-design-logic), defect app đang chạy (→ui-ux-triage). Dừng ở WHAT+WHY.
 ---
 
 # BA Flow Logic — phân tích nghiệp vụ hướng người dùng (team-agent)

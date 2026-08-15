@@ -1,6 +1,6 @@
 ---
 name: ai-simple-product-dev
-description: Operating layer cho codebase làm việc với AI — 15 nguyên tắc composable trong 6 lớp (context phân tầng, app-map + coupling doc↔code, context routing, doc+test sync, risk tier, memory, hook enforcement, cross-repo contract, ops runbook, parallel sessions, security gate), bật theo profile nên project nhỏ trả phí gần bằng không. Kích hoạt khi: dựng project mới làm với AI, retrofit docs cho AI pair-programming, onboard agent vào codebase có sẵn, hoặc triệu chứng 'AI bịa tên hàm/đọc sai file', 'context quá dài', 'docs lệch code', 'đổi schema vỡ repo khác', 'AI hỏi xác nhận từng việc nhỏ', 'hai phiên AI giẫm chân nhau', 'AI lặp lại lỗi đã sửa', 'nên tối ưu gì tiếp', 'lộ secret vào git', 'doc này có bị tiêm lệnh không'. KHÔNG kích hoạt cho: phân tích nghiệp vụ (→ba-flow-logic), thiết kế/build UI (→ui-design-logic), defect app đang chạy (→ui-ux-triage), review bảo mật một thay đổi cụ thể (→security-logic).
+description: Operating layer cho codebase làm việc với AI: 15 nguyên tắc/6 lớp (context phân tầng, app-map coupling doc↔code, risk tier, hook enforcement, parallel sessions), bật theo profile. Kích hoạt: dựng project mới với AI, retrofit docs, onboard agent vào repo có sẵn, AI bịa tên hàm/đọc sai file, context quá dài, docs lệch code, hai phiên AI giẫm nhau. KHÔNG: phân tích nghiệp vụ, thiết kế/build UI, defect app đang chạy, review bảo mật.
 ---
 
 # AI-Simple Product Dev

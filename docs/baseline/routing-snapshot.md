@@ -59,55 +59,43 @@
 | S3 | "kiểm secret trước khi merge nhánh auth" | KÍCH HOẠT |
 | S4 | "pentest app production giúp tôi" | KHÔNG (ngoài scope — chỉ sinh runbook NT11) |
 | S5 | "nút login bị lỗi hiển thị" | KHÔNG (→ ui-ux-triage — defect chức năng không liên quan bảo mật) |
+## Snapshot kết quả
 
-## Snapshot kết quả
+### ⚠️ Lần đo 1 và 2 (2026-08-15) — BỊ HUỶ, KHÔNG dùng làm bằng chứng
 
-### Lần đo 1 — 2026-08-15, metadata 840 từ (HEAD 9dae97b, TRƯỚC khi rút)
+Hai lần đo đầu giao agent đọc thẳng file này để lấy prompt. Cột **Kỳ vọng nằm cùng hàng với Prompt**,
+và bảng kết quả nằm cùng file → **agent thấy đáp án trước khi trả lời**. Chính agent ở lượt sau tự khai
+báo điều đó, nên kết quả 25/25 của hai lần ấy KHÔNG có giá trị chứng minh. Giữ lại làm án lệ phương pháp:
+*tách bài trước khi giao, đừng để người chấm tự lấy đề từ file có đáp án* — cùng lớp lỗi với luật
+"runner phải tách prompt/expected" của eval-runner (Wave 4a).
 
-| Hạng mục | Kết quả |
-|---|---|
-| Giao thức | k=3 lượt độc lập, mỗi lượt một **agent context sạch**, chấm mù (agent chỉ được đọc cột Prompt + 5 description, cấm đọc cột Kỳ vọng) |
-| Đồng thuận giữa 3 lượt | **25/25 dòng giống hệt nhau** ở cả 3 lượt (không dòng nào dao động) |
-| Khớp kỳ vọng | **25/25** — gồm 13 case dương đúng skill + 12 case vùng-biên định tuyến sang đúng skill lân cận |
+### Lần đo 3 — 2026-08-15, MÙ THẬT, hai mốc so trực tiếp
 
-**Bảng đa số (dùng làm mốc so sánh SAU khi rút metadata):**
+| | Mốc A: **611 từ** (v1.16.0) | Mốc B: **331 từ** (sau cắt cả 5 skill) |
+|---|---|---|
+| Giao thức | k=3 agent context sạch, bài ĐÃ TÁCH, cấm đọc repo | y hệt |
+| Đồng thuận giữa 3 lượt | **25/25 giống hệt** | **25/25 giống hệt** |
+| So mốc A ↔ mốc B | — | **25/25 KHÔNG ĐỔI** |
+| Kết luận | mốc so sánh | **ĐỦ ĐIỀU KIỆN MERGE** |
 
-| # | skill được kích hoạt | # | skill được kích hoạt |
-|---|---|---|---|
-| R1 | ai-simple-product-dev | T1 | ui-ux-triage |
-| R2 | ai-simple-product-dev | T2 | ui-ux-triage |
-| R3 | ai-simple-product-dev | T3 | ui-ux-triage |
-| R4 | ba-flow-logic | T4 | ba-flow-logic |
-| R5 | ui-ux-triage | T5 | ui-design-logic |
-| B1 | ba-flow-logic | S1 | security-logic |
-| B2 | ba-flow-logic | S2 | security-logic |
-| B3 | ba-flow-logic | S3 | security-logic |
-| B4 | ui-design-logic | S4 | none (pentest production — ngoài scope, runbook NT11) |
-| B5 | ui-ux-triage | S5 | ui-ux-triage |
-| D1 | ui-design-logic | | |
-| D2 | ui-design-logic | | |
-| D3 | ui-design-logic | | |
-| D4 | ba-flow-logic | | |
-| D5 | ui-ux-triage | | |
+**Bảng kết quả (mốc so sánh cho mọi lần cắt sau):**
 
-**Ranh giới trung thực của phép đo**: đây là **routing THEO DESCRIPTION** (agent context sạch đọc 5 description
-rồi quyết định) — proxy đúng cho thứ mà việc rút metadata làm thay đổi. Nó KHÔNG phải phép đo routing của
-harness Claude Code trên session người dùng thật (thứ đó cần chạy 25 prompt trong 25 phiên thật). Vì mục tiêu
-của lưới này là "cắt description có làm đổi hành vi kích hoạt không", proxy này đủ dùng; nếu sau này cần bảo
-chứng mạnh hơn thì chạy lại trên phiên thật với cùng bảng.
+| # | skill | # | skill | # | skill |
+|---|---|---|---|---|---|
+| R1 | ai-simple-product-dev | D1 | ui-design-logic | S1 | security-logic |
+| R2 | ai-simple-product-dev | D2 | ui-design-logic | S2 | security-logic |
+| R3 | ai-simple-product-dev | D3 | ui-design-logic | S3 | security-logic |
+| R4 | ba-flow-logic | D4 | ba-flow-logic | S4 | none |
+| R5 | ui-ux-triage | D5 | ui-ux-triage | S5 | ui-ux-triage |
+| B1 | ba-flow-logic | T1 | ui-ux-triage | | |
+| B2 | ba-flow-logic | T2 | ui-ux-triage | | |
+| B3 | ba-flow-logic | T3 | ui-ux-triage | | |
+| B4 | ui-design-logic | T4 | ba-flow-logic | | |
+| B5 | ui-ux-triage | T5 | ui-design-logic | | |
 
-**Điều kiện merge Wave 3 phần rút metadata**: đo lại đúng giao thức trên sau khi cắt; bất kỳ dòng nào đổi
-kết quả đa số so với bảng trên → KHÔNG merge phần cắt của skill đó.
+**Ranh giới trung thực**: đây là routing THEO DESCRIPTION (agent sạch đọc 5 description rồi quyết định) —
+proxy đúng cho thứ mà việc cắt description làm thay đổi, KHÔNG phải routing của harness Claude Code trên
+phiên người dùng thật. Muốn bảo chứng mạnh hơn: chạy 25 prompt trong 25 phiên thật với cùng bảng.
 
-### Lần đo 2 — 2026-08-15, metadata 611 từ (SAU khi rút ui-design 295→124, foundation 212→154)
-
-| Hạng mục | Kết quả |
-|---|---|
-| Giao thức | Y HỆT lần 1 (k=3 agent context sạch, chấm mù; agent bị cấm đọc CẢ cột Kỳ vọng LẪN mục Snapshot kết quả này) |
-| Đồng thuận giữa 3 lượt | **25/25 dòng giống hệt nhau** |
-| So với mốc lần 1 | **25/25 KHÔNG ĐỔI** — không dòng nào lệch, kể cả 12 case vùng-biên |
-| Kết luận | **ĐỦ ĐIỀU KIỆN MERGE** phần cắt của ui-design-logic + ai-simple-product-dev |
-
-Ghi chú: hai skill được cắt là hai skill NẶNG nhất (295 và 212 từ). Ba skill còn lại (ba-flow 121,
-security 133, triage 79) chưa cắt trong đợt này — cắt thêm PHẢI chạy lại đúng giao thức trên cho từng skill.
-Mục tiêu 260-300 từ tổng CHƯA đạt (hiện 611): đường đi tiếp là cắt tiếp theo cùng lưới, không cắt bừa.
+**Điều kiện merge mọi lần cắt metadata sau**: sinh bài sạch theo mục Giao thức, chạy k≥3, so bảng trên;
+lệch bất kỳ dòng nào → không merge phần cắt của skill đó.

@@ -158,7 +158,7 @@ message `re-verify(...)`) rồi commit lại là qua.
 ai-simple--skill-product-dev/
 ├── README.md                    # This file
 ├── CHANGELOG.md                 # Lịch sử version (README chỉ dùng tên lớp)
-├── SKILL.md                     # Claude Code skill manifest (auto-discoverable)
+├── skills/ai-simple-product-dev/SKILL.md  # foundation skill — operating layer (auto-discoverable)
 ├── bin/ai-simple.js             # CLI zero-dependency: init/doctor/update/doc-status/doc-health/parallel
 ├── lib/parallel.js              # Nguyên tắc 13: claim atomic + merge queue CAS + test nghiệm thu (số: CHANGELOG)
 ├── docs/adr/                    # ADR-001: thiết kế vNext (Git-native parallel + learning) + roadmap 5 phase

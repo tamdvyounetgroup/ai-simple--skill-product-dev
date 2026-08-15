@@ -13,7 +13,7 @@
 ai-simple--skill-product-dev/
 ├── bin/ai-simple.js        CLI: init/doctor/self-test/update/parallel...
 ├── methodology/01..15      15 nguyên tắc (nguồn lý lẽ — không phải nơi cất luật load-bearing)
-├── skills/                 5 skill: ba-flow-logic, ui-design-logic, ui-ux-triage, security-logic (+SKILL.md gốc ở root)
+├── skills/                 5 skill: ai-simple-product-dev (foundation), ba-flow-logic, ui-design-logic, ui-ux-triage, security-logic
 ├── templates/              thứ `init` cài vào project tiêu thụ (hook, CLAUDE.md, router...)
 ├── scripts/                gate: dogfood-gate, ship-gate, stranger-path, doc-health, rule-enforcer
 └── docs/                   adr/, scoring.md

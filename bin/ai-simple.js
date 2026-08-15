@@ -148,6 +148,46 @@ function parseChangelogDelta(text, fromV, toV) {
   return out;
 }
 
+// ---------- junction skill (Wave 3 — collision-fix, dùng chung init/update) ----------
+// Kế hoạch hội đồng: init cũ SKIP im lặng MỌI đích tồn tại → bản copy STALE tiếp tục được load
+// (đo thật: ForFish có thư mục thật ai-simple-product-dev description còn "12 nguyên tắc").
+// Luật mới: junction sẵn → no-op có báo (idempotent); THƯ MỤC THẬT → in tóm tắt khác biệt, chỉ thay
+// khi có cờ consent --replace-stale-skills (vết trong lịch sử lệnh): backup <tên>.bak rồi thay junction —
+// không tự xoá, không SKIP im lặng; .bak đã tồn tại → báo và dừng phần đó (không bak-2 vô hạn).
+function skillDesc(dir) {
+  try {
+    const m = fs.readFileSync(path.join(dir, 'SKILL.md'), 'utf8').match(/^description:\s*(.*)$/m);
+    return m ? m[1].slice(0, 90) : '(không đọc được description)';
+  } catch { return '(không có SKILL.md)'; }
+}
+function installSkillJunction(src, dst, name, { replaceStale = false, log = console.log } = {}) {
+  let st = null; try { st = fs.lstatSync(dst); } catch { /* chưa có */ }
+  if (st && st.isSymbolicLink()) { log(`  OK    .claude/skills/${name} — junction sẵn có (no-op)`); return 'ok'; }
+  if (st && st.isDirectory()) {
+    log(`  WARN  .claude/skills/${name} là THƯ MỤC THẬT (bản copy — sẽ drift, không nhận update):`);
+    log(`        bản tại chỗ : ${skillDesc(dst)}`);
+    log(`        bản package : ${skillDesc(src)}`);
+    if (!replaceStale) { log(`        → chạy lại với --replace-stale-skills để backup ${name}.bak + thay junction (không tự xoá)`); return 'stale-kept'; }
+    const bak = dst + '.bak';
+    if (fs.existsSync(bak)) { log(`        BACKUP đã tồn tại: ${bak} — dọn/di chuyển rồi chạy lại (không backup đè)`); return 'bak-exists'; }
+    fs.renameSync(dst, bak);
+    log(`        OK backup → ${bak}`);
+  } else if (st) { log(`  WARN  .claude/skills/${name}: tồn tại nhưng không phải junction/thư mục — bỏ qua`); return 'odd'; }
+  try {
+    fs.symlinkSync(src, dst, 'junction'); // Windows: junction không cần admin; POSIX: dir symlink
+    log(`  OK    .claude/skills/${name} (junction → package — không copy, chống drift)`);
+    return 'created';
+  } catch (e) { log(`  WARN  .claude/skills/${name}: không tạo được junction (${e.code || e.message}) — tạo tay theo README §Cài 5 skill`); return 'err'; }
+}
+function warnTrackedSkillPaths() {
+  const tr = git(['ls-files', '.claude/skills/']);
+  if (tr.status === 0 && tr.stdout.trim()) {
+    console.log('  WARN  git đang TRACK path dưới .claude/skills/ (gitignore BẤT LỰC với file đã track — commit sẽ tái diễn copy=drift #08/#10):');
+    console.log(tr.stdout.split('\n').slice(0, 3).map((l) => '        ' + l).join('\n'));
+    console.log('        → gỡ index (KHÔNG đụng working tree/junction): git rm -r --cached .claude/skills/<tên> rồi commit');
+  }
+}
+
 function copyTemplate(src, dest, { force = false, transform = null } = {}) {
   if (fs.existsSync(dest) && !force) return { action: 'SKIP (đã tồn tại — dùng --force để ghi đè, hoặc `update` để nâng cấp giữ config)', dest };
   fs.mkdirSync(path.dirname(dest), { recursive: true });
@@ -188,7 +228,9 @@ const FILES = [
   { tpl: 'ops-schedules.md.template',        dest: 'docs/_templates/ops-schedules.md.template',        stackable: false },
   { tpl: 'ops-external-services.md.template',dest: 'docs/_templates/ops-external-services.md.template',stackable: false },
   { tpl: 'contract-doc.md.template',         dest: 'docs/_templates/contract-doc.md.template',         stackable: false },
-  { tpl: 'security-review.md.template',      dest: 'docs/_templates/security-review.md.template',      stackable: false },
+  // Wave 3 — template SỐNG TRONG SKILL (self-contained; tpl chứa '/' = path từ PKG_ROOT, không qua templates/)
+  { tpl: 'skills/security-logic/security-review.md.template', dest: 'docs/_templates/security-review.md.template', stackable: false },
+  { tpl: 'skills/ui-design-logic/design-spec.md.template',    dest: 'docs/_templates/design-spec.md.template',     stackable: false },
 ];
 
 function runSelfTests() {
@@ -238,7 +280,7 @@ function cmdInit(args) {
   for (const f of FILES) {
     if (f.optionalFlag && args[f.optionalFlag]) { console.log(`  SKIP  ${f.dest} (--${f.optionalFlag})`); continue; }
     const transform = f.stackable ? STACKS[stack] : null;
-    const r = copyTemplate(TPL(f.tpl), f.dest, { force: !!args.force, transform });
+    const r = copyTemplate(f.tpl.includes('/') ? path.join(PKG_ROOT, f.tpl) : TPL(f.tpl), f.dest, { force: !!args.force, transform });
     console.log(`  ${r.action === 'OK' ? 'OK   ' : 'SKIP '} ${f.dest}${r.action.startsWith('SKIP') ? ' — đã tồn tại' : ''}`);
   }
 
@@ -264,16 +306,9 @@ function cmdInit(args) {
     for (const s of fs.readdirSync(skillsSrc)) {
       const src = path.join(skillsSrc, s);
       if (!fs.statSync(src).isDirectory()) continue;
-      const dst = path.join('.claude', 'skills', s);
-      let already = false; try { fs.lstatSync(dst); already = true; } catch { /* chưa có */ }
-      if (already) { console.log(`  SKIP  .claude/skills/${s} — đã tồn tại`); continue; }
-      try {
-        fs.symlinkSync(src, dst, 'junction'); // Windows: junction không cần admin; POSIX: dir symlink
-        console.log(`  OK    .claude/skills/${s} (junction → package — không copy, chống drift)`);
-      } catch (e) {
-        console.log(`  WARN  .claude/skills/${s}: không tạo được junction (${e.code || e.message}) — tạo tay theo README §Cài 5 skill`);
-      }
+      installSkillJunction(src, path.join('.claude', 'skills', s), s, { replaceStale: !!args['replace-stale-skills'] });
     }
+    warnTrackedSkillPaths();
   }
 
   console.log('\nSelf-test (tin instrument sau khi nó tự chứng minh):');
@@ -452,6 +487,35 @@ function cmdUpdate(args) {
     const r = copyTemplate(TPL('doc-health.workflow.yml.template'), '.github/workflows/doc-health.yml', { force: true });
     console.log(`  OK    ${r.dest}`);
   }
+
+  // Wave 3 — junction-migration trong update (năng lực MỚI; SRC map cũ chỉ refresh 2 file):
+  // thay junction/skill giữa lúc session Claude Code đang mở → skill load dở trạng thái trung gian.
+  // Cổng consent: flag --i-closed-sessions do user gõ (vết trong lịch sử lệnh). Heuristic mtime chỉ là
+  // THÔNG-TIN-THAM-KHẢO in ra, KHÔNG chặn (mtime đổi vì nhiều lý do — vừa BLOCK oan vừa an-toàn-giả).
+  const skillsSrcU = path.join(PKG_ROOT, 'skills');
+  if (fs.existsSync(skillsSrcU) && fs.existsSync('.claude')) {
+    const needs = [];
+    for (const s of fs.readdirSync(skillsSrcU)) {
+      const src = path.join(skillsSrcU, s);
+      if (!fs.statSync(src).isDirectory()) continue;
+      const dst = path.join('.claude', 'skills', s);
+      let st = null; try { st = fs.lstatSync(dst); } catch { /* chưa có */ }
+      if (!st || !st.isSymbolicLink()) needs.push(s);
+    }
+    if (needs.length) {
+      let mt = '(không đọc được)';
+      try { mt = fs.statSync('.claude').mtime.toISOString(); } catch { /* tham khảo */ }
+      console.log(`\nJunction skill cần tạo/thay: ${needs.join(', ')} (mtime .claude gần nhất: ${mt} — nếu có session Claude Code đang mở trên repo này, đóng trước)`);
+      if (!args['i-closed-sessions']) {
+        console.log('  SKIP  phần junction — chạy lại: ai-simple update --i-closed-sessions (kèm --replace-stale-skills nếu muốn thay thư mục copy stale)');
+      } else {
+        fs.mkdirSync(path.join('.claude', 'skills'), { recursive: true });
+        for (const s of needs) installSkillJunction(path.join(skillsSrcU, s), path.join('.claude', 'skills', s), s, { replaceStale: !!args['replace-stale-skills'] });
+        warnTrackedSkillPaths();
+        console.log('  → Restart session Claude Code để skill nạp bản mới.');
+      }
+    }
+  }
   console.log('\nSelf-test:');
   let failed = false;
   for (const t of runSelfTests()) { console.log(`  ${t.ok ? 'PASS ' : 'FAIL '} ${t.name}`); if (!t.ok) { failed = true; console.log(t.out.split('\n').map((l) => '        ' + l).join('\n')); } }
@@ -532,7 +596,7 @@ async function cmdSelfTest() { // dùng cho `npm test` của chính package: ch�
   // Identity: guard blacklist số-cũ (2 đời regex) đã GỠ ở Wave 2a — thay bằng identity-manifest
   // enforcer WHITELIST bên dưới (đếm thực-tế + so manifest; bắt MỌI số lệch, không chỉ số cũ đã biết;
   // ca FAIL bắt buộc "14 composable principles" nằm trong fixture ranh giới của enforcer).
-  const LIVE = ['README.md', 'SKILL.md', 'methodology/README.md',
+  const LIVE = ['README.md', 'skills/ai-simple-product-dev/SKILL.md', 'methodology/README.md',
     ...['ba-flow-logic', 'ui-design-logic', 'ui-ux-triage', 'security-logic'].map(s => `skills/${s}/SKILL.md`)];
   // Cross-cut mktemp fail-fast (v1.11.0 — Lỗ an toàn số 1): tập quét ĐỘNG git ls-files '*.sh' '*.sh.template'
   // + template hook. Dòng chứa $(mktemp thiếu CẢ '|| exit' LẪN '|| return' cùng dòng → FAIL
@@ -563,9 +627,10 @@ async function cmdSelfTest() { // dùng cho `npm test` của chính package: ch�
     let idmOk = true;
     const MF = JSON.parse(fs.readFileSync(path.join(PKG_ROOT, 'system-manifest.json'), 'utf8'));
     const nPrin = fs.readdirSync(path.join(PKG_ROOT, 'methodology')).filter(f => /^\d{2}-.*\.md$/.test(f)).length;
-    const nSkills = fs.readdirSync(path.join(PKG_ROOT, 'skills')).filter(s => fs.statSync(path.join(PKG_ROOT, 'skills', s)).isDirectory()).length + 1;
+    // Wave 3: foundation skill đã vào skills/ai-simple-product-dev/ — đếm = số thư mục skills/ (không +1 root nữa)
+    const nSkills = fs.readdirSync(path.join(PKG_ROOT, 'skills')).filter(s => fs.statSync(path.join(PKG_ROOT, 'skills', s)).isDirectory()).length;
     if (nPrin !== MF.principles) { failed = true; idmOk = false; console.log(`FAIL identity-manifest: methodology/ có ${nPrin} nguyên tắc ≠ manifest ${MF.principles}`); }
-    if (nSkills !== MF.skills) { failed = true; idmOk = false; console.log(`FAIL identity-manifest: đếm được ${nSkills} skill (4 con + root) ≠ manifest ${MF.skills}`); }
+    if (nSkills !== MF.skills) { failed = true; idmOk = false; console.log(`FAIL identity-manifest: đếm được ${nSkills} thư mục skill ≠ manifest ${MF.skills}`); }
     const idmScan = (text, rel) => {
       const bad = [];
       for (const m of text.matchAll(/(\d+)(?: \w+)? principles/gi)) if (+m[1] !== MF.principles) bad.push(m[0]);
@@ -592,6 +657,31 @@ async function cmdSelfTest() { // dùng cho `npm test` của chính package: ch�
     for (const s of mustCatch) if (hits(s) === 0) { failed = true; idmOk = false; console.log(`FAIL identity-manifest-fixture: '${s}' phải bị bắt mà lọt`); }
     for (const s of mustPass) if (hits(s) !== 0) { failed = true; idmOk = false; console.log(`FAIL identity-manifest-fixture: '${s}' bị bắt oan`); }
     if (idmOk) console.log(`PASS identity-manifest (thực-tế ${nPrin} nguyên tắc/${nSkills} skill khớp manifest; whitelist docs sống + fixture ranh giới xanh)`);
+  }
+  // Fixture junction collision-fix (Wave 3 — temp, không đụng repo): idempotent + stale-dir + bak-exists
+  {
+    let jOk = true;
+    const os = require('os');
+    const jt = fs.mkdtempSync(path.join(os.tmpdir(), 'ais-junc-'));
+    const jsrc = path.join(jt, 'srcskill'); fs.mkdirSync(jsrc);
+    fs.writeFileSync(path.join(jsrc, 'SKILL.md'), '---\nname: x\ndescription: ban moi\n---\n', 'utf8');
+    const silent = () => {};
+    const jd1 = path.join(jt, 'dst');
+    const r1 = installSkillJunction(jsrc, jd1, 'x', { log: silent });
+    const r2 = installSkillJunction(jsrc, jd1, 'x', { log: silent });
+    if (!(r1 === 'created' && r2 === 'ok')) { failed = true; jOk = false; console.log(`FAIL junction-fixture: created→no-op, ra (${r1}/${r2})`); }
+    const jd2 = path.join(jt, 'dst2'); fs.mkdirSync(jd2);
+    fs.writeFileSync(path.join(jd2, 'SKILL.md'), '---\ndescription: ban stale\n---\n', 'utf8');
+    const r3 = installSkillJunction(jsrc, jd2, 'y', { log: silent });
+    const stillDir = fs.lstatSync(jd2).isDirectory() && !fs.lstatSync(jd2).isSymbolicLink();
+    if (!(r3 === 'stale-kept' && stillDir)) { failed = true; jOk = false; console.log(`FAIL junction-fixture: stale-dir không flag phải GIỮ NGUYÊN (${r3})`); }
+    const r4 = installSkillJunction(jsrc, jd2, 'y', { replaceStale: true, log: silent });
+    if (!(r4 === 'created' && fs.lstatSync(jd2).isSymbolicLink() && fs.existsSync(jd2 + '.bak'))) { failed = true; jOk = false; console.log(`FAIL junction-fixture: replace-stale phải backup .bak + thay junction (${r4})`); }
+    fs.rmSync(jd2, { force: true }); fs.mkdirSync(jd2);
+    const r5 = installSkillJunction(jsrc, jd2, 'y', { replaceStale: true, log: silent });
+    if (r5 !== 'bak-exists') { failed = true; jOk = false; console.log(`FAIL junction-fixture: .bak sẵn có phải DỪNG không bak-đè (${r5})`); }
+    fs.rmSync(jt, { recursive: true, force: true });
+    if (jOk) console.log('PASS junction-fixture (idempotent; stale-dir giữ nguyên khi thiếu flag; replace backup .bak; không bak-đè)');
   }
   // Cross-cut coverage guard: 4 skill anh em PHẢI nhắc security-logic (sơ đồ 5-skill / handoff) —
   // identity-numbers chỉ đếm số, guard này bắt "skill thiếu sơ đồ" (reviewer cuối trừ điểm đúng lỗ này).

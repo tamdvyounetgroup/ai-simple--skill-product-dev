@@ -62,7 +62,7 @@ S5 Declared coverage → security-review.md: 3 vùng phủ + "KHÔNG phải pent
 
 **`security-review` là chốt chặn**: chưa khai vùng phủ + chưa map OWASP + chưa có dòng out-of-scope thì CHƯA xong. Review nhỏ cho việc nhỏ — vá 1 endpoint thì review ngắn, nhưng vẫn phải khai "phủ A, KHÔNG phủ C".
 
-Template: `templates/security-review.md.template`. Chi tiết khung: `methodology/14 §Giải pháp`.
+Template: `security-review.md.template` (CÙNG THƯ MỤC skill này — self-contained, Wave 3; init cài vào `docs/_templates/`). Chi tiết khung: `methodology/14 §Giải pháp`.
 
 ---
 

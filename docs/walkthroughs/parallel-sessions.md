@@ -73,7 +73,7 @@ npx ai-simple parallel recover --run dashboard-v2 --lot ui-design  # checklist r
 npx ai-simple parallel release --run dashboard-v2 --lot ui-design   # trả claim (worktree dirty thì từ chối, --abandon để bỏ)
 ```
 
-## Luật sống còn (guard trong SKILL.md root)
+## Luật sống còn (guard trong skills/ai-simple-product-dev/SKILL.md)
 
 - Claim CHỈ qua CLI — cấm tự tạo/sửa JSON trong `GIT_COMMON_DIR` tay (state rác đầu độc orchestrator).
 - STALE ≠ tự lấy: lot của session chết phải qua `recover`, muốn takeover phải `--force-run` SAU recover.

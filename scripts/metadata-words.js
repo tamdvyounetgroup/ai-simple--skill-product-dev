@@ -36,7 +36,7 @@ if (process.argv[2] === '--self-test') {
   process.exit(rc);
 }
 
-const FILES = [['root', 'SKILL.md'], ['ba-flow-logic', 'skills/ba-flow-logic/SKILL.md'],
+const FILES = [['root/foundation', 'skills/ai-simple-product-dev/SKILL.md'], ['ba-flow-logic', 'skills/ba-flow-logic/SKILL.md'],
   ['security-logic', 'skills/security-logic/SKILL.md'], ['ui-design-logic', 'skills/ui-design-logic/SKILL.md'],
   ['ui-ux-triage', 'skills/ui-ux-triage/SKILL.md']];
 let total = 0;

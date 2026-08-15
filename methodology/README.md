@@ -44,7 +44,7 @@
 
 ## Profiles — kích hoạt theo tải, không theo đức tin
 
-Bảng chọn profile (tiny/core/scale/contracts/ops/optimization/parallel/security/full → nguyên tắc nào bật) nằm ở `SKILL.md` §Bước 0 — nguồn duy nhất, không lặp ở đây. Nguyên tắc chung: bắt đầu NHỎ NHẤT có thể (project < 10 file → tiny = 01+06), để trigger scale-up (bảng dưới) mở dần các lớp sau. Audit chấm theo applicability — profile chưa bật thì NOT_APPLICABLE, không trừ oan.
+Bảng chọn profile (tiny/core/scale/contracts/ops/optimization/parallel/security/full → nguyên tắc nào bật) nằm ở `skills/ai-simple-product-dev/SKILL.md` §Bước 0 — nguồn duy nhất, không lặp ở đây. Nguyên tắc chung: bắt đầu NHỎ NHẤT có thể (project < 10 file → tiny = 01+06), để trigger scale-up (bảng dưới) mở dần các lớp sau. Audit chấm theo applicability — profile chưa bật thì NOT_APPLICABLE, không trừ oan.
 
 ---
 

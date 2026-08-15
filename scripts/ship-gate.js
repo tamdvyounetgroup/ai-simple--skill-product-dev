@@ -63,7 +63,7 @@ function checkTemplates(inTarball) {
 
 // ── 3. link-check: link markdown tương đối trong README + SKILL trỏ file tồn tại (disk + tarball) ──
 function checkLinks(inTarball) {
-  for (const doc of ['README.md', 'SKILL.md']) {
+  for (const doc of ['README.md', 'skills/ai-simple-product-dev/SKILL.md']) {
     const p = path.join(ROOT, doc);
     if (!fs.existsSync(p)) continue;
     const body = fs.readFileSync(p, 'utf8');

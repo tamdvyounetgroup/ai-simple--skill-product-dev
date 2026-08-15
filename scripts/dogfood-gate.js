@@ -55,7 +55,7 @@ if (fs.existsSync(template)) {
 // D3 — over-claim scan trên docs SỐNG (surface tuyên bố hiện hành). CHANGELOG/ADR bị LOẠI: là
 // LỊCH SỬ thảo luận về chính luật (luôn trích "đã bảo mật ✓" như thứ bị cấm) — cùng cách
 // identity-numbers guard miễn trừ chúng.
-const LIVE = ['README.md', 'SKILL.md', 'methodology/README.md', 'methodology/14-security-gate.md',
+const LIVE = ['README.md', 'skills/ai-simple-product-dev/SKILL.md', 'methodology/README.md', 'methodology/14-security-gate.md',
   ...['ba-flow-logic', 'ui-design-logic', 'ui-ux-triage', 'security-logic'].map((s) => `skills/${s}/SKILL.md`)];
 // Ngữ cảnh CẤM/lên-án (dòng đang condemn over-claim, không phải claim): mở rộng đủ để bắt cả câu mô tả anti-pattern.
 const NEG = /(không|khong|cấm|never|đừng|luật vàng|luat vang|anti-pattern|slogan|giả|cảm giác|cam giac|lỗ hổng|lo hong|false|cám dỗ|cam do|tránh|"[^"]*✓"|`[^`]*✓`)/i;

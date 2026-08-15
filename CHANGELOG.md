@@ -4,6 +4,32 @@ Toàn bộ lịch sử tiến hóa của phương pháp. README/methodology dùn
 
 Convention từ v1.10.0: mỗi mục version có thể chứa dòng `**RE-APPLY**: <việc project tiêu thụ cần làm lại sau update>` — `ai-simple update` tự trích các dòng này trong khoảng (bản-cũ → bản-mới] in thành checklist. Không có dòng RE-APPLY = update xong là xong.
 
+## v1.13.0 — 2026-08-15 (Wave 3 — architecture v2: foundation skill vào skills/, junction collision-fix, update --i-closed-sessions)
+
+RED tier đã confirm. KHÔNG stub: root SKILL.md DI CHUYỂN, mọi ref tracked đổi CÙNG commit.
+
+- **Foundation skill**: root `SKILL.md` → `skills/ai-simple-product-dev/SKILL.md` (git mv giữ history);
+  cập nhật đủ refs tracked (package.json files, LIVE list identity/dogfood, ship-gate, metadata-words,
+  README, methodology/README, CLAUDE.md, walkthroughs); `init` tự junction 5 skill (quét thư mục, không hardcode).
+- **Junction collision-fix [ENFORCED tại init/update]**: lstat phân biệt junction vs THƯ MỤC THẬT —
+  junction sẵn → no-op có báo (idempotent); thư mục thật (bản copy stale — ForFish đang có
+  ai-simple-product-dev "12 nguyên tắc") → in tóm tắt khác biệt 2 bên, CHỈ thay khi có cờ consent
+  `--replace-stale-skills`: backup `<tên>.bak` + thay junction, không tự xoá, không SKIP im lặng;
+  `.bak` sẵn có → dừng, không bak-đè; path đang bị git TRACK → cảnh báo `git rm -r --cached` (gitignore
+  bất lực với file đã track). 5 fixture trong npm test.
+- **`update` junction-migration + cổng `--i-closed-sessions`**: thay junction giữa session Claude Code
+  đang mở = skill load dở → flag do user gõ là vết consent; heuristic mtime `.claude` chỉ in tham khảo,
+  KHÔNG chặn; sau migration in hướng dẫn restart session.
+- **Template self-contained**: `security-review.md.template` chuyển vào `skills/security-logic/`;
+  thêm `skills/ui-design-logic/design-spec.md.template` (format đúng lint design-verify); init hỗ trợ
+  tpl path skill-local.
+- **Identity-manifest** đếm skill = số thư mục `skills/` (foundation đã vào trong, không +1 root).
+- **KHÔNG làm trong wave này** (điều kiện tiền đề chưa thoả, đúng luật kế hoạch): rút metadata
+  frontmatter — phải chờ baseline routing A′ đo k≥3 trên session sạch; TeamCreate tách file (backlog).
+- **RE-APPLY**: đóng session Claude Code rồi chạy `ai-simple update --i-closed-sessions --replace-stale-skills`
+  để nhận junction skill thứ 5 (ai-simple-product-dev) + thay bản copy stale; repo có bản stale bị git track:
+  `git rm -r --cached .claude/skills/<tên>` + commit (không đụng working tree).
+
 ## v1.12.0 — 2026-08-15 (Wave 2a — deterministic core kiểm NỘI DUNG: gate hết kiểm-hình-thức, mutation suite 0 false-pass)
 
 Đóng chẩn đoán nền thứ hai của hội đồng: "deterministic gate mới kiểm hình thức, chưa kiểm nội dung".

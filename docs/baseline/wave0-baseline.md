@@ -30,7 +30,10 @@ Chưa có runner (2/5 skill có evals: ba-flow 8 case, ui-design 5 case). Deadli
 
 ## Phân rã per-block hook self-test (phục vụ KPI Wave 2b "<60s")
 
-KPI "<60s" CHỈ được chốt sau khi phân rã cho thấy tổng phần cắt được ≥38s (mốc sạch 98s).
-Lần đo awk-arrival-time thất bại vì pipe buffering (mọi dòng tới cùng lúc) — Wave 2b đo lại bằng
-timestamp chèn trong-process (`date +%s` giữa các fixture block, bản instrument tạm, không commit).
-Hàng này KHÔNG chặn Wave 1.
+**ĐÃ ĐO (2026-08-15, trace `PS4='+T$(date +%s) ' bash -x ... --self-test`)**: span 142s (máy đang tải nhẹ;
+mốc sạch 98s), trong đó **48 điểm ≥2s tổng 112s — TOÀN BỘ là các `git commit` fixture**: mỗi fixture-commit
+chạy trọn bộ hook như subprocess (~2.5-3s/lượt × ~40 fixture). Không có block đơn lẻ nào nóng —
+chi phí là tích số (số fixture-commit) × (số git-spawn mỗi lượt hook).
+→ **KPI Wave 2b "<60s" ĐƯỢC CHỐT** (điều kiện "phần cắt được ≥38s" thoả): đường cắt = gộp fixture
+cùng repo/commit + giảm git-subprocess mỗi lượt hook chạy. Việc optimize = PR Wave 2b riêng.
+(Lần đo awk-arrival-time trước đó thất bại vì pipe buffering — phương pháp trace PS4 là chuẩn từ nay.)

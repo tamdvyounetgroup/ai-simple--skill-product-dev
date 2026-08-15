@@ -4,6 +4,19 @@ Toàn bộ lịch sử tiến hóa của phương pháp. README/methodology dùn
 
 Convention từ v1.10.0: mỗi mục version có thể chứa dòng `**RE-APPLY**: <việc project tiêu thụ cần làm lại sau update>` — `ai-simple update` tự trích các dòng này trong khoảng (bản-cũ → bản-mới] in thành checklist. Không có dòng RE-APPLY = update xong là xong.
 
+## v1.16.0 — 2026-08-15 (Wave 3 phần cuối — rút metadata SAU KHI lưới routing xanh: 840 → 611 từ)
+
+- **Lưới chống routing-regression chạy THẬT, 2 lần đo** (docs/baseline/routing-snapshot.md): k=3 agent
+  context sạch, chấm mù (cấm đọc cột Kỳ vọng lẫn mục kết quả). Lần 1 ở mốc 840 từ: 25/25 đồng thuận +
+  25/25 khớp kỳ vọng. Lần 2 sau khi cắt: **25/25 KHÔNG ĐỔI** so với mốc → đủ điều kiện merge.
+- **Rút 2 skill nặng nhất**: ui-design-logic 295→124 từ, ai-simple-product-dev 212→154 từ; tổng 840→611.
+  Ba skill còn lại chưa cắt — cắt thêm phải chạy lại đúng lưới cho từng skill (mục tiêu 260-300 CHƯA đạt).
+- **Ranh giới trung thực của phép đo**: routing THEO DESCRIPTION (proxy đúng cho thứ mà việc cắt làm đổi),
+  KHÔNG phải routing của harness trên phiên người dùng thật — ghi rõ trong snapshot để không over-claim.
+- **Kiểm chính harness song song của v1.14.0** (thứ trước đó chỉ mới chứng minh chiều PASS): mutation-test
+  4 ca — đột biến assertion khối 08 → FAIL+exit 1 đúng; đột biến khối 10 → bắt đúng; khối chết im lặng
+  (exit 9, không in gì) → báo "khoi 05 thoat som"; 3 lượt chạy sạch cho 48 dòng verdict GIỐNG HỆT nhau
+  (thứ tự tất định) và 0 temp dir rò rỉ.
 ## v1.15.0 — 2026-08-15 (Wave 4a — hạ tầng semantic eval: 5/5 skill có evals, runner tách bài mù)
 
 - **`scripts/eval-runner.js`**: `--list` · `--emit-task <skill> <id>` (phát cho agent LÀM BÀI, KHÔNG kèm

@@ -98,3 +98,16 @@ chứng mạnh hơn thì chạy lại trên phiên thật với cùng bảng.
 
 **Điều kiện merge Wave 3 phần rút metadata**: đo lại đúng giao thức trên sau khi cắt; bất kỳ dòng nào đổi
 kết quả đa số so với bảng trên → KHÔNG merge phần cắt của skill đó.
+
+### Lần đo 2 — 2026-08-15, metadata 611 từ (SAU khi rút ui-design 295→124, foundation 212→154)
+
+| Hạng mục | Kết quả |
+|---|---|
+| Giao thức | Y HỆT lần 1 (k=3 agent context sạch, chấm mù; agent bị cấm đọc CẢ cột Kỳ vọng LẪN mục Snapshot kết quả này) |
+| Đồng thuận giữa 3 lượt | **25/25 dòng giống hệt nhau** |
+| So với mốc lần 1 | **25/25 KHÔNG ĐỔI** — không dòng nào lệch, kể cả 12 case vùng-biên |
+| Kết luận | **ĐỦ ĐIỀU KIỆN MERGE** phần cắt của ui-design-logic + ai-simple-product-dev |
+
+Ghi chú: hai skill được cắt là hai skill NẶNG nhất (295 và 212 từ). Ba skill còn lại (ba-flow 121,
+security 133, triage 79) chưa cắt trong đợt này — cắt thêm PHẢI chạy lại đúng giao thức trên cho từng skill.
+Mục tiêu 260-300 từ tổng CHƯA đạt (hiện 611): đường đi tiếp là cắt tiếp theo cùng lưới, không cắt bừa.

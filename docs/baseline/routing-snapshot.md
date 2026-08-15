@@ -62,6 +62,39 @@
 
 ## Snapshot kết quả
 
-| Ngày đo | Người/agent đo | Kết quả | Ghi chú |
+### Lần đo 1 — 2026-08-15, metadata 840 từ (HEAD 9dae97b, TRƯỚC khi rút)
+
+| Hạng mục | Kết quả |
+|---|---|
+| Giao thức | k=3 lượt độc lập, mỗi lượt một **agent context sạch**, chấm mù (agent chỉ được đọc cột Prompt + 5 description, cấm đọc cột Kỳ vọng) |
+| Đồng thuận giữa 3 lượt | **25/25 dòng giống hệt nhau** ở cả 3 lượt (không dòng nào dao động) |
+| Khớp kỳ vọng | **25/25** — gồm 13 case dương đúng skill + 12 case vùng-biên định tuyến sang đúng skill lân cận |
+
+**Bảng đa số (dùng làm mốc so sánh SAU khi rút metadata):**
+
+| # | skill được kích hoạt | # | skill được kích hoạt |
 |---|---|---|---|
-| (chưa đo — mốc riêng Nhóm A′, xong trước phần rút metadata đầu tiên của Wave 3) | | | |
+| R1 | ai-simple-product-dev | T1 | ui-ux-triage |
+| R2 | ai-simple-product-dev | T2 | ui-ux-triage |
+| R3 | ai-simple-product-dev | T3 | ui-ux-triage |
+| R4 | ba-flow-logic | T4 | ba-flow-logic |
+| R5 | ui-ux-triage | T5 | ui-design-logic |
+| B1 | ba-flow-logic | S1 | security-logic |
+| B2 | ba-flow-logic | S2 | security-logic |
+| B3 | ba-flow-logic | S3 | security-logic |
+| B4 | ui-design-logic | S4 | none (pentest production — ngoài scope, runbook NT11) |
+| B5 | ui-ux-triage | S5 | ui-ux-triage |
+| D1 | ui-design-logic | | |
+| D2 | ui-design-logic | | |
+| D3 | ui-design-logic | | |
+| D4 | ba-flow-logic | | |
+| D5 | ui-ux-triage | | |
+
+**Ranh giới trung thực của phép đo**: đây là **routing THEO DESCRIPTION** (agent context sạch đọc 5 description
+rồi quyết định) — proxy đúng cho thứ mà việc rút metadata làm thay đổi. Nó KHÔNG phải phép đo routing của
+harness Claude Code trên session người dùng thật (thứ đó cần chạy 25 prompt trong 25 phiên thật). Vì mục tiêu
+của lưới này là "cắt description có làm đổi hành vi kích hoạt không", proxy này đủ dùng; nếu sau này cần bảo
+chứng mạnh hơn thì chạy lại trên phiên thật với cùng bảng.
+
+**Điều kiện merge Wave 3 phần rút metadata**: đo lại đúng giao thức trên sau khi cắt; bất kỳ dòng nào đổi
+kết quả đa số so với bảng trên → KHÔNG merge phần cắt của skill đó.

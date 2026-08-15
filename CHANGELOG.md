@@ -6,9 +6,9 @@ Convention từ v1.10.0: mỗi mục version có thể chứa dòng `**RE-APPLY*
 
 ## v1.14.0 — 2026-08-15 (Wave 2b + session-audit — suite nhanh gấp đôi, dirty của user có máy canh)
 
-- **session-audit hai pha [DETECTED]** (cắt khỏi 2a nay hoàn tất):  chụp snapshot đầu
+- **session-audit hai pha [DETECTED]** (cắt khỏi 2a nay hoàn tất): `--session-audit` chụp snapshot đầu
   phiên (stash-create + porcelain + hash-object từng untracked, loại trừ test-reports/, skip >5MB),
-  in <id> NTFS-safe;  so + ghi record chính thức audit-<stamp>.txt rồi
+  in `<id>` NTFS-safe; `--session-audit --close <id>` so + ghi record chính thức audit-&lt;stamp&gt;.txt rồi
   dọn record mở. Luật phán máy-quyết-được: FAIL khi dirty/untracked BIẾN MẤT (reset/checkout/stash)
   hoặc untracked bị GHI ĐÈ (điểm mù của stash-create); tracked-modified đổi nội dung = việc hợp lệ
   của loop (chống-oan). Fallback tất định: đúng 1 record mở mới được close không id, ≥2 → exit 3 kèm
@@ -19,8 +19,7 @@ Convention từ v1.10.0: mỗi mục version có thể chứa dòng `**RE-APPLY*
   riêng từng khối in theo thứ tự cố định, verdict lấy từ '^FAIL' trong log; khối UI (critical path 50s
   đo bằng mtime log) chia đôi. **npm test 154s → 94s**: 11 self-test chạy đồng thời qua spawn async,
   in theo thứ tự khai báo. 48 PASS marker của hook giữ nguyên byte-for-byte.
-- **RE-APPLY**: chạy  để hook nhận §3e WARN session-audit; loop triage từ nay mở phiên
-  bằng  và đóng bằng  (exit gate §9 đòi record).
+- **RE-APPLY**: chạy `ai-simple update` để hook nhận §3e WARN session-audit; loop triage từ nay mở phiên bằng `triage-verify.sh --session-audit` và đóng bằng `triage-verify.sh --session-audit --close <id>` (exit gate §9 đòi record chính thức).
 
 ## v1.13.0 — 2026-08-15 (Wave 3 — architecture v2: foundation skill vào skills/, junction collision-fix, update --i-closed-sessions)
 

@@ -580,9 +580,10 @@ async function cmdSelfTest() { // dùng cho `npm test` của chính package: ch�
     ['template hook --self-test', () => shAsync([TPL('pre-commit.hook.template'), '--self-test'], { cwd: PKG_ROOT })],
     ['template report --self-test', () => shAsync([TPL('doc-health-report.sh.template'), '--self-test'], { cwd: PKG_ROOT })],
     ['template pretooluse-guard --self-test', () => shAsync([TPL('pretooluse-git-guard.sh'), '--self-test'], { cwd: PKG_ROOT })],
-    ['script metadata-words --self-test', () => nodeAsync([path.join(PKG_ROOT, 'scripts', 'metadata-words.js'), '--self-test'], { cwd: PKG_ROOT })],
-    ['script mutation-suite --self-test', () => shAsync([MUT, '--self-test'], { cwd: PKG_ROOT })],
-    ['script mutation-suite (full: 0 false-pass/0 false-block)', () => shAsync([MUT], { cwd: PKG_ROOT })],
+    ['script metadata-words --self-test', () => nodeAsync([path.join(PKG_ROOT, 'scripts', 'metadata-words.js'), '--self-test'], { cwd: PKG_ROOT }), path.join(PKG_ROOT, 'scripts', 'metadata-words.js')],
+    ['script eval-runner --self-test (schema evals + tách dữ liệu blind)', () => nodeAsync([path.join(PKG_ROOT, 'scripts', 'eval-runner.js'), '--self-test'], { cwd: PKG_ROOT }), path.join(PKG_ROOT, 'scripts', 'eval-runner.js')],
+    ['script mutation-suite --self-test', () => shAsync([MUT, '--self-test'], { cwd: PKG_ROOT }), MUT],
+    ['script mutation-suite (full: 0 false-pass/0 false-block)', () => shAsync([MUT], { cwd: PKG_ROOT }), MUT],
   ];
   // Skill-verifier fixtures (G1 bộ chấm điểm — self-test hợp nhất): MỌI skills/*/*-verify.sh có
   // --self-test phải chạy trong `npm test`, không suite mồ côi (trước đây chỉ security-verify được nối,
@@ -605,9 +606,12 @@ async function cmdSelfTest() { // dùng cho `npm test` của chính package: ch�
   for (const { skill, file } of verifiers)
     jobs.push([`skill ${skill} ${path.basename(file)} --self-test`, () => shAsync([file, '--self-test'], { cwd: PKG_ROOT })]);
   // Chạy ĐỒNG THỜI, in theo thứ tự khai báo (ổn định như bản tuần tự).
-  const results = await Promise.all(jobs.map(([, run]) => run()));
+  // Job trỏ vào scripts/ chỉ tồn tại ở REPO NGUỒN (package.json files[] không ship scripts/ — đo bằng
+  // npm pack: self-test từ tarball từng báo FAIL GIẢ 3 dòng "Cannot find module"). SKIP có báo, không FAIL.
+  const results = await Promise.all(jobs.map(([, run, needs]) => (needs && !fs.existsSync(needs) ? Promise.resolve({ skip: true }) : run())));
   jobs.forEach(([label], i) => {
     const r = results[i];
+    if (r.skip) { console.log(`SKIP ${label} — chỉ có trong repo nguồn (scripts/ không nằm trong tarball)`); return; }
     console.log(`${r.status === 0 ? 'PASS' : 'FAIL'} ${label}`);
     if (r.status !== 0) { failed = true; console.log(r.stdout + r.stderr); }
   });

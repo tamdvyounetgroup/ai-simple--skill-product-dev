@@ -4,6 +4,22 @@ Toàn bộ lịch sử tiến hóa của phương pháp. README/methodology dùn
 
 Convention từ v1.10.0: mỗi mục version có thể chứa dòng `**RE-APPLY**: <việc project tiêu thụ cần làm lại sau update>` — `ai-simple update` tự trích các dòng này trong khoảng (bản-cũ → bản-mới] in thành checklist. Không có dòng RE-APPLY = update xong là xong.
 
+## v1.15.0 — 2026-08-15 (Wave 4a — hạ tầng semantic eval: 5/5 skill có evals, runner tách bài mù)
+
+- **`scripts/eval-runner.js`**: `--list` · `--emit-task <skill> <id>` (phát cho agent LÀM BÀI, KHÔNG kèm
+  đáp án) · `--emit-rubric` (phát cho agent CHẤM riêng) · `--record <verdict>` ghi baseline JSONL ·
+  `--report` · `--self-test`. **Tách dữ liệu được kiểm BẰNG MÁY**: self-test FAIL nếu prompt chứa câu đầu
+  của `expected_output` (blind bị phá) + kiểm schema/id-trùng/prompt-quá-ngắn của cả 5 file evals.
+- **Evals đủ 5/5 skill, 34 case** (trước: 2/5, 13 case): thêm security-logic 7, ui-ux-triage 7,
+  ai-simple-product-dev 7 — mỗi skill ≥5 case dương + 2 case vùng-biên ÂM (phải KHÔNG kích hoạt).
+- **Baseline đo thật lần 1** (agent làm bài mù, chỉ biết mô tả 5 skill — tức đo mức "chưa có skill"):
+  3 case chạy → 2 pass, 1 partial; ghi vào `docs/baseline/semantic-baseline.jsonl` kèm ghi chú.
+  Ngưỡng release semantic VẪN CHƯA chốt — `--report` in kèm cảnh báo "cần ≥2 lần đo baseline".
+- **Nhãn trung thực**: runner là hạ tầng tách-bài + ghi-sổ [ENFORCED phần schema/tách dữ liệu];
+  việc CHẤM là agent/người [ADVISORY] — không máy nào tự phán semantic.
+- **Sửa FAIL giả khi chạy ngoài repo nguồn** (đo bằng `npm pack` + giải nén): `scripts/` không nằm
+  trong tarball nên self-test từ package đã cài báo 3-4 dòng FAIL "Cannot find module" — nay SKIP có báo.
+
 ## v1.14.0 — 2026-08-15 (Wave 2b + session-audit — suite nhanh gấp đôi, dirty của user có máy canh)
 
 - **session-audit hai pha [DETECTED]** (cắt khỏi 2a nay hoàn tất): `--session-audit` chụp snapshot đầu

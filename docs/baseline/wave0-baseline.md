@@ -24,9 +24,23 @@
 Bộ prompt + giao thức: [routing-snapshot.md](routing-snapshot.md). Phần ĐO có mốc riêng
 (trước phần rút metadata đầu tiên của Wave 3), không nằm trên đường găng Wave 1.
 
-## Nhóm B — semantic
+## Nhóm B — semantic (Wave 4a — ĐÃ CÓ HẠ TẦNG)
 
-Chưa có runner (2/5 skill có evals: ba-flow 8 case, ui-design 5 case). Deadline: trước Wave 4a.
+`scripts/eval-runner.js` + evals đủ **5/5 skill, 34 case** (ba-flow 8 · ui-design 5 · security 7 · triage 7 · foundation 7);
+mỗi skill ≥5 case dương + 2 case vùng-biên âm. Runner **tách dữ liệu thật** (self-test kiểm bằng máy:
+`--emit-task` không được chứa câu đầu của `expected_output`) nên agent làm bài không thấy đáp án, judge đọc rubric riêng.
+
+```sh
+node scripts/eval-runner.js --list
+node scripts/eval-runner.js --emit-task <skill> <id>     # phát cho agent LÀM BÀI
+node scripts/eval-runner.js --emit-rubric <skill> <id>   # phát cho agent CHẤM
+node scripts/eval-runner.js --record <skill> <id> pass|fail|partial [note]
+node scripts/eval-runner.js --report
+```
+
+Nhãn trung thực: runner là **hạ tầng tách bài + ghi sổ [ENFORCED phần schema/tách dữ liệu]**; việc CHẤM là
+agent/người [ADVISORY] — không có máy nào tự phán semantic. Ngưỡng release semantic vẫn CHƯA chốt:
+cần ≥2 lần đo baseline thật (luật của chính kế hoạch), `--report` in kèm cảnh báo đó.
 
 ## Phân rã per-block hook self-test (phục vụ KPI Wave 2b "<60s")
 

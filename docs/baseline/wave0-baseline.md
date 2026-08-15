@@ -48,6 +48,10 @@ cần ≥2 lần đo baseline thật (luật của chính kế hoạch), `--repo
 mốc sạch 98s), trong đó **48 điểm ≥2s tổng 112s — TOÀN BỘ là các `git commit` fixture**: mỗi fixture-commit
 chạy trọn bộ hook như subprocess (~2.5-3s/lượt × ~40 fixture). Không có block đơn lẻ nào nóng —
 chi phí là tích số (số fixture-commit) × (số git-spawn mỗi lượt hook).
-→ **KPI Wave 2b "<60s" ĐƯỢC CHỐT** (điều kiện "phần cắt được ≥38s" thoả): đường cắt = gộp fixture
-cùng repo/commit + giảm git-subprocess mỗi lượt hook chạy. Việc optimize = PR Wave 2b riêng.
+→ **KPI Wave 2b "<60s" ĐƯỢC CHỐT** (điều kiện "phần cắt được ≥38s" thoả) — và **ĐÃ ĐẠT ở v1.14.0**:
+đường cắt thực thi là **song song hoá** (10 khối fixture độc lập + chia khối UI critical-path 50s đo bằng
+mtime log), KHÔNG phải gộp fixture (giữ nguyên 48 PASS marker). Đo sau: **hook self-test 98s → 56s**
+(median 2 lượt), **npm test 154s → 94s** (11 self-test chạy đồng thời qua spawn async).
+Bằng chứng phương pháp: 1 lượt hook ≈1.4s/~42 external spawn, không hotspot đơn lẻ (`bash -x` + PS4 ms);
+4 lượt tuần tự 5.76s vs song song 2.83s.
 (Lần đo awk-arrival-time trước đó thất bại vì pipe buffering — phương pháp trace PS4 là chuẩn từ nay.)

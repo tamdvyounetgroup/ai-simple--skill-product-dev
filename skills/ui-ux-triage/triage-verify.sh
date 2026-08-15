@@ -158,6 +158,65 @@ case "${1:-}" in
       [ "$LASTC" != "$LINE" ] && echo "$LINE" >> "$TRIAGE_LOG"
     fi
     exit 0 ;;
+  --session-audit)
+    # Bảo vệ dirty của user (NT13/ADR-001) — DETECTED, hai pha. Nhãn trung thực: máy PHÁT HIỆN sau
+    # sự việc; Git không có pre-reset/pre-checkout hook nên không chặn được lúc lệnh chạy.
+    #   sh triage-verify.sh --session-audit                 # pha MỞ: chụp snapshot, in <id>
+    #   sh triage-verify.sh --session-audit --close <id>    # pha ĐÓNG: so + ghi record chính thức
+    # LUẬT PHÁN (máy quyết được, không mơ hồ):
+    #   FAIL  (a) file dirty/untracked của user BIẾN MẤT khỏi danh sách (dấu hiệu reset/checkout/stash)
+    #   FAIL  (b) file UNTRACKED của user bị ĐỔI NỘI DUNG (điểm mù của stash create — ghi đè giữ tên)
+    #   PASS  file TRACKED-modified đổi nội dung = việc hợp lệ của loop (chống-oan: loop phải được sửa code)
+    # Loại trừ: thư mục output của chính triage; file > 5MB ghi 'skipped-by-size'.
+    AUD_DIR=$(dirname "$TRIAGE_LOG")
+    snapshot_lines() { # in "<U|T> <hash|skipped-by-size> <path>" cho mọi file dirty/untracked
+      git status --porcelain 2>/dev/null | while IFS= read -r ln; do
+        st=$(printf '%s' "$ln" | cut -c1-2); p=$(printf '%s' "$ln" | cut -c4-)
+        case "$p" in "$AUD_DIR"/*|test-reports/*) continue;; esac
+        [ -f "$p" ] || { printf 'X gone %s\n' "$p"; continue; }
+        SZ=$(wc -c < "$p" 2>/dev/null || echo 0)
+        if [ "$SZ" -gt 5242880 ] 2>/dev/null; then printf '%s skipped-by-size %s\n' "$([ "$st" = '??' ] && echo U || echo T)" "$p"; continue; fi
+        printf '%s %s %s\n' "$([ "$st" = '??' ] && echo U || echo T)" "$(git hash-object "$p" 2>/dev/null || echo nohash)" "$p"
+      done
+    }
+    if [ "${2:-}" = "--close" ]; then
+      ID="${3:-}"
+      if [ -z "$ID" ]; then
+        # Fallback TẤT ĐỊNH: chỉ hợp lệ khi có ĐÚNG 1 record mở (TRIAGE_LOG là file chung mọi phiên
+        # nên "dòng gần nhất của chính phiên" không có định nghĩa máy khi 2 phiên song song).
+        N=$(ls "$AUD_DIR"/audit-open-*.txt 2>/dev/null | wc -l)
+        if [ "$N" -eq 1 ]; then ID=$(basename "$(ls "$AUD_DIR"/audit-open-*.txt)" .txt); ID=${ID#audit-open-}
+        else echo "FAIL: có $N record mở — truyền id tường minh: --session-audit --close <id> (fail-closed, có đường thoát)"; exit 3; fi
+      fi
+      OPEN="$AUD_DIR/audit-open-$ID.txt"
+      [ -f "$OPEN" ] || { echo "FAIL: không thấy record mở '$OPEN' — phiên chưa chạy pha MỞ?"; exit 3; }
+      NOW=$(snapshot_lines)
+      RCA=0; STAMP=$(date -u +%Y%m%dT%H%M%SZ)
+      REC="$AUD_DIR/audit-$STAMP.txt"
+      { echo "# audit record $STAMP (sid=$ID)"; echo "## snapshot-mo"; grep -v '^#' "$OPEN" | grep -v '^sid='; echo "## snapshot-dong"; printf '%s\n' "$NOW"; } > "$REC"
+      while IFS= read -r l; do
+        case "$l" in ''|'#'*|sid=*) continue;; esac
+        k=$(printf '%s' "$l" | cut -d' ' -f1); h=$(printf '%s' "$l" | cut -d' ' -f2); p=$(printf '%s' "$l" | cut -d' ' -f3-)
+        [ "$h" = "skipped-by-size" ] && continue
+        NL=$(printf '%s\n' "$NOW" | grep -F " $p" | head -1)
+        if [ -z "$NL" ]; then echo "FAIL: dirty/untracked cua user BIEN MAT: $p (reset/checkout/stash?)"; echo "verdict: FAIL bien-mat $p" >> "$REC"; RCA=1; continue; fi
+        nh=$(printf '%s' "$NL" | cut -d' ' -f2)
+        if [ "$k" = "U" ] && [ "$nh" != "$h" ]; then echo "FAIL: file UNTRACKED cua user bi GHI DE: $p"; echo "verdict: FAIL ghi-de-untracked $p" >> "$REC"; RCA=1; fi
+      done < "$OPEN"
+      [ "$RCA" -eq 0 ] && echo "verdict: PASS" >> "$REC"
+      rm -f "$OPEN"
+      echo "audit record: $REC"
+      [ "$RCA" -eq 0 ] && echo "PASS: dirty/untracked cua user con nguyen (record da ghi)"
+      exit $RCA
+    fi
+    mkdir -p "$AUD_DIR" 2>/dev/null || { echo "FAIL: khong tao duoc $AUD_DIR"; exit 1; }
+    SID="$(date -u +%Y%m%dT%H%M%SZ)-$$"   # NTFS-safe: KHONG dau hai cham
+    OPEN="$AUD_DIR/audit-open-$SID.txt"
+    { echo "# audit-open $SID"; echo "sid=$SID"; echo "# stash-create: $(git stash create 2>/dev/null || echo none)"; snapshot_lines; } > "$OPEN"
+    echo "session-audit id: $SID"
+    echo "record: $OPEN"
+    echo "→ cuối phiên BẮT BUỘC: sh <verifier> --session-audit --close $SID (exit gate §9)"
+    exit 0 ;;
   --self-test)
     SELF="$0"; case "$SELF" in /*|[A-Za-z]:*) ;; *) SELF="$(pwd)/$SELF";; esac
     T=$(mktemp -d) || exit 1; RC2=0
@@ -273,6 +332,45 @@ case "${1:-}" in
     grep -rq --include='*.md' "$P" "$TDL" && echo "PASS: assertion bat path cu trong md DU co marker (lint lot, assertion bat)" || { echo "FAIL: assertion khong bat path cu"; RC2=1; }
     rm -f "$TDL/b.md"; printf 'sach\n' > "$TDL/a.md"
     grep -rq --include='*.md' "$P" "$TDL" && { echo "FAIL: assertion FAIL oan tap hau-PR sach"; RC2=1; } || echo "PASS: assertion tap hau-PR sach → im lang"
+    # 14) session-audit hai pha (Wave 2b — bảo vệ dirty user, DETECTED)
+    mk_audit_repo() { # $1=dir — repo có 1 file dirty tracked + 1 file untracked của "user"
+      ( cd "$1" && git init -q . && git config user.email t@t.t && git config user.name t \
+        && mkdir -p src && printf 'v1\n' > src/a.txt && git add -A && git commit -qm init \
+        && printf 'user dang sua\n' >> src/a.txt && printf 'ghi chu cua user\n' > user-note.txt ) >/dev/null 2>&1
+    }
+    aud_open() { ( cd "$1" && sh "$SELF" --session-audit 2>/dev/null | sed -n 's/^session-audit id: //p' ); }
+    TA=$(mktemp -d) || exit 1; mk_audit_repo "$TA"
+    AID=$(aud_open "$TA")
+    [ -n "$AID" ] && [ -f "$TA/test-reports/triage/audit-open-$AID.txt" ] && echo "PASS: session-audit pha MO tao record per-phien ($AID)" || { echo "FAIL: pha MO khong tao record"; RC2=1; }
+    case "$AID" in *:*) echo "FAIL: sid chua dau hai cham — khong NTFS-safe"; RC2=1;; *) echo "PASS: sid NTFS-safe (khong co ':')";; esac
+    ( cd "$TA" && printf 'loop sua tiep\n' >> src/a.txt )   # loop sửa file TRACKED trong scope
+    ( cd "$TA" && sh "$SELF" --session-audit --close "$AID" >/dev/null 2>&1 ); RCA1=$?
+    [ "$RCA1" -eq 0 ] && echo "PASS: phien chi sua file tracked trong scope → PASS (chong-oan)" || { echo "FAIL: chan oan loop sua file tracked"; RC2=1; }
+    ls "$TA"/test-reports/triage/audit-2*.txt >/dev/null 2>&1 && echo "PASS: record chinh thuc audit-<stamp>.txt duoc ghi" || { echo "FAIL: khong co record chinh thuc"; RC2=1; }
+    [ ! -f "$TA/test-reports/triage/audit-open-$AID.txt" ] && echo "PASS: record mo da duoc don sau pha DONG (vong doi)" || { echo "FAIL: record mo con sot"; RC2=1; }
+    TB2=$(mktemp -d) || exit 1; mk_audit_repo "$TB2"
+    BID=$(aud_open "$TB2")
+    ( cd "$TB2" && git checkout -- src/a.txt )   # PHÁ dirty của user
+    ( cd "$TB2" && sh "$SELF" --session-audit --close "$BID" >/dev/null 2>&1 ); RCA2=$?
+    [ "$RCA2" -ne 0 ] && echo "PASS: phien XOA dirty user (git checkout --) → FAIL dung" || { echo "FAIL: xoa dirty user KHONG bi bat"; RC2=1; }
+    TC2=$(mktemp -d) || exit 1; mk_audit_repo "$TC2"
+    CID=$(aud_open "$TC2")
+    ( cd "$TC2" && printf 'agent ghi de\n' > user-note.txt )   # GHI ĐÈ untracked, giữ nguyên tên
+    ( cd "$TC2" && sh "$SELF" --session-audit --close "$CID" >/dev/null 2>&1 ); RCA3=$?
+    [ "$RCA3" -ne 0 ] && echo "PASS: phien GHI DE untracked (diem mu cua stash-create) → FAIL dung" || { echo "FAIL: ghi de untracked LOT"; RC2=1; }
+    TD2=$(mktemp -d) || exit 1; mk_audit_repo "$TD2"
+    DID=$(aud_open "$TD2")
+    ( cd "$TD2" && mkdir -p test-reports/triage && printf 'report cua loop\n' > test-reports/triage/report-x.txt )
+    ( cd "$TD2" && sh "$SELF" --session-audit --close "$DID" >/dev/null 2>&1 ); RCA4=$?
+    [ "$RCA4" -eq 0 ] && echo "PASS: untracked do loop tu tao trong test-reports/ KHONG lam FAIL (chong-oan)" || { echo "FAIL: output cua chinh triage bi tinh la vi pham"; RC2=1; }
+    TE2=$(mktemp -d) || exit 1; mk_audit_repo "$TE2"
+    E1=$(aud_open "$TE2"); E2=$(aud_open "$TE2")
+    ( cd "$TE2" && sh "$SELF" --session-audit --close >/dev/null 2>&1 ); RCA5=$?
+    [ "$RCA5" -eq 3 ] && echo "PASS: 2 record mo + close khong id → FAIL-closed exit 3 (co duong thoat)" || { echo "FAIL: fallback mo ho khong fail-closed (exit=$RCA5)"; RC2=1; }
+    ( cd "$TE2" && sh "$SELF" --session-audit --close "$E1" >/dev/null 2>&1 ); RCA6=$?
+    ( cd "$TE2" && sh "$SELF" --session-audit --close >/dev/null 2>&1 ); RCA7=$?
+    { [ "$RCA6" -eq 0 ] && [ "$RCA7" -eq 0 ]; } && echo "PASS: 2 phien song song — close kem id dung baseline cua minh; con 1 record → fallback hop le" || { echo "FAIL: 2-phien-song-song sai ($RCA6/$RCA7)"; RC2=1; }
+    rm -rf "$TA" "$TB2" "$TC2" "$TD2" "$TE2"
     rm -rf "$T" "$T2" "$T3" "$T4" "$TH" "$TH2" "$TU5" "$TP" "$TDL"
     echo "--- self-test: $([ $RC2 -eq 0 ] && echo ALL PASS || echo CÓ FAIL) ---"; exit $RC2 ;;
 esac

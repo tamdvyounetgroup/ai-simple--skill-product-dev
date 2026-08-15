@@ -196,6 +196,7 @@ ai-simple/BA/ui-design-logic **vắng** trong repo → degrade: tier áp cục b
 
 ## 9. Exit gates (verify-on-use, có bằng chứng — tự tick khi CHẠY xong, không pre-tick)
 - [ ] `triage-verify.sh` exit 0
+- [ ] **session-audit đã chạy ĐỦ 2 PHA** — đầu phiên `--session-audit` (lấy `<id>`), cuối phiên `--session-audit --close <id>`; record chính thức `test-reports/triage/audit-<stamp>.txt` đính kèm. Tick mà không có record = vi phạm exit gate. [DETECTED — máy phát hiện sau sự việc; phần agent tự gọi giữa phiên là ADVISORY]
 - [ ] Loop ≥1 iter end-to-end; mọi defect fix hoặc escalate
 - [ ] Verify pass (capture exit code, không "chắc pass")
 - [ ] Decision-pattern §6 updated nếu user dạy khác (§4b)

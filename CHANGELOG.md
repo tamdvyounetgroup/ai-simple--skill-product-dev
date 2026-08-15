@@ -4,6 +4,24 @@ Toàn bộ lịch sử tiến hóa của phương pháp. README/methodology dùn
 
 Convention từ v1.10.0: mỗi mục version có thể chứa dòng `**RE-APPLY**: <việc project tiêu thụ cần làm lại sau update>` — `ai-simple update` tự trích các dòng này trong khoảng (bản-cũ → bản-mới] in thành checklist. Không có dòng RE-APPLY = update xong là xong.
 
+## v1.14.0 — 2026-08-15 (Wave 2b + session-audit — suite nhanh gấp đôi, dirty của user có máy canh)
+
+- **session-audit hai pha [DETECTED]** (cắt khỏi 2a nay hoàn tất):  chụp snapshot đầu
+  phiên (stash-create + porcelain + hash-object từng untracked, loại trừ test-reports/, skip >5MB),
+  in <id> NTFS-safe;  so + ghi record chính thức audit-<stamp>.txt rồi
+  dọn record mở. Luật phán máy-quyết-được: FAIL khi dirty/untracked BIẾN MẤT (reset/checkout/stash)
+  hoặc untracked bị GHI ĐÈ (điểm mù của stash-create); tracked-modified đổi nội dung = việc hợp lệ
+  của loop (chống-oan). Fallback tất định: đúng 1 record mở mới được close không id, ≥2 → exit 3 kèm
+  hướng dẫn. Hook §3e WARN khi log loop mới hơn record đóng (bỏ qua dòng consent |). Exit gate §9 thêm
+  ô bắt buộc. 10 fixture gồm 2-phiên-song-song + fallback-mơ-hồ + chống-oan output của chính triage.
+- **Wave 2b tốc độ — KPI <60s ĐẠT (98s → 56s)**: 9→10 khối fixture hook chạy SONG SONG (đo trước khi
+  tối ưu: 1 lượt hook ≈1.4s/~42 spawn, KHÔNG hotspot; 4 lượt tuần tự 5.76s vs song song 2.83s), log
+  riêng từng khối in theo thứ tự cố định, verdict lấy từ '^FAIL' trong log; khối UI (critical path 50s
+  đo bằng mtime log) chia đôi. **npm test 154s → 94s**: 11 self-test chạy đồng thời qua spawn async,
+  in theo thứ tự khai báo. 48 PASS marker của hook giữ nguyên byte-for-byte.
+- **RE-APPLY**: chạy  để hook nhận §3e WARN session-audit; loop triage từ nay mở phiên
+  bằng  và đóng bằng  (exit gate §9 đòi record).
+
 ## v1.13.0 — 2026-08-15 (Wave 3 — architecture v2: foundation skill vào skills/, junction collision-fix, update --i-closed-sessions)
 
 RED tier đã confirm. KHÔNG stub: root SKILL.md DI CHUYỂN, mọi ref tracked đổi CÙNG commit.

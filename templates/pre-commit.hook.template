@@ -1,5 +1,5 @@
 #!/bin/sh
-# ai-simple-version: 1.13.0
+# ai-simple-version: 1.14.0
 # pre-commit — Automated enforcement (nguyên tắc 08 / principle 08)
 #
 # CHẠY ĐƯỢC NGAY với default Supabase + Next.js. Sửa 3 biến CẤU HÌNH bên dưới cho project khác.
@@ -52,7 +52,13 @@ if [ "$1" = "--self-test" ]; then
   [ -n "$M" ] && echo "PASS: matcher contract — child (src/lib/x) khop" || { echo "FAIL: matcher miss child"; RC=1; }
   # Fixture gate: warn — chạy flow thật trong temp repo, WARN nhưng KHÔNG chặn
   HOOK_SELF="$0"; case "$HOOK_SELF" in /*|[A-Za-z]:*) ;; *) HOOK_SELF="$(pwd)/$HOOK_SELF";; esac
-  TW=$(mktemp -d) && OPW=$(pwd) || exit 1
+  # Wave 2b — 9 khối fixture là các temp repo ĐỘC LẬP, chi phí là spawn-bound (đo: 1 lượt hook ≈ 1.4s,
+  # ~42 external spawn, KHÔNG có hotspot đơn lẻ; 4 lượt tuần tự 5.76s vs song song 2.83s).
+  # → chạy song song, mỗi khối ghi log riêng; sau `wait` in log THEO ĐÚNG THỨ TỰ CŨ (output ổn định).
+  # Verdict lấy từ log: dòng bắt đầu '^FAIL' (RC=1 trong subshell không propagate — đây là nguồn chân lý),
+  # cộng ca subshell thoát sớm (mktemp guard) được ghi FAIL vào chính log của nó.
+  OPW=$(pwd); PJ=$(mktemp -d) || exit 1
+  ( TW=$(mktemp -d) || exit 1
   cd "$TW" && git init -q . && git config user.email t@t.t && git config user.name t || exit 1
   mkdir -p .githooks src/w docs/app-map
   cp "$HOOK_SELF" .githooks/pre-commit && git config core.hooksPath .githooks
@@ -66,10 +72,10 @@ if [ "$1" = "--self-test" ]; then
   else
     echo "FAIL: gate warn khong dung (exit=$RCW)"; RC=1
   fi
-  cd "$OPW" && rm -rf "$TW"
+  cd "$OPW" && rm -rf "$TW" ) > "$PJ/01.log" 2>&1 || echo "FAIL: khoi 01 thoat som" >> "$PJ/01.log" &
   # Fixture claim gate (NT13): claim cua BRANCH KHAC giu src/c -> commit dung vao bi BLOCK;
   # commit tu CHINH branch cua lot -> di qua.
-  TC=$(mktemp -d) && cd "$TC" && git init -q . && git config user.email t@t.t && git config user.name t || exit 1
+  ( TC=$(mktemp -d) && cd "$TC" && git init -q . && git config user.email t@t.t && git config user.name t || exit 1
   mkdir -p .githooks src/c
   cp "$HOOK_SELF" .githooks/pre-commit && git config core.hooksPath .githooks
   echo x > src/c/h.ts && git add -A && git commit -qm setup >/dev/null 2>&1
@@ -89,9 +95,9 @@ if [ "$1" = "--self-test" ]; then
   else
     echo "FAIL: claim gate chan oan chinh lot (exit=$RCC2)"; RC=1
   fi
-  cd "$OPW" && rm -rf "$TC"
+  cd "$OPW" && rm -rf "$TC" ) > "$PJ/02.log" 2>&1 || echo "FAIL: khoi 02 thoat som" >> "$PJ/02.log" &
   # Fixture UI anti-slop gate (1d): mau hard-code -> BLOCK; mau token -> qua
-  TU=$(mktemp -d) && cd "$TU" && git init -q . && git config user.email t@t.t && git config user.name t || exit 1
+  ( TU=$(mktemp -d) && cd "$TU" && git init -q . && git config user.email t@t.t && git config user.name t || exit 1
   mkdir -p .githooks src/ui
   cp "$HOOK_SELF" .githooks/pre-commit && git config core.hooksPath .githooks
   echo "module.exports={}" > tailwind.config.js
@@ -152,6 +158,14 @@ if [ "$1" = "--self-test" ]; then
   git add src/ui/Dv.tsx
   OUTU8=$(git commit -m f3b 2>&1); RCU8=$?
   [ "$RCU8" -eq 0 ] && echo "PASS: 1d-f cho qua div co role" || { echo "FAIL: 1d-f chan oan div co role (exit=$RCU8)"; RC=1; }
+  cd "$OPW" && rm -rf "$TU" ) > "$PJ/03.log" 2>&1 || echo "FAIL: khoi 03 thoat som" >> "$PJ/03.log" &
+  # Wave 2b — nửa sau của fixture UI tách thành khối RIÊNG: khối 03 từng là critical path 50s
+  # (đo mtime log/khối), chia đôi đưa tổng suite xuống dưới KPI <60s. Repo temp độc lập, cùng setup.
+  ( TU2=$(mktemp -d) && cd "$TU2" && git init -q . && git config user.email t@t.t && git config user.name t || exit 1
+  mkdir -p .githooks src/ui
+  cp "$HOOK_SELF" .githooks/pre-commit && git config core.hooksPath .githooks
+  echo "module.exports={}" > tailwind.config.js
+  git add -A && git commit -qm setup >/dev/null 2>&1
   # F4 — 1d-g: bg-clip-text MOT MINH -> qua (mat na anh); + text-transparent -> BLOCK
   printf 'export const G = () => <span className="bg-clip-text bg-[url(/x.png)]">x</span>\n' > src/ui/Gr.tsx
   git add src/ui/Gr.tsx
@@ -178,9 +192,9 @@ if [ "$1" = "--self-test" ]; then
   OUTU12=$(git commit -m f6p 2>&1); RCU12=$?
   if [ "$RCU12" -eq 0 ] && echo "$OUTU12" | grep -q "thieu be mat trinh duyet"; then echo "PASS: 1d-p WARN globals thieu ::selection/caret, khong chan"
   else echo "FAIL: 1d-p sai (exit=$RCU12): $OUTU12"; RC=1; fi
-  cd "$OPW" && rm -rf "$TU"
+  cd "$OPW" && rm -rf "$TU2" ) > "$PJ/10.log" 2>&1 || echo "FAIL: khoi 10 thoat som" >> "$PJ/10.log" &
   # 1f (NT15): no-marker 2 ve, export trung, page thieu state, lane-vs-spec — moi WARN khong duoc keo FAIL
-  TB=$(mktemp -d) && cd "$TB" && git init -q . && git config user.email t@t.t && git config user.name t || exit 1
+  ( TB=$(mktemp -d) && cd "$TB" && git init -q . && git config user.email t@t.t && git config user.name t || exit 1
   mkdir -p .githooks src/lib src/app/foo docs/app-map
   cp "$HOOK_SELF" .githooks/pre-commit && git config core.hooksPath .githooks
   printf 'export function dupFn(a){return a}\n' > src/lib/a.ts
@@ -217,9 +231,9 @@ if [ "$1" = "--self-test" ]; then
   OUTB5=$(git commit -m page2 2>&1); RCB5=$?
   if [ "$RCB5" -eq 0 ]; then echo "PASS: 1f page moi + spec cung commit + du state -> qua"
   else echo "FAIL: 1f chan oan khi da du (exit=$RCB5): $OUTB5"; RC=1; fi
-  cd "$OPW" && rm -rf "$TB"
+  cd "$OPW" && rm -rf "$TB" ) > "$PJ/04.log" 2>&1 || echo "FAIL: khoi 04 thoat som" >> "$PJ/04.log" &
   # 1b moi: gate: warn nam SAU dong 10 nhung trong frontmatter (truoc heading ## dau) -> van WARN, khong BLOCK
-  TG=$(mktemp -d) && cd "$TG" && git init -q . && git config user.email t@t.t && git config user.name t || exit 1
+  ( TG=$(mktemp -d) && cd "$TG" && git init -q . && git config user.email t@t.t && git config user.name t || exit 1
   mkdir -p .githooks src/g docs/app-map
   cp "$HOOK_SELF" .githooks/pre-commit && git config core.hooksPath .githooks
   echo "a" > src/g/a.ts
@@ -234,9 +248,9 @@ if [ "$1" = "--self-test" ]; then
   else
     echo "FAIL: gate: warn sau dong 10 bi nuot -> BLOCK oan (exit=$RCG)"; RC=1
   fi
-  cd "$OPW" && rm -rf "$TG"
+  cd "$OPW" && rm -rf "$TG" ) > "$PJ/05.log" 2>&1 || echo "FAIL: khoi 05 thoat som" >> "$PJ/05.log" &
   # Fixture Security gate (1e): secret hard-code -> BLOCK; placeholder -> qua; doc injection -> BLOCK
-  TS=$(mktemp -d) && cd "$TS" && git init -q . && git config user.email t@t.t && git config user.name t || exit 1
+  ( TS=$(mktemp -d) && cd "$TS" && git init -q . && git config user.email t@t.t && git config user.name t || exit 1
   mkdir -p .githooks src docs/app-map
   cp "$HOOK_SELF" .githooks/pre-commit && git config core.hooksPath .githooks
   echo "export const ok = 1" > src/clean.ts
@@ -327,10 +341,10 @@ if [ "$1" = "--self-test" ]; then
     echo "FAIL: send-token + sink kha nghi LOT (exit=$RCL2)"; RC=1
   fi
   git reset -q >/dev/null 2>&1; rm -f docs/app-map/13-w2.md
-  cd "$OPW" && rm -rf "$TS"
+  cd "$OPW" && rm -rf "$TS" ) > "$PJ/06.log" 2>&1 || echo "FAIL: khoi 06 thoat som" >> "$PJ/06.log" &
   # Fixture B1/M4 (hoi dong Fable): doc-change CHI GOM dong DOC-STATUS may-ghi KHONG duoc tinh
   # la "da sua doc" -> cong covers van BLOCK (vá false-pass 'git add -A' trong First-win README).
-  TB=$(mktemp -d) && cd "$TB" && git init -q . && git config user.email t@t.t && git config user.name t || exit 1
+  ( TB=$(mktemp -d) && cd "$TB" && git init -q . && git config user.email t@t.t && git config user.name t || exit 1
   mkdir -p .githooks src/b docs/app-map
   cp "$HOOK_SELF" .githooks/pre-commit && git config core.hooksPath .githooks
   echo "a" > src/b/a.ts
@@ -350,10 +364,10 @@ if [ "$1" = "--self-test" ]; then
   git add -A
   OUTB2=$(git commit -m "re-verify(docs/app-map/01-b.md): checked" 2>&1); RCB2=$?
   [ "$RCB2" -eq 0 ] && echo "PASS: covers gate cho qua khi doc duoc sua that (bump last_verified)" || { echo "FAIL: covers gate chan oan doc sua that (exit=$RCB2)"; RC=1; }
-  cd "$OPW" && rm -rf "$TB"
+  cd "$OPW" && rm -rf "$TB" ) > "$PJ/07.log" 2>&1 || echo "FAIL: khoi 07 thoat som" >> "$PJ/07.log" &
   # Fixture consent NOTIFY vet-audit (v1.11.0 — 3c): token-trong-staged-diff, so GIA TRI HIEU LUC.
   # Moi ca chay KHONG co junction .claude/skills -> dong thoi chung minh fresh-clone khong gay (3d guard).
-  TN=$(mktemp -d) && cd "$TN" && git init -q . && git config user.email t@t.t && git config user.name t || exit 1
+  ( TN=$(mktemp -d) && cd "$TN" && git init -q . && git config user.email t@t.t && git config user.name t || exit 1
   mkdir -p .githooks .claude
   cp "$HOOK_SELF" .githooks/pre-commit && git config core.hooksPath .githooks
   printf 'NOTIFY=off\n' > .claude/triage.config
@@ -388,11 +402,11 @@ if [ "$1" = "--self-test" ]; then
   printf '# user-consent: notify-on 2026-08-16\r\nNOTIFY=on\r\nTELEGRAM=x\r\n' > .claude/triage.config; git add .claude/triage.config
   OUTN9=$(git commit -m eolchurn 2>&1); RCN9=$?
   [ "$RCN9" -eq 0 ] && echo "PASS: consent 3c — churn eol toan file giu gia tri khong token -> PASS" || { echo "FAIL: 3c churn eol bi chan oan (exit=$RCN9): $OUTN9"; RC=1; }
-  cd "$OPW" && rm -rf "$TN"
+  cd "$OPW" && rm -rf "$TN" ) > "$PJ/08.log" 2>&1 || echo "FAIL: khoi 08 thoat som" >> "$PJ/08.log" &
   # Wave 2a: secret trong file TEN CO DAU CACH phai bi bat — word-split cu tach ten lam doi ->
   # moi gate skip im lang -> secret LOT. Fixture secret LAP LUC CHAY (ghep chuoi — chinh file hook
   # khong duoc chua literal khop pattern, luat CLAUDE.md).
-  TSC=$(mktemp -d) && cd "$TSC" && git init -q . && git config user.email t@t.t && git config user.name t || exit 1
+  ( TSC=$(mktemp -d) && cd "$TSC" && git init -q . && git config user.email t@t.t && git config user.name t || exit 1
   mkdir -p .githooks src
   cp "$HOOK_SELF" .githooks/pre-commit && git config core.hooksPath .githooks
   git commit -qm init --allow-empty >/dev/null 2>&1
@@ -401,7 +415,16 @@ if [ "$1" = "--self-test" ]; then
   git add -A
   OUTSC=$(git commit -m sp 2>&1); RCSC=$?
   if [ "$RCSC" -ne 0 ] && echo "$OUTSC" | grep -q 'secret HIGH-CONFIDENCE'; then echo "PASS: 2a — secret trong file ten-co-dau-cach bi BLOCK (het skip word-split)"; else echo "FAIL: 2a — secret file ten dau cach LOT (exit=$RCSC)"; RC=1; fi
-  cd "$OPW" && rm -rf "$TSC"
+  cd "$OPW" && rm -rf "$TSC" ) > "$PJ/09.log" 2>&1 || echo "FAIL: khoi 09 thoat som" >> "$PJ/09.log" &
+  wait
+  # In log THEO THỨ TỰ CỐ ĐỊNH (không theo thứ tự hoàn thành) → output ổn định, so diff được giữa các lần chạy.
+  for i in 01 02 03 04 05 06 07 08 09 10; do
+    if [ -s "$PJ/$i.log" ]; then cat "$PJ/$i.log"
+    else echo "FAIL: khoi $i khong sinh output (subshell chet im lang?)"; RC=1; fi
+  done
+  # Verdict của phần song song: dòng '^FAIL' trong log là NGUỒN CHÂN LÝ (RC=1 trong subshell không propagate).
+  grep -hq '^FAIL' "$PJ"/*.log 2>/dev/null && RC=1
+  rm -rf "$PJ"
   exit $RC
 fi
 
@@ -799,6 +822,19 @@ fi
 # fresh clone chưa `ai-simple init` không có verifier → skip im lặng, hook không gãy.
 TV=".claude/skills/ui-ux-triage/triage-verify.sh"
 if [ -f "$TV" ]; then sh "$TV" --config-check >/dev/null 2>&1 || true; fi
+
+# ── 3e. Session-audit chưa đóng (DETECTED — WARN, KHÔNG kéo FAIL: "WARN là WARN") ──
+# Phiên triage có dòng log FORMAT LOOP mới hơn record audit chính thức mới nhất = phiên chưa chạy
+# pha ĐÓNG. BỎ QUA dòng 'consent |' của --config-check (user đổi consent không kèm phiên triage nào
+# thì mọi commit 24h kế sẽ dính WARN oan).
+TLOG="test-reports/triage/triage-log.md"
+if [ -f "$TLOG" ]; then
+  LASTLOOP=$(grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}' "$TLOG" 2>/dev/null | grep -v '^consent |' | tail -1 | cut -d' ' -f1 | tr -d '-')
+  LASTREC=$(ls test-reports/triage/audit-2*.txt 2>/dev/null | sed 's/.*audit-//; s/T.*//' | sort | tail -1)
+  if [ -n "$LASTLOOP" ] && { [ -z "$LASTREC" ] || [ "$LASTLOOP" -gt "$LASTREC" ] 2>/dev/null; }; then
+    echo "WARN: phien triage ($LASTLOOP) chua co record session-audit dong (exit gate §9) -> chay: sh $TV --session-audit --close <id>"
+  fi
+fi
 
 # ── 4. WARN (không chặn): app-map file thiếu chuẩn ────────────────────
 for f in $(echo "$CHANGED" | grep -E 'docs/app-map/.*\.md$' | grep -v '_generated/' || true); do

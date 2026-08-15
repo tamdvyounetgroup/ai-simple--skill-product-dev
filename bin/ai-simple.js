@@ -7,7 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { spawnSync } = require('child_process');
+const { spawnSync, spawn } = require('child_process');
 
 const PKG_ROOT = path.join(__dirname, '..');
 const PKG = JSON.parse(fs.readFileSync(path.join(PKG_ROOT, 'package.json'), 'utf8'));
@@ -549,27 +549,41 @@ function passthrough(scriptArgs) {
   process.exit(r.status);
 }
 
+// Wave 2b: chạy nhiều self-test ĐỒNG THỜI (process độc lập, spawn-bound trên Windows) rồi in
+// THEO THỨ TỰ CỐ ĐỊNH → wall-clock giảm, output vẫn ổn định/so-diff-được.
+function shAsync(scriptAndArgs, opts = {}) {
+  return new Promise((resolve) => {
+    const shPath = findSh();
+    if (!shPath) return resolve({ status: 127, stdout: '', stderr: 'khong tim thay sh' });
+    const p = spawn(shPath, scriptAndArgs, { cwd: opts.cwd || process.cwd() });
+    let out = '', err = '';
+    p.stdout.on('data', (d) => { out += d; }); p.stderr.on('data', (d) => { err += d; });
+    p.on('close', (code) => resolve({ status: code === null ? 1 : code, stdout: out, stderr: err }));
+    p.on('error', (e) => resolve({ status: 1, stdout: '', stderr: String(e) }));
+  });
+}
+function nodeAsync(args, opts = {}) {
+  return new Promise((resolve) => {
+    const p = spawn(process.execPath, args, { cwd: opts.cwd || process.cwd() });
+    let out = '', err = '';
+    p.stdout.on('data', (d) => { out += d; }); p.stderr.on('data', (d) => { err += d; });
+    p.on('close', (code) => resolve({ status: code === null ? 1 : code, stdout: out, stderr: err }));
+    p.on('error', (e) => resolve({ status: 1, stdout: '', stderr: String(e) }));
+  });
+}
+
 async function cmdSelfTest() { // dùng cho `npm test` của chính package: chạy self-test template + skill-verifier
   let failed = false;
-  for (const [label, file, arg] of [['hook', TPL('pre-commit.hook.template'), '--self-test'], ['report', TPL('doc-health-report.sh.template'), '--self-test'], ['pretooluse-guard', TPL('pretooluse-git-guard.sh'), '--self-test']]) {
-    const r = sh([file, arg], { cwd: PKG_ROOT });
-    console.log(`${r.status === 0 ? 'PASS' : 'FAIL'} template ${label} --self-test`);
-    if (r.status !== 0) { failed = true; console.log(r.stdout + r.stderr); }
-  }
-  // Script đo lường có --self-test (v1.11.0): metadata-words là NGUỒN ĐO DUY NHẤT token metadata —
-  // self-test của nó vào gate để cách đếm không rot (CLAUDE.md mục 8).
-  {
-    const r = spawnSync(process.execPath, [path.join(PKG_ROOT, 'scripts', 'metadata-words.js'), '--self-test'], { encoding: 'utf8', cwd: PKG_ROOT });
-    console.log(`${(r.status === 0) ? 'PASS' : 'FAIL'} script metadata-words --self-test`);
-    if (r.status !== 0) { failed = true; console.log((r.stdout || '') + (r.stderr || '')); }
-  }
-  // Mutation suite (Wave 2a chặng 1): thước đo false-pass/false-block của verifier — chạy ĐỦ BẢNG
-  // trong npm test (kỳ vọng 0/0), self-test riêng cho harness.
-  for (const arg of ['--self-test', '']) {
-    const r = sh(arg ? [path.join(PKG_ROOT, 'scripts', 'mutation-suite.sh'), arg] : [path.join(PKG_ROOT, 'scripts', 'mutation-suite.sh')], { cwd: PKG_ROOT });
-    console.log(`${r.status === 0 ? 'PASS' : 'FAIL'} script mutation-suite ${arg || '(full: 0 false-pass/0 false-block)'}`);
-    if (r.status !== 0) { failed = true; console.log(r.stdout + r.stderr); }
-  }
+  const MUT = path.join(PKG_ROOT, 'scripts', 'mutation-suite.sh');
+  // Lô 1 — template/script độc lập + mutation suite (Wave 2a chặng 1: thước đo false-pass/false-block).
+  const jobs = [
+    ['template hook --self-test', () => shAsync([TPL('pre-commit.hook.template'), '--self-test'], { cwd: PKG_ROOT })],
+    ['template report --self-test', () => shAsync([TPL('doc-health-report.sh.template'), '--self-test'], { cwd: PKG_ROOT })],
+    ['template pretooluse-guard --self-test', () => shAsync([TPL('pretooluse-git-guard.sh'), '--self-test'], { cwd: PKG_ROOT })],
+    ['script metadata-words --self-test', () => nodeAsync([path.join(PKG_ROOT, 'scripts', 'metadata-words.js'), '--self-test'], { cwd: PKG_ROOT })],
+    ['script mutation-suite --self-test', () => shAsync([MUT, '--self-test'], { cwd: PKG_ROOT })],
+    ['script mutation-suite (full: 0 false-pass/0 false-block)', () => shAsync([MUT], { cwd: PKG_ROOT })],
+  ];
   // Skill-verifier fixtures (G1 bộ chấm điểm — self-test hợp nhất): MỌI skills/*/*-verify.sh có
   // --self-test phải chạy trong `npm test`, không suite mồ côi (trước đây chỉ security-verify được nối,
   // 3 cái kia PASS nhưng ngoài gate -> rot lúc nào không biết). Auto-discover, không hardcode tên.
@@ -588,11 +602,15 @@ async function cmdSelfTest() { // dùng cho `npm test` của chính package: ch�
         .flat()
         .sort((a, b) => a.skill.localeCompare(b.skill) || a.file.localeCompare(b.file))
     : [];
-  for (const { skill, file } of verifiers) {
-    const r = sh([file, '--self-test'], { cwd: PKG_ROOT });
-    console.log(`${r.status === 0 ? 'PASS' : 'FAIL'} skill ${skill} ${path.basename(file)} --self-test`);
+  for (const { skill, file } of verifiers)
+    jobs.push([`skill ${skill} ${path.basename(file)} --self-test`, () => shAsync([file, '--self-test'], { cwd: PKG_ROOT })]);
+  // Chạy ĐỒNG THỜI, in theo thứ tự khai báo (ổn định như bản tuần tự).
+  const results = await Promise.all(jobs.map(([, run]) => run()));
+  jobs.forEach(([label], i) => {
+    const r = results[i];
+    console.log(`${r.status === 0 ? 'PASS' : 'FAIL'} ${label}`);
     if (r.status !== 0) { failed = true; console.log(r.stdout + r.stderr); }
-  }
+  });
   // Identity: guard blacklist số-cũ (2 đời regex) đã GỠ ở Wave 2a — thay bằng identity-manifest
   // enforcer WHITELIST bên dưới (đếm thực-tế + so manifest; bắt MỌI số lệch, không chỉ số cũ đã biết;
   // ca FAIL bắt buộc "14 composable principles" nằm trong fixture ranh giới của enforcer).

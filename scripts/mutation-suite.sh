@@ -49,6 +49,8 @@ suite() {
   run_case "ba: Maps-to khong ton tai" "$BA" all fail "# x\n${FMOK}## 10. Acceptance\n### AC-1 a · Maps to: NV9 · Test: e2e\n- **Given** x\n- **When** y\n- **Then** z\n- **Assert** count(x)==0\n"
   run_case "sec: declared-coverage prefix suong (xyz)" "$SEC" all fail "# s\n> Load khi: t\ncovers: src/x\nlast_verified: 2026-01-01\nttl_days: 90\ndeclared-coverage: xyz\n## F\n- F1 (LLM01): x. tier=RED\n> KHONG thay the pentest.\n"
   run_case "sec: over-claim CHI WARN (khong duoc false-block)" "$SEC" all pass "# s\n${SECFM}## F\n- F1 (A02): da bao mat ✓ het loi\n> KHONG thay the pentest.\n"
+  run_case "sec: NHIEU finding, cai thu 2 rong (false-PASS cu)" "$SEC" all fail "# s\n${SECFM}## 2. Findings\n### F-1 — a\n- **Rủi ro**: payload doc don user khac\n- **OWASP**: LLM05 · A03\n- **Vùng / gate**: A — review\n- **Tier**: RED\n### F-2 — b\n- mo ta suong\n\n> KHONG thay the pentest.\n"
+  run_case "sec: nhieu finding DU truong (chong-oan)" "$SEC" all pass "# s\n${SECFM}## 2. Findings\n### F-1 — a\n- **Rủi ro**: payload doc don user khac\n- **OWASP**: LLM05 · A03\n- **Vùng / gate**: A — review\n- **Tier**: RED\n### F-2 — b\n- **Rủi ro**: thieu rate-limit gay DoS endpoint\n- **OWASP**: LLM10 · A04\n- **Vùng / gate**: B — SCA/CI\n- **Tier**: YELLOW\n\n> KHONG thay the pentest.\n"
   run_case "ba: format ForFish hop le (chong-oan)" "$BA" all pass "# x\n${FMOK}## Nghiep vu\n| NV1 | them tau |\n## 10. Acceptance\n### AC-1 a · Maps to: NV1 · Test: e2e\n- **Given** x\n- **When** y\n- **Then** z\n- **Assert** count(x)==2\n"
   run_case "sec: review hop le (chong-oan)" "$SEC" all pass "# s\n${SECFM}## F\n- F1 (LLM01/A03): SQLi qua orderId. tier=RED\n> KHONG thay the pentest production.\n"
 }

@@ -19,7 +19,7 @@ description: Operating layer cho codebase làm việc với AI: 15 nguyên tắc
 | optimization | Hệ chạy > 3 tháng / muốn học từ revisions | + 12 |
 | parallel | ≥ 2 session thường trực trên 1 repo | + 13 (CLI `ai-simple parallel` — đọc guard dưới) |
 | security | Code chạm auth/payment/crypto/migration / có dependency ngoài / docs từ nhiều nguồn | + 14 (secret-scan + doc-injection lint máy; skill `security-logic`) |
-| full | Bật tất cả không cần nghĩ (repo lớn, đội quen hệ) | 01–14 (về bộ file = core; khác biệt là nguyên tắc nào BẬT) |
+| full | Bật tất cả không cần nghĩ (repo lớn, đội quen hệ) | 01–15 (về bộ file = core; khác biệt là nguyên tắc nào BẬT) |
 
 `doctor` phát hiện trigger scale-up và đề xuất profile kế tiếp — hệ mở rộng theo tải, không theo trí nhớ người dùng.
 
@@ -62,6 +62,19 @@ description: Operating layer cho codebase làm việc với AI: 15 nguyên tắc
 - RED (không quay đầu: DROP, mutate prod, RLS nới) = dừng, đúng 1 câu confirm kèm phương án khuyến nghị. Confirm là ngoại lệ đắt giá, không phải nghi thức.
 - Không silent takeover claim/lot/branch của session khác — recovery checklist trước.
 - **Guard NT13:** claim CHỈ qua CLI `ai-simple parallel claim/extend` — CẤM tự tạo/sửa claim JSON tay trong `GIT_COMMON_DIR` (state rác đầu độc orchestrator). Trước khi song song: đọc `methodology/13` + chạy `parallel plan` (MECE) + admission gate; không đủ 2 lot độc lập thì single-session.
+
+## AUTHORITY CONTRACT (trục ĐỘC LẬP với risk tier — áp cho MỌI skill)
+
+**Reversible ≠ authorized.** Risk tier trả lời *"sai thì undo mất bao lâu"*; authority trả lời *"user đã cho phép chưa"*. Một việc dễ undo (bật cờ gửi tin, cài thêm tool) vẫn cần quyền. Bốn mức, chấm độc lập với GREEN/YELLOW/RED:
+
+| Mức | Phạm vi | Quy tắc |
+|---|---|---|
+| **L0 — local workspace write** | Sửa file trong repo đang làm, tạo branch/worktree, chạy test cục bộ | Được phép theo scope task. Vẫn cấm đụng dirty của user (mục trên). |
+| **L1 — external communication / install / publish / deploy** | Gửi tin (telegram/email/SMS), cài công cụ hoặc dependency ngoài, publish package, deploy | **Cần user cho phép TƯỜNG MINH cho chính việc đó.** "Có sẵn script/tool" hay "user từng đồng ý lần trước" KHÔNG phải quyền. Kênh consent phải nằm NGOÀI thứ agent ghi được (config tầng user / câu trả lời trực tiếp của user). |
+| **L2 — production data** | Đọc/ghi dữ liệu thật đang phục vụ người dùng | **Mặc định CẤM.** Chỉ khi user nêu đúng target + cấp quyền cho lần đó. Mặc định làm trên staging/tenant cô lập/synthetic identity. Đọc-only vẫn phải hỏi nếu là dữ liệu cá nhân. |
+| **L3 — destructive filesystem / history** | `rm -rf`, `Remove-Item -Recurse -Force`, rewrite git history, xoá branch/worktree | Bắt buộc theo thứ tự: **resolve target thật (đường dẫn tuyệt đối, phân biệt junction/symlink vs thư mục thật) → kiểm owner → backup → confirm** nếu không chắc phục hồi được. Không có bước nào được bỏ vì "chắc là đúng thư mục". |
+
+Agent bị CẤM tự nâng quyền cho chính mình: không tự set env consent, không tự ghi file consent tầng user, không tự thêm token phê duyệt. Máy không phân biệt được ai ghi — nên đây là luật hành vi [ADVISORY], cùng hạng luật cấm stash.
 
 ## Routing
 

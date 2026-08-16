@@ -6,8 +6,11 @@
  *   --emit-task <skill> <id>   → in DUY NHẤT prompt (+ file fixture nếu có). KHÔNG có expected.
  *   --emit-rubric <skill> <id> → in expected_output cho JUDGE (agent khác, không phải agent làm bài).
  *   --list                     → bảng skill/id/eval_name (điều phối viên dùng để phát bài).
- *   --record <skill> <id> <verdict:pass|fail|partial> [ghi chú]  → append vào baseline JSONL.
- *   --report                   → tổng hợp baseline hiện có (đếm theo skill + verdict).
+ *   --record <skill> <id> <pass|fail|partial> --run <run_id> --variant <baseline|with_skill>
+ *                              [--model M] [--judge J] [ghi chú] → ghi 1 QUAN SÁT có danh tính.
+ *                              Khoá duy nhất (run_id, variant, skill, case_id) — trùng thì từ chối.
+ *   --report                   → theo VÒNG ĐO và VARIANT + checklist điều kiện chốt ngưỡng
+ *                              (phủ đủ case · ≥2 vòng · có cặp control↔treatment · inter-rater).
  *   --self-test                → kiểm chính runner (tách dữ liệu THẬT SỰ tách, schema evals hợp lệ).
  *
  * NHÃN TRUNG THỰC: runner này là HẠ TẦNG TÁCH BÀI + GHI SỔ [ENFORCED ở phần schema/tách dữ liệu].
@@ -68,24 +71,55 @@ if (cmd === '--emit-rubric') {
   process.exit(0);
 }
 
+// v1.18.0 (audit 2026-08-16) — EXPERIMENT RUNNER, không còn là sổ append phẳng.
+// Lỗ cũ: baseline và with_skill append chung, case lặp tính thành mẫu mới, không có run_id/variant/
+// model/judge/timestamp → "83% pass" không đại diện cho 34 case và không so control↔treatment được.
+// Record nay là một QUAN SÁT có danh tính: (run_id, variant, skill, case_id) là KHOÁ DUY NHẤT.
 if (cmd === '--record') {
-  if (!a1 || !a2 || !a3) die('dùng: --record <skill> <id> <pass|fail|partial> [ghi chú]');
+  const usage = 'dùng: --record <skill> <id> <pass|fail|partial> --run <run_id> --variant <baseline|with_skill> [--model M] [--judge J] [ghi chú]';
+  if (!a1 || !a2 || !a3) die(usage);
   if (!['pass', 'fail', 'partial'].includes(a3)) die(`verdict '${a3}' ngoài {pass,fail,partial}`);
+  const flag = (name) => { const i = rest.indexOf(`--${name}`); return i >= 0 ? rest[i + 1] : null; };
+  const runId = flag('run'), variant = flag('variant');
+  if (!runId) die('thiếu --run <run_id> — không có run_id thì không gom được vòng đo, không so được 2 vòng độc lập');
+  if (!['baseline', 'with_skill'].includes(variant)) die('thiếu/sai --variant: phải là baseline hoặc with_skill (control vs treatment)');
   const c = getCase(a1, a2);
+  const note = rest.filter((x, i) => !x.startsWith('--') && !['run', 'variant', 'model', 'judge'].includes(rest[i - 1]?.replace(/^--/, ''))).join(' ');
+  const row = { run_id: runId, variant, skill: a1, case_id: c.id, eval_name: c.eval_name, verdict: a3,
+    model: flag('model') || 'unspecified', judge: flag('judge') || 'unspecified', timestamp: new Date().toISOString(), note };
   fs.mkdirSync(path.dirname(BASELINE), { recursive: true });
-  fs.appendFileSync(BASELINE, JSON.stringify({ skill: a1, id: c.id, eval_name: c.eval_name, verdict: a3, note: rest.join(' ') || '' }) + '\n', 'utf8');
-  console.log(`ghi baseline: ${a1}/${c.id} = ${a3}`);
+  const prior = fs.existsSync(BASELINE) ? fs.readFileSync(BASELINE, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : [];
+  const dupe = prior.find((r) => r.run_id === runId && r.variant === variant && r.skill === a1 && String(r.case_id) === String(c.id));
+  if (dupe) die(`đã có quan sát cho (${runId}, ${variant}, ${a1}, ${c.id}) = ${dupe.verdict} — khoá duy nhất, đừng append đè (đổi --run nếu là vòng đo mới)`);
+  fs.appendFileSync(BASELINE, JSON.stringify(row) + '\n', 'utf8');
+  console.log(`ghi quan sát: run=${runId} variant=${variant} ${a1}/${c.id} = ${a3}`);
   process.exit(0);
 }
 
 if (cmd === '--report') {
-  if (!fs.existsSync(BASELINE)) { console.log('chưa có baseline nào (docs/baseline/semantic-baseline.jsonl)'); process.exit(0); }
-  const rows = fs.readFileSync(BASELINE, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
-  const by = {};
-  for (const r of rows) { by[r.skill] = by[r.skill] || { pass: 0, fail: 0, partial: 0 }; by[r.skill][r.verdict]++; }
-  for (const [s, v] of Object.entries(by)) console.log(`${s.padEnd(24)} pass=${v.pass} partial=${v.partial} fail=${v.fail}`);
-  const tot = rows.length, ok = rows.filter((r) => r.verdict === 'pass').length;
-  console.log(`--- ${ok}/${tot} pass (${tot ? Math.round((ok / tot) * 100) : 0}%) — NGƯỠNG chưa chốt: cần ≥2 lần đo baseline (kế hoạch hội đồng)`);
+  if (!fs.existsSync(BASELINE)) { console.log('chưa có quan sát nào (docs/baseline/semantic-baseline.jsonl)'); process.exit(0); }
+  const raw = fs.readFileSync(BASELINE, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
+  const legacy = raw.filter((r) => !r.run_id).length;
+  const rows = raw.filter((r) => r.run_id);
+  const TOTAL_CASES = SKILLS.reduce((n, s) => n + ((loadEvals(s) || { evals: [] }).evals.length), 0);
+  const runs = [...new Set(rows.map((r) => r.run_id))];
+  console.log(`Tổng case trong bộ eval: ${TOTAL_CASES} · số vòng đo: ${runs.length} · quan sát hợp lệ: ${rows.length}${legacy ? ` (bỏ qua ${legacy} dòng format cũ, thiếu run_id)` : ''}`);
+  for (const run of runs) {
+    for (const variant of ['baseline', 'with_skill']) {
+      const set = rows.filter((r) => r.run_id === run && r.variant === variant);
+      if (!set.length) continue;
+      const uniq = new Set(set.map((r) => `${r.skill}/${r.case_id}`)).size;
+      const ok = set.filter((r) => r.verdict === 'pass').length;
+      console.log(`  run=${run.padEnd(12)} ${variant.padEnd(10)} ${ok}/${set.length} pass · phủ ${uniq}/${TOTAL_CASES} case (${Math.round((uniq / TOTAL_CASES) * 100)}%)`);
+    }
+  }
+  const cov = new Set(rows.map((r) => `${r.skill}/${r.case_id}`)).size;
+  console.log('--- ĐIỀU KIỆN chốt ngưỡng release (chưa đạt cái nào thì KHÔNG được coi 1 con số % là release score):');
+  console.log(`    [${cov === TOTAL_CASES ? 'x' : ' '}] phủ đủ ${TOTAL_CASES} case (hiện ${cov})`);
+  console.log(`    [${runs.length >= 2 ? 'x' : ' '}] ≥2 vòng đo độc lập (hiện ${runs.length})`);
+  const paired = runs.some((run) => ['baseline', 'with_skill'].every((v) => rows.some((r) => r.run_id === run && r.variant === v)));
+  console.log(`    [${paired ? 'x' : ' '}] có cặp control↔treatment trong CÙNG vòng để so`);
+  console.log('    [ ] inter-rater agreement (≥2 judge độc lập trên cùng quan sát) — chưa có cơ chế, ghi nhận là khoảng trống');
   process.exit(0);
 }
 
@@ -131,7 +165,7 @@ console.log(`eval-runner — dùng:
   node scripts/eval-runner.js --list
   node scripts/eval-runner.js --emit-task <skill> <id>      # phát cho agent LÀM BÀI (không đáp án)
   node scripts/eval-runner.js --emit-rubric <skill> <id>    # phát cho agent CHẤM (judge riêng)
-  node scripts/eval-runner.js --record <skill> <id> <pass|fail|partial> [note]
+  node scripts/eval-runner.js --record <skill> <id> <pass|fail|partial> --run <id> --variant <baseline|with_skill> [--model M] [--judge J] [note]
   node scripts/eval-runner.js --report
   node scripts/eval-runner.js --self-test`);
 process.exit(0);

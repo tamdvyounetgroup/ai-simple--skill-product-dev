@@ -4,6 +4,50 @@ Toàn bộ lịch sử tiến hóa của phương pháp. README/methodology dùn
 
 Convention từ v1.10.0: mỗi mục version có thể chứa dòng `**RE-APPLY**: <việc project tiêu thụ cần làm lại sau update>` — `ai-simple update` tự trích các dòng này trong khoảng (bản-cũ → bản-mới] in thành checklist. Không có dòng RE-APPLY = update xong là xong.
 
+## v1.18.0 — 2026-08-16 (Vá theo audit ngoài: per-finding security, authority contract, experiment runner, 2 test tier)
+
+Bản audit độc lập chấm v1.17.0 **8.0/10** và chỉ ra 5 mục; vá cả 5 + 1 bug tự tìm thêm.
+
+- **P0 · security-verify PER-FINDING [ENFORCED]** — false-PASS thật: review 5 finding, chỉ F-1 đủ
+  mã/tier/gate, 4 finding còn lại rỗng vẫn PASS vì grep quét TOÀN FILE. Nay mỗi block `### F-<id>`
+  phải tự đủ: ID duy nhất · **Rủi ro** cụ thể · ≥1 mã LLM01-10 · ≥1 mã A01-10 (hoặc `N/A` KÈM lý do)
+  · **Vùng/gate** · **Tier** trong enum. Chỉ áp khi file có block `### F-` (review format cũ không bị
+  chặn oan). 4 fixture + 2 ca mutation-suite (nhiều-finding-rỗng → BLOCK; nhiều-finding-đủ → PASS).
+- **P0 · AUTHORITY CONTRACT vào foundation** — trục độc lập với risk tier, 4 mức: L0 local write ·
+  L1 external communication/install/publish/deploy (cần quyền TƯỜNG MINH; "có sẵn script/tool" không
+  phải quyền) · L2 production data (mặc định CẤM) · L3 destructive filesystem/history (resolve target →
+  kiểm owner → backup → confirm). Vá 3 chỗ vi phạm audit chỉ ra: reference landing cho cài tool ngoài
+  (nay là L1, agent KHÔNG tự cài), hướng dẫn junction có `Remove-Item -Recurse -Force` trước khi resolve
+  (nay 4 bước L3, khuyến nghị dùng CLI đã làm hộ), triage chạm dữ liệu thật (nay L2, cleanup là điều
+  kiện CẦN chứ không phải quyền).
+- **P1 · eval-runner → EXPERIMENT RUNNER** — record nay là quan sát có danh tính:
+  `run_id, variant(baseline|with_skill), skill, case_id, model, judge, verdict, timestamp, note`;
+  khoá duy nhất `(run_id,variant,skill,case_id)` từ chối ghi trùng. `--report` bỏ con số % gộp, thay
+  bằng bảng theo vòng/variant + **checklist điều kiện chốt ngưỡng** (phủ đủ 34 case · ≥2 vòng độc lập ·
+  có cặp control↔treatment cùng vòng · inter-rater agreement — ghi rõ cái nào CHƯA đạt). 6 quan sát cũ
+  đã migrate, kèm ghi chú judge=orchestrator nên KHÔNG độc lập.
+- **P1 · identity drift ngữ nghĩa** — bảng profile `full` ghi `01–14` và audit template ghi "14 nguyên
+  tắc" trong khi manifest là 15; guard cũ chỉ đếm dạng "N nguyên tắc" nên không bắt. Nay enforcer bắt
+  thêm dạng RANGE `01–NN` và quét cả template ship xuống project tiêu thụ; fixture ranh giới thêm 6 ca
+  (`01–14` phải bắt, `mục 1-3`/`bước 1–2` không được bắt oan).
+- **P2 · hai test tier** — `npm run test:fast` (bỏ 2 job nặng nhất: hook self-test + mutation full) vs
+  `npm test` full cho pre-push/CI. Song song hoá 5 khối fixture session-audit: triage-verify **30s → 18.8s**.
+  Đo thật: fast **39s**, full **103s**. Mục tiêu 10-15s của audit CHƯA đạt — nghẽn còn lại là
+  doc-health template 15.6s + design-verify 14s + triage 18.8s (mỗi cái spawn hàng chục git subprocess);
+  đường đi tiếp là song song hoá nội bộ 3 script đó, ghi vào backlog thay vì tuyên bố đã xong.
+- **BUG tự tìm khi chạy update thật trên ForFish**: `parseChangelogDelta` chết im lặng trên CRLF —
+  CHANGELOG.md ở working tree Windows là CRLF, mà trong JS `.` KHÔNG khớp `` (line terminator) nên
+  `(.+)# Changelog
+
+Toàn bộ lịch sử tiến hóa của phương pháp. README/methodology dùng tên LỚP (Core / Scale / Ops / Optimization & Learning / Collaboration / Security); version chỉ sống ở đây.
+
+Convention từ v1.10.0: mỗi mục version có thể chứa dòng `**RE-APPLY**: <việc project tiêu thụ cần làm lại sau update>` — `ai-simple update` tự trích các dòng này trong khoảng (bản-cũ → bản-mới] in thành checklist. Không có dòng RE-APPLY = update xong là xong.
+
+ fail → `update` in "RE-APPLY: không có" dù CHANGELOG có 5 dòng. Fixture cũ ghép chuỗi LF
+  trong code nên không bao giờ chạm. Nay normalize trước khi parse + 2 fixture mới (ca CRLF, và ca
+  đọc CHANGELOG THẬT của package — fixture tổng hợp không thay được việc kiểm file sẽ đi theo release).
+- **RE-APPLY**: chạy `ai-simple update` để nhận hook v1.18.0; repo dùng security-review: từ nay mỗi finding
+  phải đủ 6 trường (xem `skills/security-logic/security-review.md.template`) — review cũ chưa có block `### F-` không bị ảnh hưởng.
 ## v1.17.0 — 2026-08-15 (Metadata về dải mục tiêu 331 từ + án lệ "bài đo phải tách trước khi giao")
 
 - **Metadata 611 → 331 từ** (cắt cả 5 skill: foundation 154→75, ba-flow 121→65, security 133→63,

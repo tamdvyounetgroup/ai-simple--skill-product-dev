@@ -53,8 +53,10 @@ giả, không gradient trên chữ, contrast đo theo cặp, mobile không vỡ 
 nhưng **không có TRẦN** visual craft — không catalog bố cục, không cơ chế trích DNA từ URL tham khảo.
 Landing của ta mặc định là "đúng, không sai gì", chưa phải "trang có cá tính".
 
-Khi user cần landing khác biệt thật sự về hình: ĐƯỢC cài công cụ ngoài (vd skill visual-craft
-chuyên landing) theo đúng 3 điều kiện, vi phạm điều nào thì không cài:
+Khi user cần landing khác biệt thật sự về hình: có thể ĐỀ XUẤT cài công cụ ngoài (vd skill visual-craft
+chuyên landing). **Cài công cụ ngoài là AUTHORITY L1 (foundation §Authority contract): phải được user
+cho phép TƯỜNG MINH cho chính lần cài đó — agent KHÔNG tự cài, kể cả khi đủ 3 điều kiện dưới.**
+Ba điều kiện là ĐIỀU KIỆN CẦN để được phép đề xuất, vi phạm điều nào thì không đề xuất:
 1. Ghi **commit** đang cài vào design-spec màn đó (không ghi version string — số của upstream trôi);
 2. Chạy trong ranh giới §1 (chỉ màn `marketing-public`) + precedence §2;
 3. Output ghi về §3 — không file trạng thái/nguồn sự thật mới trong repo.

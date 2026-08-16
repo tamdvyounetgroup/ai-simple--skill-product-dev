@@ -129,6 +129,11 @@ function updateCommandFor(up) {
 function parseChangelogDelta(text, fromV, toV) {
   // Trích các mục CHANGELOG trong khoảng (fromV, toV] — mới nhất trước.
   // RE-APPLY convention: dòng `**RE-APPLY**: <việc project tiêu thụ cần làm lại>` trong mục version.
+  // BUG THẬT đã bắt trên dữ liệu sống (v1.17.1): CHANGELOG.md trên Windows là CRLF (.gitattributes chỉ
+  // ép eol=lf cho *.sh), mà trong JS `.` KHÔNG khớp `\r` (nó là line terminator) → `(.+)$` fail →
+  // checklist RE-APPLY chết IM LẶNG, `update` in "không có — update xong là xong" dù CHANGELOG có 5 dòng.
+  // Fixture cũ dùng chuỗi LF ghép trong code nên không bao giờ chạm ca này. Chuẩn hoá trước khi parse.
+  text = String(text).replace(/\r\n?/g, '\n');
   const heads = [];
   const re = /^## v([0-9][\w.\-]*)[^\n]*$/gm;
   let m;
@@ -572,18 +577,21 @@ function nodeAsync(args, opts = {}) {
   });
 }
 
-async function cmdSelfTest() { // dùng cho `npm test` của chính package: chạy self-test template + skill-verifier
+async function cmdSelfTest(args = {}) { // dùng cho `npm test` của chính package: chạy self-test template + skill-verifier
   let failed = false;
   const MUT = path.join(PKG_ROOT, 'scripts', 'mutation-suite.sh');
-  // Lô 1 — template/script độc lập + mutation suite (Wave 2a chặng 1: thước đo false-pass/false-block).
+  // v1.18.0 (audit 2026-08-16) — HAI TẦNG: `--fast` cho vòng lặp sửa-chạy của PR thường (bỏ 2 job
+  // nặng nhất: hook self-test ~56s và mutation full ~30s, cả hai đều spawn hàng chục git subprocess);
+  // full (mặc định, dùng cho pre-push/CI) chạy tất cả. Job nặng đánh dấu slow:true để một chỗ quyết định.
+  const FAST = !!args.fast;
   const jobs = [
-    ['template hook --self-test', () => shAsync([TPL('pre-commit.hook.template'), '--self-test'], { cwd: PKG_ROOT })],
+    ['template hook --self-test', () => shAsync([TPL('pre-commit.hook.template'), '--self-test'], { cwd: PKG_ROOT }), null, true],
     ['template report --self-test', () => shAsync([TPL('doc-health-report.sh.template'), '--self-test'], { cwd: PKG_ROOT })],
     ['template pretooluse-guard --self-test', () => shAsync([TPL('pretooluse-git-guard.sh'), '--self-test'], { cwd: PKG_ROOT })],
     ['script metadata-words --self-test', () => nodeAsync([path.join(PKG_ROOT, 'scripts', 'metadata-words.js'), '--self-test'], { cwd: PKG_ROOT }), path.join(PKG_ROOT, 'scripts', 'metadata-words.js')],
     ['script eval-runner --self-test (schema evals + tách dữ liệu blind)', () => nodeAsync([path.join(PKG_ROOT, 'scripts', 'eval-runner.js'), '--self-test'], { cwd: PKG_ROOT }), path.join(PKG_ROOT, 'scripts', 'eval-runner.js')],
     ['script mutation-suite --self-test', () => shAsync([MUT, '--self-test'], { cwd: PKG_ROOT }), MUT],
-    ['script mutation-suite (full: 0 false-pass/0 false-block)', () => shAsync([MUT], { cwd: PKG_ROOT }), MUT],
+    ['script mutation-suite (full: 0 false-pass/0 false-block)', () => shAsync([MUT], { cwd: PKG_ROOT }), MUT, true],
   ];
   // Skill-verifier fixtures (G1 bộ chấm điểm — self-test hợp nhất): MỌI skills/*/*-verify.sh có
   // --self-test phải chạy trong `npm test`, không suite mồ côi (trước đây chỉ security-verify được nối,
@@ -608,9 +616,14 @@ async function cmdSelfTest() { // dùng cho `npm test` của chính package: ch�
   // Chạy ĐỒNG THỜI, in theo thứ tự khai báo (ổn định như bản tuần tự).
   // Job trỏ vào scripts/ chỉ tồn tại ở REPO NGUỒN (package.json files[] không ship scripts/ — đo bằng
   // npm pack: self-test từ tarball từng báo FAIL GIẢ 3 dòng "Cannot find module"). SKIP có báo, không FAIL.
-  const results = await Promise.all(jobs.map(([, run, needs]) => (needs && !fs.existsSync(needs) ? Promise.resolve({ skip: true }) : run())));
+  const results = await Promise.all(jobs.map(([, run, needs, slow]) => {
+    if (FAST && slow) return Promise.resolve({ skipFast: true });
+    if (needs && !fs.existsSync(needs)) return Promise.resolve({ skip: true });
+    return run();
+  }));
   jobs.forEach(([label], i) => {
     const r = results[i];
+    if (r.skipFast) { console.log(`SKIP ${label} — tier --fast (job nặng, chạy đủ ở npm test / pre-push / CI)`); return; }
     if (r.skip) { console.log(`SKIP ${label} — chỉ có trong repo nguồn (scripts/ không nằm trong tarball)`); return; }
     console.log(`${r.status === 0 ? 'PASS' : 'FAIL'} ${label}`);
     if (r.status !== 0) { failed = true; console.log(r.stdout + r.stderr); }
@@ -618,8 +631,11 @@ async function cmdSelfTest() { // dùng cho `npm test` của chính package: ch�
   // Identity: guard blacklist số-cũ (2 đời regex) đã GỠ ở Wave 2a — thay bằng identity-manifest
   // enforcer WHITELIST bên dưới (đếm thực-tế + so manifest; bắt MỌI số lệch, không chỉ số cũ đã biết;
   // ca FAIL bắt buộc "14 composable principles" nằm trong fixture ranh giới của enforcer).
+  // LIVE = surface tuyên bố hiện hành. v1.18.0: THÊM template ship xuống project tiêu thụ — audit
+  // template từng ghi "14 nguyên tắc" và lọt guard vì scope cũ chỉ có docs của repo nguồn (audit 2026-08-16).
   const LIVE = ['README.md', 'skills/ai-simple-product-dev/SKILL.md', 'methodology/README.md',
-    ...['ba-flow-logic', 'ui-design-logic', 'ui-ux-triage', 'security-logic'].map(s => `skills/${s}/SKILL.md`)];
+    ...['ba-flow-logic', 'ui-design-logic', 'ui-ux-triage', 'security-logic'].map(s => `skills/${s}/SKILL.md`),
+    ...['audit.command.md.template', 'CLAUDE.md.template', 'CLAUDE.tiny.md.template', 'fl.command.md.template'].map(t => `templates/${t}`)];
   // Cross-cut mktemp fail-fast (v1.11.0 — Lỗ an toàn số 1): tập quét ĐỘNG git ls-files '*.sh' '*.sh.template'
   // + template hook. Dòng chứa $(mktemp thiếu CẢ '|| exit' LẪN '|| return' cùng dòng → FAIL
   // (mktemp fail mà chạy tiếp = self-test ghi ~40 commit lạ + đổi branch NGAY TRONG repo thật — đã repro).
@@ -659,6 +675,10 @@ async function cmdSelfTest() { // dùng cho `npm test` của chính package: ch�
       for (const m of text.matchAll(/(\d+) nguyên tắc/g)) if (+m[1] >= 10 && +m[1] !== MF.principles) bad.push(m[0]);
       for (const m of text.matchAll(/(\d+) (?:lớp|layers)/gi)) if (+m[1] >= 4 && +m[1] !== MF.layers) bad.push(m[0]);
       for (const m of text.matchAll(/(\d+)-skill/gi)) if (+m[1] !== MF.skills) bad.push(m[0]);
+      // v1.18.0 (audit 2026-08-16) — DRIFT NGỮ NGHĨA dạng RANGE: bảng profile ghi "01–14" trong khi
+      // manifest là 15; identity guard cũ chỉ đếm dạng "N nguyên tắc" nên không bắt được. Range
+      // 01–NN chỉ có một nghĩa trong hệ này: liệt kê nguyên tắc từ 01 tới NN.
+      for (const m of text.matchAll(/\b0?1\s*[–-]\s*(\d{1,2})\b/g)) if (+m[1] >= 10 && +m[1] !== MF.principles) bad.push(m[0]);
       for (const b of bad) { failed = true; idmOk = false; console.log(`FAIL identity-manifest: '${b}' trong ${rel} lệch manifest (${MF.principles} nguyên tắc / ${MF.layers} lớp / ${MF.skills}-skill)`); }
     };
     for (const f of LIVE) {
@@ -666,14 +686,17 @@ async function cmdSelfTest() { // dùng cho `npm test` của chính package: ch�
       if (fs.existsSync(p)) idmScan(fs.readFileSync(p, 'utf8'), f);
     }
     // Fixture ranh giới (chạy trên chuỗi tổng hợp, không đụng file thật):
-    const mustCatch = ['14 nguyên tắc', '14 composable principles', '16 principles', '5 lớp', '4 layers', '4-skill', '6-skill'];
-    const mustPass = ['15 nguyên tắc', '15 core principles', '6 lớp', '6 layers', '5-skill', '1 nguyên tắc', '3 lớp'];
+    const mustCatch = ['14 nguyên tắc', '14 composable principles', '16 principles', '5 lớp', '4 layers', '4-skill', '6-skill',
+      '01–14', '01-14', 'bật 01–12'];
+    const mustPass = ['15 nguyên tắc', '15 core principles', '6 lớp', '6 layers', '5-skill', '1 nguyên tắc', '3 lớp',
+      '01–15', '01-15', 'mục 1-3', 'bước 1–2'];
     const hits = (s) => {
       let n = 0;
       for (const m of s.matchAll(/(\d+)(?: \w+)? principles/gi)) if (+m[1] !== MF.principles) n++;
       for (const m of s.matchAll(/(\d+) nguyên tắc/g)) if (+m[1] >= 10 && +m[1] !== MF.principles) n++;
       for (const m of s.matchAll(/(\d+) (?:lớp|layers)/gi)) if (+m[1] >= 4 && +m[1] !== MF.layers) n++;
       for (const m of s.matchAll(/(\d+)-skill/gi)) if (+m[1] !== MF.skills) n++;
+      for (const m of s.matchAll(/\b0?1\s*[–-]\s*(\d{1,2})\b/g)) if (+m[1] >= 10 && +m[1] !== MF.principles) n++;
       return n;
     };
     for (const s of mustCatch) if (hits(s) === 0) { failed = true; idmOk = false; console.log(`FAIL identity-manifest-fixture: '${s}' phải bị bắt mà lọt`); }
@@ -730,6 +753,20 @@ async function cmdSelfTest() { // dùng cho `npm test` của chính package: ch�
   const d1 = parseChangelogDelta(sampleCl, '1.8.0', '1.10.0');
   ut.push(['changelog delta (1.8.0→1.10.0] = 2 mục, mới nhất trước', d1.length === 2 && d1[0].version === '1.10.0' && d1[1].version === '1.9.0']);
   ut.push(['changelog RE-APPLY trích đúng dòng', d1[0].reapply.length === 1 && d1[0].reapply[0].includes('design-verify') && d1[1].reapply.length === 0]);
+  // v1.17.1 — ca CRLF: bug thật bắt trên dữ liệu sống (CHANGELOG.md working tree Windows là CRLF;
+  // `.` trong JS không khớp `\r` → RE-APPLY chết im lặng). Fixture LF-thuần ở trên KHÔNG chạm ca này.
+  const d1crlf = parseChangelogDelta(sampleCl.replace(/\n/g, '\r\n'), '1.8.0', '1.10.0');
+  ut.push(['changelog CRLF (Windows) vẫn trích được RE-APPLY — chống chết-im-lặng',
+    d1crlf.length === 2 && d1crlf[0].reapply.length === 1 && d1crlf[0].reapply[0].includes('design-verify')]);
+  // Ca dữ liệu SỐNG: CHANGELOG thật của package phải trích được ≥1 RE-APPLY trong 5 version gần nhất —
+  // fixture tổng hợp không thay được việc kiểm chính file sẽ đi theo release.
+  {
+    const realTxt = fs.readFileSync(path.join(PKG_ROOT, 'CHANGELOG.md'), 'utf8');
+    const vs = [...realTxt.matchAll(/^## v([0-9][\w.\-]*)/gm)].map((m) => m[1]);
+    const from = vs[Math.min(5, vs.length - 1)];
+    const dReal = parseChangelogDelta(realTxt, from, vs[0]);
+    ut.push([`changelog THẬT (v${from}→v${vs[0]}) trích được RE-APPLY`, dReal.reduce((s, x) => s + x.reapply.length, 0) > 0]);
+  }
   ut.push(['changelog delta rỗng khi đã mới nhất', parseChangelogDelta(sampleCl, '1.10.0', '1.10.0').length === 0]);
   const offline = await checkLatestVersion({ fetchFn: () => Promise.reject(new Error('offline')), cachePath: null });
   ut.push(['update-check OFFLINE → null, không throw (chống FAIL oan doctor)', offline === null]);
@@ -819,7 +856,7 @@ switch (cmd) {
   case 'update': cmdUpdate(args); break;
   case 'doc-status': passthrough(['--status']); break;
   case 'doc-health': passthrough(args.ci ? ['--ci'] : []); break;
-  case 'self-test': cmdSelfTest(); break;
+  case 'self-test': cmdSelfTest(args); break;
   case 'version': case '--version': case '-v': console.log(PKG.version); break;
   default: console.log(HELP);
 }

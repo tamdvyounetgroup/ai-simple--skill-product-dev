@@ -45,9 +45,20 @@ Degrade: oracle = design-system doc + heuristics; MỌI finding gắn `[no-oracl
 Skill global (junction `~/.claude/skills/ui-ux-triage` → repo này). Mỗi repo cấp ngữ cảnh riêng qua `.claude/triage.config` (hoặc auto-discover). ba-spec/design-spec ở repo nào thì triage repo đó đọc của repo đó.
 
 **Cài per-repo (nếu repo cần bản project-scoped)**: PHẢI là junction, KHÔNG copy thư mục — copy = fork → drift (vá repo-agnostic không tới tay repo thật; hook gọi script cũ hardcode).
+**Đường KHUYẾN NGHỊ (máy làm đủ 4 bước L3 hộ bạn)**: `npx ai-simple update --i-closed-sessions --replace-stale-skills`
+— nó resolve target, phân biệt junction vs thư mục thật, **backup `<tên>.bak`** rồi mới thay, và không tự
+xoá gì. Chỉ làm tay khi CLI không dùng được.
+
+**Làm tay — AUTHORITY L3 (foundation §Authority contract), theo ĐÚNG thứ tự, không bỏ bước nào:**
 ```powershell
 # từ repo root:
-Remove-Item .claude\skills\ui-ux-triage -Recurse -Force   # nếu đang là dir-copy cũ
+# 1. RESOLVE target thật + phân biệt junction vs thư mục thật (junction thì KHÔNG cần xoá):
+Get-Item .claude\skills\ui-ux-triage | Select-Object FullName, LinkType, Target
+# 2. KIỂM owner: có phải bản copy của ai-simple không, hay là thứ ai đó tự đặt vào?
+Get-Content .claude\skills\ui-ux-triage\SKILL.md -TotalCount 5
+# 3. BACKUP trước khi xoá (KHÔNG xoá thẳng — không có Undo cho -Recurse -Force):
+Rename-Item .claude\skills\ui-ux-triage ui-ux-triage.bak
+# 4. Chỉ khi 1-3 đã rõ và bạn xác nhận: tạo junction
 New-Item -ItemType Junction -Path .claude\skills\ui-ux-triage -Target <đường-dẫn-clone>\ai-simple--skill-product-dev\skills\ui-ux-triage
 # VERIFY là junction thật (không phải dir):
 Get-Item .claude\skills\ui-ux-triage | Select-Object LinkType, Target   # LinkType phải = Junction

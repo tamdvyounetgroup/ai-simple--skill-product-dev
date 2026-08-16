@@ -1,5 +1,5 @@
 ---
-description: Tự audit project theo 14 nguyên tắc ai-simple-product-dev → điểm theo applicability + backlog tối ưu xếp hạng (chạy mỗi quý hoặc khi nghi hệ docs đang mục)
+description: Tự audit project theo 15 nguyên tắc ai-simple-product-dev → điểm theo applicability + backlog tối ưu xếp hạng (chạy mỗi quý hoặc khi nghi hệ docs đang mục)
 argument-hint: [trống = full audit | tên nguyên tắc để audit riêng, vd "06" hoặc "ops"]
 ---
 

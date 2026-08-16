@@ -339,6 +339,11 @@ case "${1:-}" in
         && printf 'user dang sua\n' >> src/a.txt && printf 'ghi chu cua user\n' > user-note.txt ) >/dev/null 2>&1
     }
     aud_open() { ( cd "$1" && sh "$SELF" --session-audit 2>/dev/null | sed -n 's/^session-audit id: //p' ); }
+    # v1.18.0 (audit 2026-08-16, P2 test tier) — 5 khối fixture session-audit ĐỘC LẬP, mỗi khối
+    # tạo repo git riêng → chi phí spawn-bound. Chạy SONG SONG rồi in log theo thứ tự cố định;
+    # verdict lấy từ ^FAIL trong log (RC2 trong subshell không propagate) — cùng khuôn hook self-test.
+    PJT=$(mktemp -d) || exit 1
+    (
     TA=$(mktemp -d) || exit 1; mk_audit_repo "$TA"
     AID=$(aud_open "$TA")
     [ -n "$AID" ] && [ -f "$TA/test-reports/triage/audit-open-$AID.txt" ] && echo "PASS: session-audit pha MO tao record per-phien ($AID)" || { echo "FAIL: pha MO khong tao record"; RC2=1; }
@@ -348,21 +353,33 @@ case "${1:-}" in
     [ "$RCA1" -eq 0 ] && echo "PASS: phien chi sua file tracked trong scope → PASS (chong-oan)" || { echo "FAIL: chan oan loop sua file tracked"; RC2=1; }
     ls "$TA"/test-reports/triage/audit-2*.txt >/dev/null 2>&1 && echo "PASS: record chinh thuc audit-<stamp>.txt duoc ghi" || { echo "FAIL: khong co record chinh thuc"; RC2=1; }
     [ ! -f "$TA/test-reports/triage/audit-open-$AID.txt" ] && echo "PASS: record mo da duoc don sau pha DONG (vong doi)" || { echo "FAIL: record mo con sot"; RC2=1; }
+    rm -rf "$TA"
+    ) > "$PJT/01.log" 2>&1 || echo "FAIL: khoi audit 01 thoat som" >> "$PJT/01.log" &
+    (
     TB2=$(mktemp -d) || exit 1; mk_audit_repo "$TB2"
     BID=$(aud_open "$TB2")
     ( cd "$TB2" && git checkout -- src/a.txt )   # PHÁ dirty của user
     ( cd "$TB2" && sh "$SELF" --session-audit --close "$BID" >/dev/null 2>&1 ); RCA2=$?
     [ "$RCA2" -ne 0 ] && echo "PASS: phien XOA dirty user (git checkout --) → FAIL dung" || { echo "FAIL: xoa dirty user KHONG bi bat"; RC2=1; }
+    rm -rf "$TB2"
+    ) > "$PJT/02.log" 2>&1 || echo "FAIL: khoi audit 02 thoat som" >> "$PJT/02.log" &
+    (
     TC2=$(mktemp -d) || exit 1; mk_audit_repo "$TC2"
     CID=$(aud_open "$TC2")
     ( cd "$TC2" && printf 'agent ghi de\n' > user-note.txt )   # GHI ĐÈ untracked, giữ nguyên tên
     ( cd "$TC2" && sh "$SELF" --session-audit --close "$CID" >/dev/null 2>&1 ); RCA3=$?
     [ "$RCA3" -ne 0 ] && echo "PASS: phien GHI DE untracked (diem mu cua stash-create) → FAIL dung" || { echo "FAIL: ghi de untracked LOT"; RC2=1; }
+    rm -rf "$TC2"
+    ) > "$PJT/03.log" 2>&1 || echo "FAIL: khoi audit 03 thoat som" >> "$PJT/03.log" &
+    (
     TD2=$(mktemp -d) || exit 1; mk_audit_repo "$TD2"
     DID=$(aud_open "$TD2")
     ( cd "$TD2" && mkdir -p test-reports/triage && printf 'report cua loop\n' > test-reports/triage/report-x.txt )
     ( cd "$TD2" && sh "$SELF" --session-audit --close "$DID" >/dev/null 2>&1 ); RCA4=$?
     [ "$RCA4" -eq 0 ] && echo "PASS: untracked do loop tu tao trong test-reports/ KHONG lam FAIL (chong-oan)" || { echo "FAIL: output cua chinh triage bi tinh la vi pham"; RC2=1; }
+    rm -rf "$TD2"
+    ) > "$PJT/04.log" 2>&1 || echo "FAIL: khoi audit 04 thoat som" >> "$PJT/04.log" &
+    (
     TE2=$(mktemp -d) || exit 1; mk_audit_repo "$TE2"
     E1=$(aud_open "$TE2"); E2=$(aud_open "$TE2")
     ( cd "$TE2" && sh "$SELF" --session-audit --close >/dev/null 2>&1 ); RCA5=$?
@@ -370,7 +387,14 @@ case "${1:-}" in
     ( cd "$TE2" && sh "$SELF" --session-audit --close "$E1" >/dev/null 2>&1 ); RCA6=$?
     ( cd "$TE2" && sh "$SELF" --session-audit --close >/dev/null 2>&1 ); RCA7=$?
     { [ "$RCA6" -eq 0 ] && [ "$RCA7" -eq 0 ]; } && echo "PASS: 2 phien song song — close kem id dung baseline cua minh; con 1 record → fallback hop le" || { echo "FAIL: 2-phien-song-song sai ($RCA6/$RCA7)"; RC2=1; }
-    rm -rf "$TA" "$TB2" "$TC2" "$TD2" "$TE2"
+    rm -rf "$TE2"
+    ) > "$PJT/05.log" 2>&1 || echo "FAIL: khoi audit 05 thoat som" >> "$PJT/05.log" &
+    wait
+    for i in 01 02 03 04 05; do
+      if [ -s "$PJT/$i.log" ]; then cat "$PJT/$i.log"; else echo "FAIL: khoi audit $i khong sinh output"; RC2=1; fi
+    done
+    grep -hq '^FAIL' "$PJT"/*.log 2>/dev/null && RC2=1
+    rm -rf "$PJT"
     rm -rf "$T" "$T2" "$T3" "$T4" "$TH" "$TH2" "$TU5" "$TP" "$TDL"
     echo "--- self-test: $([ $RC2 -eq 0 ] && echo ALL PASS || echo CÓ FAIL) ---"; exit $RC2 ;;
 esac

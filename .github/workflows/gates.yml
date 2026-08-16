@@ -44,6 +44,12 @@ jobs:
       - name: G4 — dogfood-gate
         run: npm run dogfood-gate
 
+      # G6 rule-enforcer — CLAUDE.md khai "Mỗi PR: npm run gates" mà CI lại thiếu đúng bước này
+      # (audit độc lập 2026-08-16, M4): cổng chống-mục cho luật nội hoá (NOTICE.md/ADR-002) chưa
+      # từng được máy canh ở PR nào. Nay chạy cùng hàng với G1–G4.
+      - name: G6 — rule-enforcer
+        run: npm run rule-enforcer
+
       # G2 stranger-path E2E (pack -> cài tarball -> init -> hook chặn thật + precision + migrate)
       - name: G2 — stranger-path E2E
         run: npm run stranger-path

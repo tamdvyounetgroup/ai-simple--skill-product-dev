@@ -1,6 +1,6 @@
 # Chấm điểm SẢN PHẨM ai-simple (cho maintainer)
 
-> Khác `/audit` (chấm 1 **project áp dụng** ai-simple theo applicability). Đây chấm **chính sản phẩm** — 14 nguyên tắc + CLI + 5 skill — trả lời "ai-simple đang tốt tới đâu, chỗ nào yếu nhất, sửa gì trước". Thiết kế qua hội đồng team-agent (3 đề xuất → 6 phản biện → judge → synthesize → Red-Skeptic; winner: **machine-first**).
+> Khác `/audit` (chấm 1 **project áp dụng** ai-simple theo applicability). Đây chấm **chính sản phẩm** — 15 nguyên tắc + CLI + 5 skill — trả lời "ai-simple đang tốt tới đâu, chỗ nào yếu nhất, sửa gì trước". Thiết kế qua hội đồng team-agent (3 đề xuất → 6 phản biện → judge → synthesize → Red-Skeptic; winner: **machine-first**).
 
 ## Triết lý
 

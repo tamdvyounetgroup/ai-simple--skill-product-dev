@@ -27,7 +27,7 @@ ai-simple--skill-product-dev/
 5. Gặp hành vi chưa có trong spec: CẤM bỏ qua im lặng. Trạng thái thuộc ma trận mục 4 → làm mặc định an toàn nhất + ghi `## Assumptions` + bổ sung 1 dòng vào spec CÙNG COMMIT; hành vi nghiệp vụ → handoff ngược BA; HOW-nhìn → handoff design.
 6. Vùng miễn test giữ đúng 3 ca của nguyên tắc 04 (pure UI tweak / config-only / doc-only). "Sửa 1 dòng nên khỏi test" KHÔNG phải một ca.
 7. Cắt góc có trần biết trước → để lại `// nợ: <trần là gì>, <điều kiện nâng cấp>`. Thiếu vế thứ hai thì nợ sẽ mục.
-8. Riêng repo này: mọi script gate mới PHẢI có `--self-test` và được auto-discover vào `npm test`; sửa `templates/pre-commit.hook.template` thì `.githooks/pre-commit` đồng bộ CÙNG COMMIT (dogfood-gate so nội dung sau khi bỏ version-stamp); số bản sắc (15 nguyên tắc / 6 lớp / 5-skill) chỉ đổi kèm identity-numbers guard trong `bin/ai-simple.js`.
+8. Riêng repo này: mọi script gate mới PHẢI có `--self-test`. **Auto-discover chỉ áp cho `skills/*/*-verify.sh|*-lane.sh`** — script trong `scripts/` phải được THÊM TAY vào mảng `jobs` của `cmdSelfTest` (audit độc lập 2026-08-16 bắt lỗi over-claim "auto-discover" ở đây; 4 script gate hiện chạy qua `npm run gates` chứ không qua `npm test`). Sửa `templates/pre-commit.hook.template` thì `.githooks/pre-commit` đồng bộ CÙNG COMMIT (dogfood-gate so nội dung sau khi bỏ version-stamp); văn bản load-bearing ship xuống project (`templates/*.command.md.template`) sửa thì bản cài `.claude/commands/*.md` đồng bộ CÙNG COMMIT + `update` tự refresh. Số bản sắc (15 nguyên tắc / 6 lớp / 5-skill) chỉ đổi kèm identity-manifest guard trong `bin/ai-simple.js` + `system-manifest.json`.
 
 ## Commit convention
 ```
@@ -61,7 +61,9 @@ Thân commit ghi rõ hội đồng/án lệ nếu quyết định đến từ đ
 
 ## Quick commands
 ```bash
-npm test                       # self-test hợp nhất (hook, report, 5 verify/lane script, identity, cross-cut)
+npm run test:fast              # tier NHANH cho vòng lặp sửa-chạy (bỏ hook self-test + mutation full)
+npm test                       # FULL — bắt buộc trước khi land (hook, report, verify/lane, identity, mutation)
+npm run gates                  # test + ship + dogfood + rule-enforcer (đúng thứ CI chạy)
 node scripts/dogfood-gate.js   # hook tự cài + template đồng bộ + docs không over-claim
 node scripts/ship-gate.js      # require-coverage + link-check trên tarball
 node bin/ai-simple.js doctor   # sức khoẻ setup (chạy được ở cả đây lẫn project tiêu thụ)

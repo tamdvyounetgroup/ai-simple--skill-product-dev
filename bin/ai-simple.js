@@ -143,10 +143,23 @@ function parseChangelogDelta(text, fromV, toV) {
     const h = heads[i];
     if (semverCmp(h.version, fromV) <= 0 || semverCmp(h.version, toV) > 0) continue;
     const body = text.slice(h.end, i + 1 < heads.length ? heads[i + 1].index : text.length);
+    // v1.19.0 (audit độc lập 2026-08-16, M3) — GOM DÒNG NỐI: CHANGELOG xuống dòng theo lề ~100 ký tự,
+    // regex một-dòng cắt checklist giữa câu (3/8 mục bị cụt, mất đúng phần "phải làm gì"). Dòng tiếp
+    // theo được coi là phần nối khi nó thụt lề và KHÔNG mở bullet/heading mới.
     const reapply = [];
-    for (const line of body.split('\n')) {
-      const rm = line.match(/^\s*(?:[-*]\s+)?\*\*RE-APPLY\*\*:\s*(.+)$/);
-      if (rm) reapply.push(rm[1].trim());
+    const lines = body.split('\n');
+    for (let li = 0; li < lines.length; li++) {
+      const rm = lines[li].match(/^\s*(?:[-*]\s+)?\*\*RE-APPLY\*\*:\s*(.+)$/);
+      if (!rm) continue;
+      let acc = rm[1].trim();
+      for (let k = li + 1; k < lines.length; k++) {
+        const nx = lines[k];
+        if (!/^\s{2,}\S/.test(nx)) break;            // hết thụt lề → hết đoạn
+        if (/^\s*(?:[-*]\s+|#{1,6}\s)/.test(nx)) break; // bullet/heading mới → mục khác
+        acc += ' ' + nx.trim();
+        li = k;
+      }
+      reapply.push(acc);
     }
     out.push({ version: h.version, title: h.title, reapply });
   }
@@ -473,6 +486,12 @@ function cmdUpdate(args) {
     'scripts/doc-health-report.sh': ['MIGRATIONS_DIR=', 'DOC_LAG_MAX_DAYS='],
   };
   const SRC = { '.githooks/pre-commit': 'pre-commit.hook.template', 'scripts/doc-health-report.sh': 'doc-health-report.sh.template' };
+  // v1.19.0 (audit độc lập 2026-08-16, B2) — COMMAND md cũng phải được refresh: chúng là văn bản
+  // LOAD-BEARING (/audit chấm theo bảng nguyên tắc trong chính nó). Trước đây `update` chỉ refresh 2 file
+  // và `copyTemplate` SKIP khi file tồn tại ⇒ mọi project init trước v1.18.0 giữ "14 nguyên tắc" VĨNH VIỄN,
+  // /audit chấm thiếu hẳn NT15 mà không lệnh nào sửa được. Không có CONFIG người dùng trong các file này,
+  // nhưng vẫn backup .bak trước khi ghi (user có thể đã sửa tay).
+  const CMD_SRC = { '.claude/commands/audit.md': 'audit.command.md.template', '.claude/commands/fl.md': 'fl.command.md.template', '.claude/commands/learn.md': 'learn.command.md.template' };
 
   for (const [dest, keys] of Object.entries(PRESERVE)) {
     const preserved = {};
@@ -487,6 +506,15 @@ function cmdUpdate(args) {
     fs.writeFileSync(dest, content, 'utf8');
     try { fs.chmodSync(dest, 0o755); } catch {}
     console.log(`  OK    ${dest} → v${PKG.version} (config giữ: ${Object.keys(preserved).length}/${keys.length}; bản cũ: ${dest}.bak)`);
+  }
+  for (const [dest, tpl] of Object.entries(CMD_SRC)) {
+    if (!fs.existsSync(dest)) continue;   // project không dùng command này → không tự thêm
+    const now = fs.readFileSync(dest, 'utf8');
+    const next = stampVersion(fs.readFileSync(TPL(tpl), 'utf8'));
+    if (now.replace(/\r\n/g, '\n') === next.replace(/\r\n/g, '\n')) { console.log(`  OK    ${dest} — đã khớp bản ${PKG.version}`); continue; }
+    fs.copyFileSync(dest, dest + '.bak');
+    fs.writeFileSync(dest, next, 'utf8');
+    console.log(`  OK    ${dest} → v${PKG.version} (văn bản load-bearing; bản cũ: ${dest}.bak)`);
   }
   if (fs.existsSync('.github/workflows/doc-health.yml') || args.workflow) {
     const r = copyTemplate(TPL('doc-health.workflow.yml.template'), '.github/workflows/doc-health.yml', { force: true });
@@ -583,7 +611,17 @@ async function cmdSelfTest(args = {}) { // dùng cho `npm test` của chính pac
   // v1.18.0 (audit 2026-08-16) — HAI TẦNG: `--fast` cho vòng lặp sửa-chạy của PR thường (bỏ 2 job
   // nặng nhất: hook self-test ~56s và mutation full ~30s, cả hai đều spawn hàng chục git subprocess);
   // full (mặc định, dùng cho pre-push/CI) chạy tất cả. Job nặng đánh dấu slow:true để một chỗ quyết định.
-  const FAST = !!args.fast;
+  // v1.19.0 (audit độc lập, M5) — GUARD: `--fast` bỏ hook self-test (~21 fixture, artifact an toàn
+  // nhất của sản phẩm). Nếu chính hook template/bản cài đang dirty hoặc staged thì fast KHÔNG được
+  // bỏ nó — đúng lúc cần lưới nhất lại là lúc lưới bị tắt.
+  let FAST = !!args.fast;
+  if (FAST) {
+    const ch = spawnSync('git', ['status', '--porcelain', '--', 'templates/pre-commit.hook.template', '.githooks/pre-commit'], { encoding: 'utf8', cwd: PKG_ROOT });
+    if ((ch.stdout || '').trim()) {
+      FAST = false;
+      console.log('INFO --fast bị VÔ HIỆU: hook template/bản cài đang thay đổi → chạy đủ lưới hook (guard M5)');
+    }
+  }
   const jobs = [
     ['template hook --self-test', () => shAsync([TPL('pre-commit.hook.template'), '--self-test'], { cwd: PKG_ROOT }), null, true],
     ['template report --self-test', () => shAsync([TPL('doc-health-report.sh.template'), '--self-test'], { cwd: PKG_ROOT })],
@@ -669,8 +707,8 @@ async function cmdSelfTest(args = {}) { // dùng cho `npm test` của chính pac
     const nSkills = fs.readdirSync(path.join(PKG_ROOT, 'skills')).filter(s => fs.statSync(path.join(PKG_ROOT, 'skills', s)).isDirectory()).length;
     if (nPrin !== MF.principles) { failed = true; idmOk = false; console.log(`FAIL identity-manifest: methodology/ có ${nPrin} nguyên tắc ≠ manifest ${MF.principles}`); }
     if (nSkills !== MF.skills) { failed = true; idmOk = false; console.log(`FAIL identity-manifest: đếm được ${nSkills} thư mục skill ≠ manifest ${MF.skills}`); }
-    const idmScan = (text, rel) => {
-      const bad = [];
+    const idmScan = (text, rel, sink) => {
+      const bad = sink || [];
       for (const m of text.matchAll(/(\d+)(?: \w+)? principles/gi)) if (+m[1] !== MF.principles) bad.push(m[0]);
       for (const m of text.matchAll(/(\d+) nguyên tắc/g)) if (+m[1] >= 10 && +m[1] !== MF.principles) bad.push(m[0]);
       for (const m of text.matchAll(/(\d+) (?:lớp|layers)/gi)) if (+m[1] >= 4 && +m[1] !== MF.layers) bad.push(m[0]);
@@ -678,7 +716,10 @@ async function cmdSelfTest(args = {}) { // dùng cho `npm test` của chính pac
       // v1.18.0 (audit 2026-08-16) — DRIFT NGỮ NGHĨA dạng RANGE: bảng profile ghi "01–14" trong khi
       // manifest là 15; identity guard cũ chỉ đếm dạng "N nguyên tắc" nên không bắt được. Range
       // 01–NN chỉ có một nghĩa trong hệ này: liệt kê nguyên tắc từ 01 tới NN.
-      for (const m of text.matchAll(/\b0?1\s*[–-]\s*(\d{1,2})\b/g)) if (+m[1] >= 10 && +m[1] !== MF.principles) bad.push(m[0]);
+      // m6 (audit độc lập): SIẾT — chỉ dải zero-padded "01–NN" mới là cách hệ này liệt kê nguyên tắc.
+      // Dải thường ("mục 1–20", "Wave 1-12", "chương 1–14") KHÔNG còn bị bắt oan.
+      for (const m of text.matchAll(/\b01\s*[–-]\s*(\d{1,2})\b/g)) if (+m[1] >= 10 && +m[1] !== MF.principles) bad.push(m[0]);
+      if (sink) return;   // chế độ fixture: chỉ thu thập vào sink, không phán/không in
       for (const b of bad) { failed = true; idmOk = false; console.log(`FAIL identity-manifest: '${b}' trong ${rel} lệch manifest (${MF.principles} nguyên tắc / ${MF.layers} lớp / ${MF.skills}-skill)`); }
     };
     for (const f of LIVE) {
@@ -689,16 +730,13 @@ async function cmdSelfTest(args = {}) { // dùng cho `npm test` của chính pac
     const mustCatch = ['14 nguyên tắc', '14 composable principles', '16 principles', '5 lớp', '4 layers', '4-skill', '6-skill',
       '01–14', '01-14', 'bật 01–12'];
     const mustPass = ['15 nguyên tắc', '15 core principles', '6 lớp', '6 layers', '5-skill', '1 nguyên tắc', '3 lớp',
-      '01–15', '01-15', 'mục 1-3', 'bước 1–2'];
-    const hits = (s) => {
-      let n = 0;
-      for (const m of s.matchAll(/(\d+)(?: \w+)? principles/gi)) if (+m[1] !== MF.principles) n++;
-      for (const m of s.matchAll(/(\d+) nguyên tắc/g)) if (+m[1] >= 10 && +m[1] !== MF.principles) n++;
-      for (const m of s.matchAll(/(\d+) (?:lớp|layers)/gi)) if (+m[1] >= 4 && +m[1] !== MF.layers) n++;
-      for (const m of s.matchAll(/(\d+)-skill/gi)) if (+m[1] !== MF.skills) n++;
-      for (const m of s.matchAll(/\b0?1\s*[–-]\s*(\d{1,2})\b/g)) if (+m[1] >= 10 && +m[1] !== MF.principles) n++;
-      return n;
-    };
+      '01–15', '01-15', 'mục 1-3', 'bước 1–2',
+      // m6 (audit độc lập): dải THƯỜNG không được bắt oan — chỉ dải zero-padded 01–NN mới là cách hệ liệt kê nguyên tắc
+      'mục 1–20', 'Wave 1-12', 'chương 1–14', 'SKU 1-14 đã bán', '2026-08-14', 'dòng 1-100'];
+    // m7 (audit độc lập 2026-08-16): fixture chấm CHÍNH hàm production, không phải bản copy-paste —
+    // sửa idmScan mà quên bản sao thì 21 fixture vẫn xanh trong khi production đã hỏng (cùng lớp lỗi
+    // với "fixture ghép chuỗi LF nên không bao giờ chạm CRLF").
+    const hits = (str) => { const found = []; idmScan(str, null, found); return found.length; };
     for (const s of mustCatch) if (hits(s) === 0) { failed = true; idmOk = false; console.log(`FAIL identity-manifest-fixture: '${s}' phải bị bắt mà lọt`); }
     for (const s of mustPass) if (hits(s) !== 0) { failed = true; idmOk = false; console.log(`FAIL identity-manifest-fixture: '${s}' bị bắt oan`); }
     if (idmOk) console.log(`PASS identity-manifest (thực-tế ${nPrin} nguyên tắc/${nSkills} skill khớp manifest; whitelist docs sống + fixture ranh giới xanh)`);

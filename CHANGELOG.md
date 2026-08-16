@@ -4,6 +4,40 @@ Toàn bộ lịch sử tiến hóa của phương pháp. README/methodology dùn
 
 Convention từ v1.10.0: mỗi mục version có thể chứa dòng `**RE-APPLY**: <việc project tiêu thụ cần làm lại sau update>` — `ai-simple update` tự trích các dòng này trong khoảng (bản-cũ → bản-mới] in thành checklist. Không có dòng RE-APPLY = update xong là xong.
 
+## v1.19.0 — 2026-08-16 (Vá 2 audit độc lập: bypass gate security, hook 1m37s/commit, drift đang sống)
+
+Hai auditor context sạch (một soi repo nguồn, một soi ForFish sau RE-APPLY) tìm ra 2 BLOCKER + 4 MAJOR.
+
+- **B1 · security per-finding bị bypass bằng 4 biến thể heading** — vá v1.18.0 chỉ đúng với khuôn
+  `### F-`; `## F-1`, `#### F-2`, `### 2.2 Lộ token`, và finding rỗng đứng trước `### Ghi chú chung`
+  (MƯỢN trường của mục khác vì `flush()` không reset) đều PASS, kể cả ở git-time. Luật mới: MỌI heading
+  đều flush (hết mượn chéo block) + trong vùng `## … Findings` MỌI heading con là finding dù đặt tên gì.
+  4 fixture mới; review format cũ (list, không heading con) vẫn không bị chặn oan.
+- **B2 · identity drift ĐANG SỐNG mà enforcer bỏ sót** — `.claude/commands/audit.md` (bản CÀI, đang
+  chạy) còn "14 nguyên tắc" và THIẾU HẲN hàng NT15; `docs/scoring.md` cũng vậy. Tệ hơn: `update` chỉ
+  refresh 2 file nên **mọi project init trước v1.18.0 giữ bản 14 nguyên tắc VĨNH VIỄN** — /audit chấm
+  thiếu NT15 mà không lệnh nào sửa được. Vá: sync bản cài + thêm CMD_SRC vào `update` (refresh command
+  md load-bearing, backup .bak).
+- **MAJOR · hook 1m37s mỗi commit trên ForFish** (97% ở `doc-health-report --status --fast`): `doc_state`
+  chạy HAI LẦN cho mỗi doc → ~200 lần spawn `git log` trên 19 doc. Nay tính 1 lần, cache dùng cho cả
+  bảng lẫn marker. Đo trên bản sao docs ForFish: **36s → 23s**. Chưa triệt để (còn 1 `git log`/covers-path)
+  — ghi backlog thay vì tuyên bố xong.
+- **MAJOR · gate mới CHẶN OAN chính template mà skill phát hành** — `- **Rủi ro**: <...>` rớt vì heuristic
+  `length > 25` byte; F-1 lọt chỉ vì placeholder dài hơn F-2. Bỏ heuristic; luật mới: có trường + phần sau
+  `:` không rỗng + KHÔNG còn placeholder `<…>`. Template chưa điền nay BLOCK với thông điệp ĐÚNG bản chất
+  ("còn placeholder chưa điền") và NHẤT QUÁN mọi finding; review đã điền qua sạch.
+- **MAJOR · RE-APPLY nuốt dòng nối** — regex một-dòng cắt checklist giữa câu (3/8 mục cụt, mất đúng phần
+  "phải làm gì"). Nay gom dòng thụt lề; kiểm lại 5 mục đều trọn câu.
+- **MAJOR · CI thiếu đúng bước rule-enforcer** dù CLAUDE.md khai "mỗi PR chạy npm run gates" — cổng
+  chống-mục cho luật nội hoá chưa từng được máy canh ở PR nào. Thêm G6 vào gates.yml.
+- **MAJOR · `--fast` tắt lưới ngay lúc cần nhất** — nay tự VÔ HIỆU khi hook template/bản cài đang dirty.
+- **MINOR**: marker DOC-STATUS chỉ ghi khi nội dung ĐỔI (trước đây `sed -i` vô điều kiện làm bẩn 19 doc
+  mỗi lần chạy); regex range siết còn `01–NN` zero-padded (hết bắt oan "mục 1–20", "Wave 1-12") + 6
+  fixture chống-oan; fixture identity nay chấm CHÍNH hàm production thay vì bản copy-paste; authority
+  contract L0–L3 xuống `CLAUDE.md.template` (context luôn-nạp của project); CLAUDE.md sửa over-claim
+  "auto-discover" (scripts/ là hardcode) + thêm `test:fast`/`gates` vào Quick commands.
+- **RE-APPLY**: chạy `ai-simple update` — bản này refresh CẢ `.claude/commands/*.md` (audit/fl/learn),
+  cần thiết vì /audit cũ chấm thiếu NT15; bản cũ lưu `.bak`.
 ## v1.18.0 — 2026-08-16 (Vá theo audit ngoài: per-finding security, authority contract, experiment runner, 2 test tier)
 
 Bản audit độc lập chấm v1.17.0 **8.0/10** và chỉ ra 5 mục; vá cả 5 + 1 bug tự tìm thêm.

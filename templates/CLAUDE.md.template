@@ -43,6 +43,17 @@ Types: feat, fix, refactor, style, perf, test, docs, chore
 - 🟡 YELLOW (reversible có chủ đích: bảng mới, cột nullable, index `CONCURRENTLY`): tự làm phương án an toàn + down migration, ghi `## Assumptions` cuối task, KHÔNG hỏi trước
 - 🔴 RED (không thể quay đầu / nổ ở prod: DROP, ALTER mất data, đổi RLS bảng đang phục vụ user, mutate data prod, đụng cron/edge fn ĐANG chạy): đúng 1 câu confirm gộp kèm phương án khuyến nghị, đợi trả lời
 
+## Authority — TRỤC ĐỘC LẬP với risk tier
+
+**Reversible ≠ authorized.** Risk tier hỏi *"sai thì undo mất bao lâu"*; authority hỏi *"user đã cho phép chưa"*. Việc dễ undo (bật cờ gửi tin, cài thêm tool) vẫn cần quyền.
+
+- **L0 local workspace write** — sửa file trong repo, tạo branch/worktree, chạy test: được phép theo scope task. Vẫn CẤM đụng thay đổi dirty của user.
+- **L1 external** — gửi tin (telegram/email/SMS), cài tool/dependency ngoài, publish, deploy: **cần user cho phép TƯỜNG MINH cho chính việc đó**. "Có sẵn script/tool" hay "lần trước đồng ý rồi" KHÔNG phải quyền.
+- **L2 production data** — đọc/ghi dữ liệu thật đang phục vụ người dùng: **mặc định CẤM**; mặc định làm trên staging/tenant cô lập/synthetic identity.
+- **L3 destructive** — `rm -rf`, `Remove-Item -Recurse -Force`, rewrite history, xoá branch/worktree: **resolve target → kiểm owner → backup → confirm**, không bỏ bước nào.
+
+Agent CẤM tự nâng quyền cho mình: không tự set env consent, không tự ghi file consent tầng user, không tự thêm token phê duyệt.
+
 ## KHÔNG ĐƯỢC phép
 - Hardcode secret / API key
 - Skip error handling cho async

@@ -63,27 +63,48 @@ lint_one() {
   # rong van PASS vi grep quet TOAN FILE. Nay moi block '### F-<id>' phai tu du: Rui ro + OWASP LLM +
   # OWASP web (hoac N/A co ly do) + Vung/gate + Tier trong enum; ID khong duoc trung.
   # Chi ap khi file CO block '### F-' (review format cu / review khong finding khong bi chan oan).
-  if grep -qE '^###[ \t]*F-' "$f"; then
+  # Kich hoat khi: co heading dang F- o BAT KY level (## / ### / ####), HOAC co vung "## ... Findings"
+  # kem it nhat 1 heading con. Review format cu (list "- F1 (LLM01/A03): ..." khong heading con) KHONG
+  # kich hoat -> khong chan oan (fixture giu nguyen).
+  if grep -qE '^#{2,6}[ \t]*F-' "$f" || awk '/^##[^#][^\n]*[Ff]inding/{f=1;next} /^##[^#]/{f=0} f && /^#{3,6}[ \t]/{found=1} END{exit !found}' "$f"; then
     FOUT=$(awk '
       function flush() {
         if (fid=="") return
         if (seen[fid]++) print "  BLOCK: finding " fid " -> ID TRUNG voi finding truoc"
-        if (!risk)  print "  BLOCK: finding " fid " -> thieu **Rui ro** cu the (lo gi/mat gi/exploit gi)"
+        if (!risk && ph) print "  BLOCK: finding " fid " -> **Rui ro** con PLACEHOLDER <...> chua dien"
+        else if (!risk)  print "  BLOCK: finding " fid " -> thieu **Rui ro** cu the (lo gi/mat gi/exploit gi)"
         if (!llm)   print "  BLOCK: finding " fid " -> thieu ma OWASP LLM (LLM01-LLM10)"
         if (!web)   print "  BLOCK: finding " fid " -> thieu ma OWASP web (A01-A10) hoac khai N/A kem ly do"
         if (!gate)  print "  BLOCK: finding " fid " -> thieu **Vung / gate** (may/CI/nguoi)"
         if (!tier)  print "  BLOCK: finding " fid " -> thieu **Tier** trong enum GREEN|YELLOW|RED"
       }
-      /^###[ \t]*F-/ {
+      # v1.19.0 (audit doc lap 2026-08-16, B1) — KHONG con phu thuoc khuon "### F-":
+      # 4 bien the tung LOT het (## F-1 / #### F-2 / "### 2.2 Lo token" / "### Ghi chu chung" dung sau
+      # finding rong -> finding do MUON truong cua muc khac vi flush() khong reset).
+      # Luat moi: (1) MOI heading deu flush -> khong the muon truong cheo block;
+      # (2) trong VUNG FINDINGS (## ... Findings), MOI heading con la 1 finding, du dat ten gi.
+      /^##[^#][^\n]*[Ff]inding/ { flush(); infind=1; fid=""; next }
+      /^##[^#]/                 { flush(); infind=0; fid=""; next }   # sang section khac -> het vung
+      /^#{3,6}[ \t]/ {
         flush()
-        fid=$2                      # cu phap template: "### F-1 — <tieu de>" -> token 2 la ID
-        risk=0; llm=0; web=0; gate=0; tier=0; next
+        if (infind || $0 ~ /^#{3,6}[ \t]*F-/) {
+          fid=$0; sub(/^#+[ \t]*/,"",fid); sub(/[ \t]*[—–].*$/,"",fid); gsub(/[ \t]+$/,"",fid)
+          if (fid=="") fid="(khong ten)"
+        } else fid=""
+        risk=0; llm=0; web=0; gate=0; tier=0; ph=0; next
       }
-      /^##[^#]/ { flush(); fid=""; next }
+      /^#[ \t]/ { flush(); infind=0; fid=""; next }
       {
         if (fid=="") next
-        # Dung index() cho chuoi tieng Viet (awk khop byte-wise, khong dung class Unicode/interval)
-        if ((index($0,"Rủi ro")>0 || index($0,"Rui ro")>0) && length($0) > 25) risk=1
+        # Dung index() cho chuoi tieng Viet (awk khop byte-wise, khong dung class Unicode/interval).
+        # v1.19.0 (audit ForFish, MAJOR-2): BO heuristic do dai `length($0) > 25` — no chan oan CHINH
+        # template ma skill phat hanh (F-2 rot vi placeholder ngan hon F-1; thong diep sai ban chat).
+        # Luat moi, nhat quan cho moi finding: co truong Rui ro + phan sau ':' KHONG rong va KHONG con
+        # placeholder <...>. Template chua dien -> BLOCK dung nghia "chua dien", khong phai "thieu truong".
+        if (index($0,"Rủi ro")>0 || index($0,"Rui ro")>0) {
+          v=$0; sub(/^[^:]*:[ \t]*/,"",v); gsub(/[ \t]+$/,"",v)
+          if (v ~ /<[^>]*>/) ph=1; else if (length(v) > 0) risk=1
+        }
         if ($0 ~ /LLM(0[1-9]|10)/) llm=1
         if ($0 ~ /(^|[^A-Za-z0-9])A(0[1-9]|10)([^0-9]|$)/) web=1
         if (index($0,"N/A")>0 && (index($0,"vì")>0 || index($0,"ly do")>0 || index($0,"lý do")>0)) web=1
@@ -114,6 +135,7 @@ lint_one() {
 
 if [ "$MODE" = "--self-test" ]; then
   RC=0; T=$(mktemp -d) || exit 1
+  SELFV="$0"; case "$SELFV" in /*|[A-Za-z]:*) ;; *) SELFV="$(pwd)/$SELFV";; esac
   FM='> Load khi: review bao mat orders\ncovers: src/orders\nlast_verified: 2026-01-01\nttl_days: 90\ndeclared-coverage: A=secret+injection | B=SCA(npm audit) | C=NON-GOAL(pentest/DAST)\n'
   # 1) review hop le -> PASS
   printf "# sec\n${FM}## Findings\n- F1 (LLM01/A03): input chua escape -> exploit: SQLi qua orderId. tier=RED\n> KHONG thay the pentest production.\n" > "$T/ok.md"
@@ -134,6 +156,26 @@ if [ "$MODE" = "--self-test" ]; then
   R=$(lint_one "$T/f3.md"); echo "$R" | grep -q 'ID TRUNG' && echo "PASS: finding ID trung bi BLOCK" || { echo "FAIL: ID trung LOT"; RC=1; }
   printf "# sec\n${FM}## 2. Findings\n### F-1 — a\n- **Rủi ro**: prompt injection qua doc app-map\n- **OWASP**: LLM01 · A N/A vì đây là lỗ tầng agent, không map web\n- **Vùng / gate**: A — doc-injection lint\n- **Tier**: YELLOW\n\n> KHONG thay the pentest production.\n" > "$T/f4.md"
   R=$(lint_one "$T/f4.md"); echo "$R" | grep -q BLOCK && { echo "FAIL: N/A co ly do bi BLOCK oan:"; echo "$R"; RC=1; } || echo "PASS: web=N/A KEM LY DO -> qua (chong-oan, khong ep map bua)"
+  # v1.19.0 (audit doc lap, B1) — 4 BIEN THE HEADING tung LOT het gate per-finding cu:
+  printf "# sec\n${FM}## 2. Findings\n### F-1 — a\n- mo ta suong\n### Ghi chu chung\n- **Rủi ro**: rui ro cu the o muc khac\n- **OWASP**: LLM01 · A03\n- **Vùng / gate**: A — lint\n- **Tier**: RED\n> KHONG thay the pentest.\n" > "$T/b1.md"
+  R=$(lint_one "$T/b1.md"); echo "$R" | grep -q BLOCK && echo "PASS: B1 — finding rong KHONG muon duoc truong cua heading khac" || { echo "FAIL: B1 ro truong cheo block LOT"; RC=1; }
+  printf "# sec\n${FM}## 2. Findings\n## F-1 — a\n- mo ta suong\n> KHONG thay the pentest.\n" > "$T/b2.md"
+  R=$(lint_one "$T/b2.md"); echo "$R" | grep -q BLOCK && echo "PASS: B1 — finding dat o '## F-' (2 thang) van bi kiem" || { echo "FAIL: B1 '## F-' lot gate"; RC=1; }
+  printf "# sec\n${FM}## 2. Findings\n${FGOOD}#### F-2 — b\n- mo ta suong\n> KHONG thay the pentest.\n" > "$T/b3.md"
+  R=$(lint_one "$T/b3.md"); echo "$R" | grep -q BLOCK && echo "PASS: B1 — finding dat o '#### F-' (4 thang) van bi kiem" || { echo "FAIL: B1 '#### F-' lot gate"; RC=1; }
+  printf "# sec\n${FM}## 2. Findings\n${FGOOD}### 2.2 Lo token\n- mo ta suong\n> KHONG thay the pentest.\n" > "$T/b4.md"
+  R=$(lint_one "$T/b4.md"); echo "$R" | grep -q BLOCK && echo "PASS: B1 — heading con KHONG ten F- trong vung Findings van la finding" || { echo "FAIL: B1 heading khong-F- lot gate"; RC=1; }
+  # v1.19.0 (audit ForFish, MAJOR-2) — CHINH TEMPLATE ma skill phat hanh: chua dien -> BLOCK dung nghia
+  # "con placeholder", NHAT QUAN moi finding (truoc day F-1 lot chi vi placeholder cua no dai hon 25 byte).
+  TPLF="$(dirname "$SELFV")/security-review.md.template"
+  if [ -f "$TPLF" ]; then
+    R=$(lint_one "$TPLF")
+    N1=$(echo "$R" | grep -c 'PLACEHOLDER')
+    [ "$N1" -ge 2 ] && echo "PASS: MAJOR-2 — template chua dien: MOI finding bao 'con placeholder' (nhat quan, dung ban chat)" || { echo "FAIL: MAJOR-2 template bao sai/khong nhat quan:"; echo "$R"; RC=1; }
+    echo "$R" | grep -q 'thieu \*\*Rui ro\*\* cu the' && { echo "FAIL: MAJOR-2 con thong diep 'thieu truong' sai ban chat"; RC=1; } || echo "PASS: MAJOR-2 — khong con thong diep 'thieu truong' sai ban chat"
+  fi
+  printf "# sec\n${FM}## 2. Findings\n### F-1 — a\n- **Rủi ro**: dien that roi, khong con placeholder\n- **OWASP**: LLM01 · A03\n- **Vùng / gate**: A — lint\n- **Tier**: RED\n> KHONG thay the pentest.\n" > "$T/b5.md"
+  R=$(lint_one "$T/b5.md"); echo "$R" | grep -q BLOCK && { echo "FAIL: MAJOR-2 chan oan review da dien:"; echo "$R"; RC=1; } || echo "PASS: MAJOR-2 — review DA DIEN qua sach (chong-oan)"
   # Wave 2a: parse GIA TRI A=/B=/C= — prefix suong / thieu vung phai BLOCK; du 3 vung phai PASS (chong-oan o ok.md)
   printf "# sec\n> Load khi: t\ncovers: src/x\nlast_verified: 2026-01-01\nttl_days: 90\ndeclared-coverage: xyz khong co vung nao\n## Findings\n- F1 (LLM01): x. tier=RED\n> KHONG thay the pentest.\n" > "$T/dcval.md"
   R=$(lint_one "$T/dcval.md"); echo "$R" | grep -q 'thieu vung A=' && echo "PASS: declared-coverage 'xyz' (prefix suong) bi BLOCK" || { echo "FAIL: declared-coverage prefix suong LOT"; RC=1; }

@@ -4,6 +4,58 @@ Toàn bộ lịch sử tiến hóa của phương pháp. README/methodology dùn
 
 Convention từ v1.10.0: mỗi mục version có thể chứa dòng `**RE-APPLY**: <việc project tiêu thụ cần làm lại sau update>` — `ai-simple update` tự trích các dòng này trong khoảng (bản-cũ → bản-mới] in thành checklist. Không có dòng RE-APPLY = update xong là xong.
 
+## v1.20.0 — 2026-08-17 (Vá theo 4 audit độc lập: cổng flagship fail-open, secret theo đuôi file, chặn oan fixture, hook 80% ở covers-sync)
+
+Bốn auditor context sạch (bypass-hunter · chấm điểm rubric · over-claim hunter · trải nghiệm dev) —
+**mỗi người tìm ra lỗ mà 3 vòng vá trước bỏ sót**. Bản chấm điểm độc lập: **7.1/10** (trục yếu nhất:
+machine enforcement 6.5, semantic evidence 5.0). Dưới đây là phần ĐÃ vá; phần CHƯA vá ghi ở cuối mục.
+
+- **P0 · covers-sync FAIL-OPEN im lặng** (cổng flagship của README First-win): `covers:` dạng YAML list
+  — dạng tự nhiên nhất — cho giá trị rỗng ⇒ HIT=0 ⇒ cổng TẮT, không BLOCK, không cả WARN. Nay đọc CẢ
+  inline lẫn YAML list; parse ra 0 path thì WARN TƯỜNG MINH ("cổng đang tắt cho doc này") thay vì im lặng.
+- **P0 · secret-scan lọt theo ĐUÔI FILE**: cùng `sk_live_…` trong `.ts` thì BLOCK, trong `.env.local`
+  hoặc `Dockerfile` thì commit trót lọt (đo được). Nay match cả họ tên file: `.env*`, `Dockerfile*`,
+  `.npmrc`, `Makefile`, `.tf/.tfvars`.
+- **P0 · CHẶN OAN fixture test** (ca đẩy dev sang `--no-verify`): `const password = "hunter2…"` trong
+  `src/__tests__/auth.test.ts` bị gọi "secret HIGH-CONFIDENCE" kèm lời khuyên ROTATE key — vô nghĩa với
+  fixture và KHÔNG nêu đường thoát nào. Nay: file test → WARN (vẫn thấy, không chặn), file thường → BLOCK
+  với 3 đường xử lý tường minh (secret thật / fixture đặt tên / `SEC_CHECKS=off` kèm hệ quả).
+- **P0 · FALSE-BLOCK focus-ring**: `.btn:focus-visible { outline: none; box-shadow: 0 0 0 3px … }` là
+  focus style HỢP WCAG mà gate chặn (whitelist thiếu `box-shadow`) — vi phạm chính luật "gate mới phải có
+  fixture chống-BLOCK-oan". Nay whitelist thêm `box-shadow`, và bắt thêm `outline:0` (trước chỉ khớp `none`).
+- **HIỆU NĂNG · attribution v1.19.0 SAI, đã sửa đúng chỗ**: phân rã 1 lượt hook cho thấy **covers-sync
+  chiếm 80%** (127s/158s) chứ không phải doc-health (11%, và ở commit BLOCK thì nó không chạy giây nào).
+  Nguyên nhân: `H=$(echo "$CHANGED" | while read …)` **fork một subshell CHO TỪNG covers-path** —
+  đo được 967ms/path vs 9.6ms/path khi dùng `case` builtin = **100×**. Nay thay bằng hàm `covers_hit`
+  không spawn process nào; contract anchored giữ nguyên (src/lib KHÔNG khớp src/lib-utils, có fixture 2 chiều).
+- **B1 · README hướng dẫn cài skill SAI từ v1.13.0**: `ln -s "$(pwd)" …` tạo skill dir KHÔNG có SKILL.md
+  ⇒ skill nền không load; ai làm theo README mất đúng cái README gọi là "bắt buộc". Vá + thêm assertion
+  ship-gate: mọi lệnh cài skill trong README phải trỏ thư mục CÓ SKILL.md (đã kiểm: gate FAIL khi khôi phục dòng cũ).
+- **B2 · 4 gate skill SKIP IM LẶNG trên clone mới** (junction bị auto-gitignore): repo gốc chặn spec rác,
+  clone mới cho qua CÙNG commit đó. Nay hook in INFO "4 gate skill ĐANG TẮT — chạy lại npx ai-simple init".
+- **M1 · `ba-verify` chưa từng được wire vào hook** (design/security/triage có, ba 0 hit) dù SKILL khai
+  "CỔNG MÁY … CHẶN THẬT" — đúng lớp lỗi đã vá cho security ở v1.17.0. Nay wire 1d4 + `BA_CHECKS` + 3 fixture.
+- **F1 · doc-health MÙ doc tên tiếng Việt/có dấu cách**: `for doc in $DOCS` word-split + git escape ⇒ doc
+  biến mất khỏi mọi tính toán, `--ci` XANH, report khẳng định "mọi doc VERIFIED" — fail-open + nói dối trên
+  chính project tiêu thụ (repo tiếng Việt). Nay `core.quotepath=false` + while-read **qua here-doc**
+  (bản vá đầu dùng pipe đã tự gây regression mất biến trong subshell — self-test bắt được ngay).
+- 60 fixture hook (từ 54), npm test 30 PASS/0 FAIL, dogfood + ship-gate xanh.
+
+**CHƯA VÁ — ghi thẳng thay vì để trong đầu** (auditor đã craft payload, tái hiện được):
+- security-verify vẫn bypass được bằng: vùng Findings đặt tên khác (`## Vulnerabilities`), heading trong
+  code-fence, heading thụt lề, `<h3>` HTML, bảng markdown, ID trùng khác hoa-thường; và luật placeholder
+  chưa bắt `{{…}}`/`TBD`/`_____`, `Vùng/gate` + `Tier` chưa parse theo enum. **Cần viết lại parser** (theo
+  fence-state + mọi heading con của MỌI section), không vá thêm khuôn.
+- identity enforcer thiếu cờ `i` (`14 Nguyên tắc` lọt), không chuẩn hoá dash/space, LIVE list vẫn là
+  whitelist tay (`docs/adr/001` ghi "Hiện hành: 14 nguyên tắc" và ĐANG SHIP trong tarball).
+- `--fast` guard chỉ canh 2 file hook (sửa `*-verify.sh` vẫn bỏ mutation suite) và chỉ so working tree
+  (commit xong là lách được).
+- **Không có assertion ngân sách thời gian nào** trong toàn bộ gate ⇒ regression 100× ở scale 19-doc vô
+  hình với `npm test` (hook self-test chạy repo 1–3 doc). Đây là lý do gốc vụ 1m37s lọt tới ForFish.
+- `docs/scoring.md` mục nặng (A1/A2 ghi "chưa build" trong khi đã có), ngoài LIVE list nên không gate nào canh.
+- `init`/`doctor` im lặng 5–7 phút (chạy trọn hook self-test bên trong) — người mới tưởng treo.
+- **RE-APPLY**: chạy `ai-simple update` để nhận hook v1.20.0 (covers-sync nhanh hơn ~100× ở phép match,
+  cổng YAML-list, secret-scan rộng hơn + miễn trừ file test) và bản doc-health tên-file-an-toàn.
 ## v1.19.0 — 2026-08-16 (Vá 2 audit độc lập: bypass gate security, hook 1m37s/commit, drift đang sống)
 
 Hai auditor context sạch (một soi repo nguồn, một soi ForFish sau RE-APPLY) tìm ra 2 BLOCKER + 4 MAJOR.

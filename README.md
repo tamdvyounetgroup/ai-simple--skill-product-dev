@@ -108,7 +108,7 @@ verify-on-use) dùng qua Claude Code skill — CLI chỉ đóng gói phần máy
 ```bash
 git clone https://github.com/Long-Forfun/ai-simple--skill-product-dev
 cd ai-simple--skill-product-dev
-ln -s "$(pwd)" ~/.claude/skills/ai-simple-product-dev
+ln -s "$(pwd)/skills/ai-simple-product-dev" ~/.claude/skills/ai-simple-product-dev
 ln -s "$(pwd)/skills/ba-flow-logic" ~/.claude/skills/ba-flow-logic
 ln -s "$(pwd)/skills/ui-design-logic" ~/.claude/skills/ui-design-logic
 ln -s "$(pwd)/skills/ui-ux-triage" ~/.claude/skills/ui-ux-triage

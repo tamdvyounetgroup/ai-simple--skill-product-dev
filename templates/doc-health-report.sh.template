@@ -186,7 +186,11 @@ if [ "$1" = "--self-test" ]; then
   exit $RC
 fi
 
-DOCS=$(git ls-files 'docs/app-map/*.md' 'docs/app-map/**/*.md' 2>/dev/null | grep -v '_generated/' | sort -u)
+# v1.20.0 (audit doc lap 2026-08-17, F1 BLOCKER): quotepath=false + while-read. Truoc day `for doc in
+# $DOCS` word-split VA git escape ten co dau ⇒ doc tieng Viet ('docs/app-map/01-don-hang.md') BIEN MAT
+# khoi moi tinh toan: khong marker, --ci XANH, report khang dinh "moi doc VERIFIED" — fail-open + noi doi
+# tren chinh project tieu thu (repo tieng Viet). security-verify da va lop nay o Wave 2a, doc-health thi chua.
+DOCS=$(git -c core.quotepath=false ls-files 'docs/app-map/*.md' 'docs/app-map/**/*.md' 2>/dev/null | grep -v '_generated/' | sort -u)
 
 # ── chế độ --status: regenerate doc-status.md ──────────────────────────
 # --status --fast: skip symbol-scan (hook per-commit dùng — giữ commit nhanh);
@@ -202,14 +206,17 @@ if [ "$1" = "--status" ]; then
     echo ""
     echo "| Doc | Trang thai | Ly do |"
     echo "|---|---|---|"
-    for doc in $DOCS; do
+    while IFS= read -r doc; do
+      [ -n "$doc" ] || continue
       DS=$(doc_state "$doc")
       # v1.19.0 (audit ForFish 2026-08-16, MAJOR-1): CACHE kết quả — trước đây doc_state chạy LẠI
       # nguyên vòng cho từng doc ở khối marker bên dưới ⇒ ~200 lần spawn `git log -1` trên 19 doc,
       # hook mất 1m37s/commit (97% ở đây) → user bị đẩy sang --no-verify. Tính 1 lần, dùng 2 nơi.
       printf '%s\t%s\n' "$doc" "$DS" >> "$STATE_CACHE"
       echo "| $doc | $(echo "$DS" | cut -d'|' -f1) | $(echo "$DS" | cut -d'|' -f2) |"
-    done
+    done <<EOF_DOCS1
+$DOCS
+EOF_DOCS1
   } > "$OUT"
   # Marker trong CHÍNH doc (đóng đường đọc-trực-tiếp không qua /fl — STALE mitigation
   # phải hiện ở mọi lối vào). Máy quản lý dòng này: xóa marker cũ, chèn lại nếu != VERIFIED.
@@ -233,7 +240,8 @@ echo "=== Doc health report — $(date +%Y-%m-%d) ==="
 # ── 1. Doc-lag (nguyên tắc 12 v2 — thay drift%): doc SUSPECT/ORPHANED ──
 echo "--- Doc-lag: SUSPECT / ORPHANED ---"
 SUSPECTS=""
-for doc in $DOCS; do
+while IFS= read -r doc; do
+  [ -n "$doc" ] || continue
   DS=$(doc_state "$doc")
   ST=$(echo "$DS" | cut -d'|' -f1)
   case "$ST" in
@@ -248,7 +256,9 @@ for doc in $DOCS; do
       echo "$DS" | grep -q "symbol '" && CI_FAIL=1
       ;;
   esac
-done
+done <<EOF_DOCS2
+$DOCS
+EOF_DOCS2
 if [ -n "$SUSPECTS" ]; then printf '%s' "$SUSPECTS"; else echo "  (khong co — moi doc VERIFIED)"; fi
 
 # ── 2. _generated/ cũ hơn source of truth (nguyên tắc 09) ──────────────
@@ -276,7 +286,7 @@ done
 # ── 5. Broken cross-ref ─────────────────────────────────────────────────
 # Gom output ra biến vì while-trong-pipe là subshell — set CI_FAIL ở đó sẽ mất.
 echo "--- Broken cross-ref ---"
-BROKEN=$(git ls-files 'docs/app-map/*.md' 'docs/app-map/**/*.md' 2>/dev/null | sort -u | while read -r f; do
+BROKEN=$(git -c core.quotepath=false ls-files 'docs/app-map/*.md' 'docs/app-map/**/*.md' 2>/dev/null | sort -u | while read -r f; do
   DIR=$(dirname "$f")
   grep -oE '\]\(([^)#]+\.md)' "$f" | sed 's/](//' | while read -r link; do
     case "$link" in http*|/*) continue ;; esac

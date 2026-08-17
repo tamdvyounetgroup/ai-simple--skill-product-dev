@@ -61,6 +61,24 @@ function checkTemplates(inTarball) {
   }
 }
 
+// ── 3b. skill-path-check (v1.20.0, audit độc lập 2026-08-17 B1): mọi đường dẫn xuất hiện trong CODE
+// FENCE của README dưới dạng đích cài skill (`~/.claude/skills/<tên>`) phải trỏ tới thư mục CÓ SKILL.md.
+// Lỗi thật: README hướng dẫn `ln -s "$(pwd)" ~/.claude/skills/ai-simple-product-dev` — từ v1.13.0
+// SKILL.md đã dời vào skills/ai-simple-product-dev/ nên link repo-root tạo skill dir KHÔNG có SKILL.md
+// ⇒ skill nền không load. link-check cũ chỉ parse `](path)` markdown nên mù với path trong code fence.
+function checkSkillPaths() {
+  const p = path.join(ROOT, 'README.md');
+  if (!fs.existsSync(p)) return;
+  for (const line of fs.readFileSync(p, 'utf8').split(/\r?\n/)) {
+    const m = line.match(/(?:ln -s|New-Item[^\n]*-Target)\s+"?\$?\(?(?:pwd)?\)?([^"\s]*)"?\s+[^\s]*\.claude[\/\\]skills[\/\\](\S+)/);
+    if (!m) continue;
+    const rel = (m[1] || '').replace(/^[\/\\]/, '');
+    const target = rel ? path.join(ROOT, rel) : ROOT;
+    if (!fs.existsSync(path.join(target, 'SKILL.md')))
+      fail(`README: lệnh cài skill trỏ '${rel || '(repo root)'}' — thư mục này KHÔNG có SKILL.md ⇒ skill sẽ không load`);
+  }
+}
+
 // ── 3. link-check: link markdown tương đối trong README + SKILL trỏ file tồn tại (disk + tarball) ──
 function checkLinks(inTarball) {
   for (const doc of ['README.md', 'skills/ai-simple-product-dev/SKILL.md']) {
@@ -93,6 +111,7 @@ if (inTarball) {
   checkRequires(inTarball);
   checkTemplates(inTarball);
   checkLinks(inTarball);
+  checkSkillPaths();
 }
 if (failed === 0) console.log('PASS ship-gate (require-coverage + template-coverage + link-check trên tarball)');
 process.exit(failed ? 1 : 0);

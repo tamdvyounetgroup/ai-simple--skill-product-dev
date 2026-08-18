@@ -89,11 +89,38 @@ if (cmd === '--record') {
     model: flag('model') || 'unspecified', judge: flag('judge') || 'unspecified', timestamp: new Date().toISOString(), note };
   fs.mkdirSync(path.dirname(BASELINE), { recursive: true });
   const prior = fs.existsSync(BASELINE) ? fs.readFileSync(BASELINE, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : [];
-  const dupe = prior.find((r) => r.run_id === runId && r.variant === variant && r.skill === a1 && String(r.case_id) === String(c.id));
-  if (dupe) die(`đã có quan sát cho (${runId}, ${variant}, ${a1}, ${c.id}) = ${dupe.verdict} — khoá duy nhất, đừng append đè (đổi --run nếu là vòng đo mới)`);
+  // v1.22.0: KHOÁ gồm CẢ judge — một quan sát là (run, variant, skill, case, judge). Khoá cũ thiếu
+  // judge nên KHÔNG ghi nổi 2 judge độc lập trên cùng bài, tức chặn đúng thứ điều kiện #4 đòi.
+  const judgeId = flag("judge") || "unspecified";
+  const dupe = prior.find((r) => r.run_id === runId && r.variant === variant && r.skill === a1 && String(r.case_id) === String(c.id) && (r.judge || "unspecified") === judgeId);
+  if (dupe) die(`đã có quan sát cho (${runId}, ${variant}, ${a1}, ${c.id}, judge=${judgeId}) = ${dupe.verdict} — khoá duy nhất (đổi --run cho vòng mới, hoặc --judge cho giám khảo khác)`);
   fs.appendFileSync(BASELINE, JSON.stringify(row) + '\n', 'utf8');
   console.log(`ghi quan sát: run=${runId} variant=${variant} ${a1}/${c.id} = ${a3}`);
   process.exit(0);
+}
+
+// Hàm THUẦN để --self-test bơm được dữ liệu tổng hợp: mọi phép chốt-điều-kiện nằm ở đây, không nằm
+// rải trong nhánh --report (không có cách nào test lớp chốt số nếu nó dính chặt vào file JSONL thật).
+function analyze(rows, totalCases) {
+  const runs = [...new Set(rows.map((r) => r.run_id))];
+  const cov = new Set(rows.map((r) => `${r.skill}/${r.case_id}`)).size;
+  const paired = runs.some((run) => ['baseline', 'with_skill'].every((v) => rows.some((r) => r.run_id === run && r.variant === v)));
+  // INTER-RATER: với mỗi ô (run,variant,skill,case) được ≥2 judge chấm, đếm tỉ lệ ô mà MỌI judge cho cùng
+  // verdict. Dưới 80% nghĩa là RUBRIC mơ hồ (không phải agent kém) — sửa rubric trước khi tin số pass.
+  // Gộp theo JUDGE (verdict cuối thắng) TRƯỚC khi so: nếu không, một judge ghi lại lần 2 sẽ tự bất đồng
+  // với chính mình và kéo IRR xuống — chặn oan. Bất đồng chỉ có nghĩa khi là giữa NGƯỜI CHẤM KHÁC NHAU.
+  const byCell = {};
+  for (const r of rows) {
+    const k = `${r.run_id}|${r.variant}|${r.skill}|${r.case_id}`;
+    (byCell[k] = byCell[k] || {})[r.judge || 'unspecified'] = r.verdict;
+  }
+  const multi = Object.values(byCell).filter((c) => Object.keys(c).length >= 2);
+  const agreed = multi.filter((c) => new Set(Object.values(c)).size === 1).length;
+  const irr = multi.length ? Math.round((agreed / multi.length) * 100) : null;
+  const allOk = cov === totalCases && runs.length >= 2 && paired && irr !== null && irr >= 80;
+  // chỉ lấy vòng có ≥2 judge: không trộn vòng 1-judge (bằng chứng yếu) vào con số công bố
+  const strong = runs.filter((run) => new Set(rows.filter((r) => r.run_id === run).map((r) => r.judge || 'unspecified')).size >= 2);
+  return { runs, cov, paired, multi: multi.length, agreed, irr, allOk, strong };
 }
 
 if (cmd === '--report') {
@@ -110,16 +137,28 @@ if (cmd === '--report') {
       if (!set.length) continue;
       const uniq = new Set(set.map((r) => `${r.skill}/${r.case_id}`)).size;
       const ok = set.filter((r) => r.verdict === 'pass').length;
-      console.log(`  run=${run.padEnd(12)} ${variant.padEnd(10)} ${ok}/${set.length} pass · phủ ${uniq}/${TOTAL_CASES} case (${Math.round((uniq / TOTAL_CASES) * 100)}%)`);
+      // mẫu số là QUAN SÁT, không phải case: n judge chấm cùng 1 case = n quan sát. In rõ số judge
+      // để không ai đọc "1/14" thành "14 case" (chính tôi suýt nhầm khi ghi vòng đo đầu 2 judge).
+      const nj = new Set(set.map((r) => r.judge || 'unspecified')).size;
+      console.log(`  run=${run.padEnd(12)} ${variant.padEnd(10)} ${ok}/${set.length} quan sát pass · ${uniq}/${TOTAL_CASES} case (${Math.round((uniq / TOTAL_CASES) * 100)}%) × ${nj} judge`);
     }
   }
-  const cov = new Set(rows.map((r) => `${r.skill}/${r.case_id}`)).size;
+  const A = analyze(rows, TOTAL_CASES);
+  const { cov, paired, irr, agreed, multi, allOk, strong } = A;
   console.log('--- ĐIỀU KIỆN chốt ngưỡng release (chưa đạt cái nào thì KHÔNG được coi 1 con số % là release score):');
   console.log(`    [${cov === TOTAL_CASES ? 'x' : ' '}] phủ đủ ${TOTAL_CASES} case (hiện ${cov})`);
   console.log(`    [${runs.length >= 2 ? 'x' : ' '}] ≥2 vòng đo độc lập (hiện ${runs.length})`);
-  const paired = runs.some((run) => ['baseline', 'with_skill'].every((v) => rows.some((r) => r.run_id === run && r.variant === v)));
   console.log(`    [${paired ? 'x' : ' '}] có cặp control↔treatment trong CÙNG vòng để so`);
-  console.log('    [ ] inter-rater agreement (≥2 judge độc lập trên cùng quan sát) — chưa có cơ chế, ghi nhận là khoảng trống');
+  console.log(`    [${irr !== null && irr >= 80 ? 'x' : ' '}] inter-rater agreement ≥80% — ${irr === null ? 'CHƯA có ô nào được ≥2 judge chấm' : `${agreed}/${multi} ô đồng thuận = ${irr}%`}`);
+
+  // Con số so sánh chỉ được IN RA khi cả 4 điều kiện đạt — đây là lý do tồn tại của checklist trên.
+  // In sớm là mời người đọc trích dẫn một con số chưa đủ nền, đúng lỗi mà bản audit ngoài bắt.
+  if (!allOk) { console.log('--- CHƯA đủ điều kiện → KHÔNG in con số so sánh (cố tình).'); process.exit(0); }
+  const pct = (v) => {
+    const set = rows.filter((r) => strong.includes(r.run_id) && r.variant === v);
+    return `${set.filter((r) => r.verdict === 'pass').length}/${set.length} (${Math.round((set.filter((r) => r.verdict === 'pass').length / set.length) * 100)}%)`;
+  };
+  console.log(`--- ĐỦ ĐIỀU KIỆN. Trên ${strong.length} vòng có ≥2 judge: baseline ${pct('baseline')} pass · with_skill ${pct('with_skill')} pass`);
   process.exit(0);
 }
 
@@ -155,6 +194,29 @@ if (cmd === '--self-test') {
   }
   // 3) Fixture ranh giới của chính runner: verdict ngoài enum phải bị từ chối
   if (['pass', 'fail', 'partial'].includes('probably')) fail('enum verdict hỏng');
+  // 4) Lớp CHỐT SỐ (analyze): dữ liệu tổng hợp, 2 case giả lập cho gọn
+  const mk = (run, variant, skill, id, judge, verdict) => ({ run_id: run, variant, skill, case_id: id, judge, verdict });
+  const full = [];
+  for (const j of ['j1', 'j2']) for (const v of ['baseline', 'with_skill']) for (const id of [0, 1]) full.push(mk('r1', v, 's', id, j, 'pass'));
+  full.push(mk('r2', 'baseline', 's', 0, 'j1', 'pass'));   // vòng thứ 2 cho điều kiện ≥2 vòng
+  const okA = analyze(full, 2);
+  if (!okA.allOk) fail(`analyze: bộ ĐỦ điều kiện lại bị chặn (cov=${okA.cov} runs=${okA.runs.length} paired=${okA.paired} irr=${okA.irr})`);
+  if (okA.irr !== 100) fail(`analyze: 8 ô 2-judge đồng thuận phải = 100%, ra ${okA.irr}`);
+  if (okA.strong.length !== 1) fail(`analyze: chỉ r1 có ≥2 judge, strong phải = 1 vòng, ra ${okA.strong.length}`);
+  // FAIL-1: thiếu case → không được allOk (thà không có số còn hơn có số sai)
+  if (analyze(full, 3).allOk) fail('analyze: thiếu 1/3 case mà vẫn cho chốt số');
+  // FAIL-2: hai judge bất đồng quá nửa → IRR dưới ngưỡng, chặn
+  const noisy = full.map((r) => (r.judge === 'j2' && r.variant === 'with_skill' ? { ...r, verdict: 'fail' } : r));
+  const nA = analyze(noisy, 2);
+  if (nA.irr >= 80) fail(`analyze: 2/4 ô bất đồng mà IRR vẫn ${nA.irr}% ≥80`);
+  if (nA.allOk) fail('analyze: IRR dưới ngưỡng mà vẫn cho chốt số');
+  // CHỐNG-BLOCK-OAN 1: cùng judge ghi trùng y hệt (chạy lại lệnh --record) không được đổi kết quả
+  if (analyze([...full, mk('r1', 'baseline', 's', 0, 'j1', 'pass')], 2).irr !== okA.irr) fail('analyze: bản ghi TRÙNG của cùng judge làm lệch IRR → chặn oan');
+  // CHỐNG-BLOCK-OAN 2: judge SỬA verdict của chính mình → lấy bản cuối, KHÔNG tự bất đồng với chính mình.
+  // Ở đây j1 sửa 'pass'→'partial' và j2 cũng 'partial' ⇒ ô này phải là ĐỒNG THUẬN, không phải lệch.
+  const revised = [...full.map((r) => (r.judge === 'j2' && r.variant === 'baseline' && r.case_id === 0 ? { ...r, verdict: 'partial' } : r)),
+    mk('r1', 'baseline', 's', 0, 'j1', 'partial')];
+  if (analyze(revised, 2).irr !== 100) fail(`analyze: judge sửa verdict của chính mình bị tính thành bất đồng (IRR ${analyze(revised, 2).irr}%) → chặn oan`);
   console.log(rc === 0
     ? `PASS eval-runner (${withEvals}/${SKILLS.length} skill có evals, ${totalCases} case, schema hợp lệ, tách dữ liệu không lộ đáp án)`
     : 'eval-runner self-test: CÓ FAIL');

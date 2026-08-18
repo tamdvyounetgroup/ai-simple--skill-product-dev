@@ -4,6 +4,33 @@ Toàn bộ lịch sử tiến hóa của phương pháp. README/methodology dùn
 
 Convention từ v1.10.0: mỗi mục version có thể chứa dòng `**RE-APPLY**: <việc project tiêu thụ cần làm lại sau update>` — `ai-simple update` tự trích các dòng này trong khoảng (bản-cũ → bản-mới] in thành checklist. Không có dòng RE-APPLY = update xong là xong.
 
+## v1.22.0 — 2026-08-18 (mục #2 của audit 8.3/10: A/B ngữ nghĩa ĐỦ 34 case, 4 điều kiện chốt số cùng xanh)
+
+Đây là mục cuối trong danh sách audit, và là mục duy nhất không code được cho xong — phải ĐO. Trước bản
+này `--report` mới có 3/34 case và ô inter-rater bỏ trống vĩnh viễn với chú thích "chưa có cơ chế".
+
+- **Đo đủ 34/34 case, 2 vòng, 8 judge**: `run-2026-08-18-ab` (7 case của `ai-simple-product-dev`) và
+  `run-2026-08-18-full` (27 case của 4 skill còn lại). Mỗi skill: 1 agent control **bị cấm đọc
+  `skills/`+`methodology/`**, 1 agent treatment đọc SKILL.md, rồi **2 judge độc lập chấm MÙ** trên gói
+  chỉ gồm rubric + hai bản trả lời. **Nhãn Bản A/Bản B đảo khác nhau theo từng skill** để judge không suy
+  ra biến thể từ vị trí — cùng lớp phòng thủ với án lệ routing 2026-08-15 (agent nhìn thấy cột "Kỳ vọng").
+  Kết quả: **baseline 1/68 quan sát pass (1%) · with_skill 63/68 (93%)**, inter-rater **59/68 = 87%**.
+  Giao thức + cách đọc con số cho đúng: `docs/baseline/semantic-ab-protocol.md`.
+- **Khoá duy nhất của `--record` thiếu `judge`** — hai judge chấm cùng một ô thì người thứ hai bị nuốt im
+  lặng. Đây chính là lý do ô inter-rater không bao giờ điền được: máy ghi vốn không cho phép nó tồn tại.
+- **Inter-rater thành phép tính thật** (`analyze()`, hàm thuần tách khỏi nhánh `--report` để fixture bơm
+  được dữ liệu): trên các ô `(run, variant, skill, case)` có ≥2 judge, đếm tỉ lệ ô mọi judge cùng verdict.
+  Gộp theo judge trước khi so, **verdict cuối thắng** — một judge ghi lại không được tính là tự bất đồng
+  với chính mình. Chính fixture chống-BLOCK-oan này bắt lỗi lúc viết (bản đầu tính 75% thay vì 100%).
+- **`--report` chỉ in con số so sánh khi ĐỦ CẢ 4 điều kiện**, chưa đủ thì in thẳng "CHƯA đủ điều kiện →
+  KHÔNG in con số (cố tình)". Con số cũng chỉ gộp các vòng có ≥2 judge, không trộn vòng 1-judge vào cho
+  đẹp mẫu. 4 fixture ép lớp này: 1 PASS, 2 FAIL (thiếu case / IRR dưới ngưỡng), 2 chống-oan.
+- Mẫu số của mỗi dòng report ghi rõ `× N judge` — "1/14 quan sát pass" từng dễ đọc nhầm thành 14 case.
+
+**Giới hạn còn lại, ghi thẳng**: rubric do chính repo này viết ⇒ đây là bằng chứng nội bộ nhất quán, KHÔNG
+phải "trả lời tốt hơn theo chuẩn ngoài". Judge cùng họ mô hình với thí sinh. 13% bất đồng nằm ở ranh giới
+`pass`/`partial` — chỗ lệch thì sửa RUBRIC cho hết mơ hồ, không chỉnh câu trả lời.
+
 ## v1.21.0 — 2026-08-18 (5 việc theo audit 8.3/10: parser state-machine, perf budget có máy ép, identity quét tarball, packaging Codex)
 
 Làm đúng thứ tự audit đề xuất. Bốn mục code xong trong bản này; mục semantic A/B 34 case là việc ĐO,

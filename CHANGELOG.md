@@ -4,7 +4,43 @@ Toàn bộ lịch sử tiến hóa của phương pháp. README/methodology dùn
 
 Convention từ v1.10.0: mỗi mục version có thể chứa dòng `**RE-APPLY**: <việc project tiêu thụ cần làm lại sau update>` — `ai-simple update` tự trích các dòng này trong khoảng (bản-cũ → bản-mới] in thành checklist. Không có dòng RE-APPLY = update xong là xong.
 
+## v1.23.0 — 2026-08-18 (theo audit 8.8/10: RÚT overclaim semantic v1.22.0, vòng 2 thật, tarball đủ file runtime, artifact tái kiểm)
+
+- **P0 · RÚT LẠI con số 93% của v1.22.0.** Điều kiện "≥2 vòng" của `--report` đếm `số run ≥ 2` trên
+  toàn corpus; hai run chia đôi corpus (7 + 27 case) làm checklist xanh trong khi **31/34 case mới có một
+  vòng**. Predicate viết lại THEO TỪNG CASE: vòng đủ = cùng run có baseline + with_skill, mỗi biến thể ≥2
+  judge; case đạt = ≥2 vòng đủ. Fixture mới tái hiện đúng ca auditor bắt (2 run chia đôi → phải CHẶN) + 2
+  ca kề (vòng 2 chỉ 1 judge / vòng 2 thiếu treatment → không tính). Chạy predicate mới trên dữ liệu v1.22.0:
+  **0/34 case đạt** — đúng như audit nói.
+- **Vòng 2 THẬT (`run-2026-08-18-r2`)**: 34/34 case, 10 agent làm bài + 10 judge đều mới, nhãn Bản A/B
+  đảo NGƯỢC vòng 1. Kết quả sau 2 vòng đủ cho mọi case: **baseline 3/136 (2%) · with_skill 109/136
+  (80%)**, inter-rater 118/136 = 87%. Vòng 2 riêng lẻ chỉ **68%** (vòng 1: 93%) — phương sai thật, và là
+  bằng chứng vì sao một vòng không được phép chốt số. Ghi là *internal recorded result*, không phải benchmark.
+- **P1 · Artifact thô để tái kiểm** — `docs/baseline/semantic-runs/<run>/`: đề, rubric, câu trả lời thô
+  đặt tên theo variant THẬT, đúng gói judge đã đọc (chỉ nhãn A/B), map nhãn→variant, và rationale từng ô do
+  judge tự ghi lúc chấm. Vòng 1 thiếu file rationale — ghi rõ khoảng trống, KHÔNG tái tạo sau khi biết map.
+  `note` trong JSONL trỏ tới file rationale.
+- **P1 · `system-manifest.json` KHÔNG vào tarball** → bản npm chạy `self-test` tới identity gate thì ENOENT,
+  ship-gate vẫn PASS. Sửa gốc 3 lớp: thêm vào `files`; ship-gate quét thêm mọi file đọc bằng
+  `path.join(PKG_ROOT|__dirname, '…')` (gate cũ chỉ quét `require()`, nên mù) — chạy trước khi sửa `files`
+  gate FAIL đúng dòng này; stranger-path chạy `self-test --fast` trên BẢN CÀI và assert không ENOENT.
+- **P1 · `docs/scoring.md`** viết lại theo hiện trạng: 6 gate máy (thêm G6 perf-budget), A1 mutation + A2
+  eval đã build, 5/5 skill-verifier, backlog thật.
+- **P2 · Ngân sách tổng `test:fast`**: trần 90s, vượt → WARN (thời gian phụ thuộc máy, WARN là WARN);
+  `AI_SIMPLE_PERF_STRICT=1` (CI) → FAIL. Full tier in tổng thời gian, trần vẫn ở perf-budget.js.
+- **BUG TỰ BẮT khi chạy stranger-path sau các sửa trên (9/12 → 12/12)**: fixture 1d4 của hook self-test copy
+  skill từ `$OPW/skills/ba-flow-logic` — đường chỉ có ở REPO NGUỒN; project tiêu thụ chỉ có `.claude/skills`
+  (junction) → fixture rỗng, 1d4 không bao giờ CHẶN → **`doctor` ĐỎ trên mọi project lạ từ v1.20.0**, và
+  `update` (gọi doctor) cũng đỏ theo. Sửa: dò 3 nguồn `skills/` → `.claude/skills/` →
+  `node_modules/ai-simple/skills/`. Bài học ghi thẳng: fixture chạy xanh ở repo nguồn không chứng minh gì
+  cho project tiêu thụ — stranger-path là gate duy nhất nhìn thấy điều đó, và tôi đã không chạy nó ở v1.20–v1.22.
+  **RE-APPLY**: project đang ở v1.20–v1.22 thấy `doctor` báo `FAIL 1d4 ba-verify khong chan` — chỉ cần
+  `ai-simple update`, không phải sửa tay.
+
 ## v1.22.0 — 2026-08-18 (mục #2 của audit 8.3/10: A/B ngữ nghĩa ĐỦ 34 case, 4 điều kiện chốt số cùng xanh)
+
+> **RÚT LẠI ở v1.23.0**: con số 93% và dòng "4 điều kiện cùng xanh" là overclaim — điều kiện "≥2 vòng" đếm
+> theo corpus, không theo case. Xem v1.23.0.
 
 Đây là mục cuối trong danh sách audit, và là mục duy nhất không code được cho xong — phải ĐO. Trước bản
 này `--report` mới có 3/34 case và ô inter-rater bỏ trống vĩnh viễn với chú thích "chưa có cơ chế".

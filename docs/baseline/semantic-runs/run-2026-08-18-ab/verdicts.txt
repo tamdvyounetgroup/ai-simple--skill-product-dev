@@ -1,0 +1,3 @@
+# judge-1: baseline = partial×6 + fail(case 5); with_skill = pass×7
+# judge-2: baseline = partial×6 + pass(case 5); with_skill = pass×7
+# inter-rater 13/14. Rationale từng dòng KHÔNG được lưu file ở vòng này (khoảng trống, vá từ run-r2).

@@ -1,0 +1,6 @@
+run: run-2026-08-18-r2
+ai-simple-product-dev  BanA=with_skill  BanB=baseline
+ba-flow-logic          BanA=baseline    BanB=with_skill
+security-logic         BanA=with_skill  BanB=baseline
+ui-design-logic        BanA=baseline    BanB=with_skill
+ui-ux-triage           BanA=with_skill  BanB=baseline

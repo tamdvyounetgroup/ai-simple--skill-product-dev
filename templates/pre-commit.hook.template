@@ -1,5 +1,5 @@
 #!/bin/sh
-# ai-simple-version: 1.22.0
+# ai-simple-version: 1.23.0
 # pre-commit — Automated enforcement (nguyên tắc 08 / principle 08)
 #
 # CHẠY ĐƯỢC NGAY với default Supabase + Next.js. Sửa 3 biến CẤU HÌNH bên dưới cho project khác.
@@ -461,7 +461,14 @@ if [ "$1" = "--self-test" ]; then
   if [ "$RCB0" -eq 0 ] && echo "$OUTB0" | grep -q 'gate skill (design/security/ba/triage) ĐANG TẮT'; then echo "PASS: 1d5 — clone chua init: in INFO gate dang TAT, khong chan"; else echo "FAIL: 1d5 khong canh bao (exit=$RCB0)"; RC=1; fi
   # (b) co junction ba-flow-logic + ba-spec RAC staged -> phai BLOCK
   mkdir -p .claude/skills
-  cp -r "$OPW/skills/ba-flow-logic" .claude/skills/ba-flow-logic 2>/dev/null || true
+  # v1.23.0 — nguon skill: repo NGUON co skills/, project TIEU THU chi co .claude/skills (junction ->
+  # node_modules/ai-simple/skills). Truoc day chi copy tu $OPW/skills → tren moi project la fixture rong,
+  # 1d4 khong bao gio CHAN → doctor DO tren project tieu thu (stranger-path v1.23.0 bat: 9/12).
+  BASRC=""
+  for cand in "$OPW/skills/ba-flow-logic" "$OPW/.claude/skills/ba-flow-logic" "$OPW/node_modules/ai-simple/skills/ba-flow-logic"; do
+    [ -f "$cand/ba-verify.sh" ] && { BASRC="$cand"; break; }
+  done
+  [ -n "$BASRC" ] && cp -r "$BASRC" .claude/skills/ba-flow-logic 2>/dev/null || true
   printf 'noi dung sai khong co AC\n' > docs/app-map/ba-spec-x.md; git add -A
   OUTB1=$(git commit -m barac 2>&1); RCB1=$?
   if [ "$RCB1" -ne 0 ] && echo "$OUTB1" | grep -q 'ba-verify'; then echo "PASS: 1d4 — ba-spec rac bi ba-verify CHAN THAT o git-time"; else echo "FAIL: 1d4 ba-verify khong chan (exit=$RCB1)"; RC=1; fi

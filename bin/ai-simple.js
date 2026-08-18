@@ -606,6 +606,7 @@ function nodeAsync(args, opts = {}) {
 }
 
 async function cmdSelfTest(args = {}) { // dùng cho `npm test` của chính package: chạy self-test template + skill-verifier
+  const T0 = Date.now();
   let failed = false;
   const MUT = path.join(PKG_ROOT, 'scripts', 'mutation-suite.sh');
   // v1.18.0 (audit 2026-08-16) — HAI TẦNG: `--fast` cho vòng lặp sửa-chạy của PR thường (bỏ 2 job
@@ -877,6 +878,19 @@ async function cmdSelfTest(args = {}) { // dùng cho `npm test` của chính pac
   const clOk = realDelta.length > 0 && realDelta[0].version === PKG.version && missing.length === 0;
   console.log(`${clOk ? 'PASS' : 'FAIL'} update-channel: CHANGELOG.md thật — ${realDelta.length} mục, đầu = v${versions[0]}, minor liên tục${missing.length ? ` (THIẾU heading v${missing.join(', v')} — nuốt heading?)` : ''}`);
   if (!clOk) failed = true;
+
+  // v1.23.0 — NGÂN SÁCH TỔNG cho tier nhanh (audit ngoài: chỉ perf-budget có trần, vòng lặp sửa-chạy thì
+  // không). Trần 90s cho `--fast` (đo 43s trên Windows lúc chốt v1.20, để dư 2× cho máy CI chậm). Vượt →
+  // WARN mặc định (thời gian phụ thuộc máy, WARN là WARN); AI_SIMPLE_PERF_STRICT=1 (CI) → FAIL thật.
+  // Full tier không đặt trần ở đây: đã có perf-budget.js đo đúng thứ chậm (hook trên repo quy mô thật).
+  const elapsed = Math.round((Date.now() - T0) / 1000);
+  const FAST_BUDGET_S = 90;
+  if (FAST) {
+    const over = elapsed > FAST_BUDGET_S;
+    const strict = process.env.AI_SIMPLE_PERF_STRICT === '1';
+    console.log(`${over ? (strict ? 'FAIL' : 'WARN') : 'PASS'} fast-budget: test:fast ${elapsed}s / trần ${FAST_BUDGET_S}s${over && !strict ? ' (đặt AI_SIMPLE_PERF_STRICT=1 để FAIL)' : ''}`);
+    if (over && strict) failed = true;
+  } else console.log(`INFO tổng thời gian npm test: ${elapsed}s (full tier — trần nằm ở perf-budget.js)`);
 
   process.exit(failed ? 1 : 0);
 }

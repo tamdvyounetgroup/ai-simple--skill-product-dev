@@ -45,6 +45,15 @@ function checkRequires(inTarball) {
       if (!onDisk) { fail(`${rel} require('${m[2]}') -> KHÔNG có file trên disk`); continue; }
       if (!inTarball.has(onDisk)) fail(`${rel} require('${m[2]}') -> '${onDisk}' KHÔNG nằm trong tarball (thêm vào package.json "files")`);
     }
+    // v1.23.0 — audit ngoài bắt: `system-manifest.json` được đọc bằng path.join(PKG_ROOT,'…') chứ không
+    // require(), nên gate cũ mù → bản npm chạy self-test tới identity gate thì ENOENT trong khi ship-gate
+    // vẫn PASS. Quét luôn mọi literal file đi kèm PKG_ROOT/__dirname (chỉ đuôi dữ liệu, bỏ qua thư mục).
+    const re2 = /path\.join\(\s*(?:PKG_ROOT|__dirname)\s*,\s*(?:'\.\.'\s*,\s*)*'([^']+\.(?:json|md|template|sh|awk|yaml|txt))'\s*\)/g;
+    while ((m = re2.exec(body))) {
+      const target = m[1].replace(/\\/g, '/');
+      if (!fs.existsSync(path.join(ROOT, target))) continue; // đường dẫn động/optional — không phán ở đây
+      if (!inTarball.has(target)) fail(`${rel} đọc '${target}' lúc runtime nhưng file KHÔNG nằm trong tarball (thêm vào package.json "files")`);
+    }
   }
 }
 

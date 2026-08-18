@@ -55,6 +55,13 @@ try {
   const par = run('node', [cli, 'parallel', 'status'], { cwd: proj });
   check('CLI sống: `parallel` load lib/ (class bug v1.4.1)', !/Cannot find module|MODULE_NOT_FOUND/.test(par.out), par.status !== 0 && /Cannot find module/.test(par.out) ? 'lib/ thiếu trong tarball' : '');
 
+  // 3b) v1.23.0 — self-test trên BẢN CÀI (audit ngoài bắt: --version sống nhưng self-test tới identity gate
+  // thì ENOENT vì system-manifest.json không vào tarball; ship-gate lúc đó vẫn PASS). Không đòi PASS toàn bộ
+  // (bản cài thiếu scripts/ dev là hợp lệ) — chỉ đòi KHÔNG chết vì thiếu file runtime.
+  const st = run('node', [cli, 'self-test', '--fast'], { cwd: proj });
+  const enoent = (st.out.match(/ENOENT[^\n]*/) || [])[0] || '';
+  check('self-test bản cài không ENOENT (file runtime đủ trong tarball)', !enoent && !/system-manifest\.json.*(không|thiếu|not found)/i.test(st.out), enoent);
+
   // 4) init trong git repo mới + doctor
   git(['init', '-q'], proj); git(['config', 'user.email', 't@t.t'], proj); git(['config', 'user.name', 't'], proj);
   const ini = run('node', [cli, 'init'], { cwd: proj });

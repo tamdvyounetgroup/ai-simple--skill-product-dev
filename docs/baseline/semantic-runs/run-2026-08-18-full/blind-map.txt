@@ -1,0 +1,4 @@
+ba-flow-logic     BanA=with_skill  BanB=baseline
+security-logic    BanA=baseline    BanB=with_skill
+ui-design-logic   BanA=with_skill  BanB=baseline
+ui-ux-triage      BanA=baseline    BanB=with_skill

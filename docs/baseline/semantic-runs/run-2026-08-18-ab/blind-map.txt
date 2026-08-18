@@ -1,0 +1,4 @@
+run: run-2026-08-18-ab
+ai-simple-product-dev  BanA=baseline  BanB=with_skill
+
+GHI CHÚ TRUNG THỰC: vòng này chỉ có 1 skill nên KHÔNG có đảo nhãn chéo skill; judge nhìn thấy nhãn "Bản A/Bản B" nhưng không biết bản nào nạp skill. Rationale của 2 judge chỉ còn tóm tắt verdict (chưa lưu file lúc chấm) — xem verdicts.txt.

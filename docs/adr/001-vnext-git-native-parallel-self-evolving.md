@@ -4,7 +4,8 @@
 - **Date**: 2026-07-28
 - **Deciders**: Long (owner)
 - **Nguồn**: bản tổng hợp thiết kế của owner + hội đồng phản biện 3 reviewer độc lập (concurrency / pragmatics / learning-loop). Bản gốc là INPUT; **contract chính thức = `methodology/13-parallel-sessions.md` + `methodology/12-self-optimization.md` v3** (đã hấp thụ Amendments bên dưới). Khi bản gốc trong ADR này mâu thuẫn với methodology docs → methodology docs thắng.
-- **Status note (2026-08-12)**: ADR này viết ở thời điểm hệ có 13 nguyên tắc / 5 lớp — các con số trong thân ADR là lịch sử, KHÔNG cập nhật theo release. Hiện hành: 14 nguyên tắc / 6 lớp (thêm `methodology/14-security-gate.md`); nguồn sự thật về số = `methodology/README.md`.
+- **Status note (2026-08-12)**: ADR này viết ở thời điểm hệ có 13 nguyên tắc / 5 lớp — các con số trong thân ADR là lịch sử, KHÔNG cập nhật theo release. Hiện hành: **15 nguyên tắc / 6 lớp** (nguồn sự thật về số = `system-manifest.json`, ép bởi identity-manifest guard).
+<!-- identity-exempt: THÂN ADR là lịch sử (viết khi hệ có 13 nguyên tắc / 5 lớp) — số trong đó KHÔNG cập nhật theo release. Dòng "Hiện hành" ở trên thì PHẢI đúng và được guard soi trước khi miễn trừ áp dụng. -->
 
 ---
 

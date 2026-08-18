@@ -19,6 +19,7 @@
 # (qua junction -> ban global moi nhat; KHONG copy thu muc -> tranh drift, bai hoc #08/#10.)
 
 set -u
+SELFV0="$0"; case "$SELFV0" in /*|[A-Za-z]:*) ;; *) SELFV0="$(pwd)/$SELFV0";; esac
 APP_MAP_DIR="${APP_MAP_DIR:-docs/app-map}"
 MODE="${1:-all}"
 
@@ -58,61 +59,15 @@ lint_one() {
     done
   fi
 
-  # v1.18.0 [ENFORCED] — PER-FINDING, khong phai "co ma OWASP o dau do trong file":
-  # false-PASS that (audit 2026-08-16): review 5 finding, chi F-1 du ma/tier/gate, 4 finding con lai
-  # rong van PASS vi grep quet TOAN FILE. Nay moi block '### F-<id>' phai tu du: Rui ro + OWASP LLM +
-  # OWASP web (hoac N/A co ly do) + Vung/gate + Tier trong enum; ID khong duoc trung.
-  # Chi ap khi file CO block '### F-' (review format cu / review khong finding khong bi chan oan).
-  # Kich hoat khi: co heading dang F- o BAT KY level (## / ### / ####), HOAC co vung "## ... Findings"
-  # kem it nhat 1 heading con. Review format cu (list "- F1 (LLM01/A03): ..." khong heading con) KHONG
-  # kich hoat -> khong chan oan (fixture giu nguyen).
-  if grep -qE '^#{2,6}[ \t]*F-' "$f" || awk '/^##[^#][^\n]*[Ff]inding/{f=1;next} /^##[^#]/{f=0} f && /^#{3,6}[ \t]/{found=1} END{exit !found}' "$f"; then
-    FOUT=$(awk '
-      function flush() {
-        if (fid=="") return
-        if (seen[fid]++) print "  BLOCK: finding " fid " -> ID TRUNG voi finding truoc"
-        if (!risk && ph) print "  BLOCK: finding " fid " -> **Rui ro** con PLACEHOLDER <...> chua dien"
-        else if (!risk)  print "  BLOCK: finding " fid " -> thieu **Rui ro** cu the (lo gi/mat gi/exploit gi)"
-        if (!llm)   print "  BLOCK: finding " fid " -> thieu ma OWASP LLM (LLM01-LLM10)"
-        if (!web)   print "  BLOCK: finding " fid " -> thieu ma OWASP web (A01-A10) hoac khai N/A kem ly do"
-        if (!gate)  print "  BLOCK: finding " fid " -> thieu **Vung / gate** (may/CI/nguoi)"
-        if (!tier)  print "  BLOCK: finding " fid " -> thieu **Tier** trong enum GREEN|YELLOW|RED"
-      }
-      # v1.19.0 (audit doc lap 2026-08-16, B1) — KHONG con phu thuoc khuon "### F-":
-      # 4 bien the tung LOT het (## F-1 / #### F-2 / "### 2.2 Lo token" / "### Ghi chu chung" dung sau
-      # finding rong -> finding do MUON truong cua muc khac vi flush() khong reset).
-      # Luat moi: (1) MOI heading deu flush -> khong the muon truong cheo block;
-      # (2) trong VUNG FINDINGS (## ... Findings), MOI heading con la 1 finding, du dat ten gi.
-      /^##[^#][^\n]*[Ff]inding/ { flush(); infind=1; fid=""; next }
-      /^##[^#]/                 { flush(); infind=0; fid=""; next }   # sang section khac -> het vung
-      /^#{3,6}[ \t]/ {
-        flush()
-        if (infind || $0 ~ /^#{3,6}[ \t]*F-/) {
-          fid=$0; sub(/^#+[ \t]*/,"",fid); sub(/[ \t]*[—–].*$/,"",fid); gsub(/[ \t]+$/,"",fid)
-          if (fid=="") fid="(khong ten)"
-        } else fid=""
-        risk=0; llm=0; web=0; gate=0; tier=0; ph=0; next
-      }
-      /^#[ \t]/ { flush(); infind=0; fid=""; next }
-      {
-        if (fid=="") next
-        # Dung index() cho chuoi tieng Viet (awk khop byte-wise, khong dung class Unicode/interval).
-        # v1.19.0 (audit ForFish, MAJOR-2): BO heuristic do dai `length($0) > 25` — no chan oan CHINH
-        # template ma skill phat hanh (F-2 rot vi placeholder ngan hon F-1; thong diep sai ban chat).
-        # Luat moi, nhat quan cho moi finding: co truong Rui ro + phan sau ':' KHONG rong va KHONG con
-        # placeholder <...>. Template chua dien -> BLOCK dung nghia "chua dien", khong phai "thieu truong".
-        if (index($0,"Rủi ro")>0 || index($0,"Rui ro")>0) {
-          v=$0; sub(/^[^:]*:[ \t]*/,"",v); gsub(/[ \t]+$/,"",v)
-          if (v ~ /<[^>]*>/) ph=1; else if (length(v) > 0) risk=1
-        }
-        if ($0 ~ /LLM(0[1-9]|10)/) llm=1
-        if ($0 ~ /(^|[^A-Za-z0-9])A(0[1-9]|10)([^0-9]|$)/) web=1
-        if (index($0,"N/A")>0 && (index($0,"vì")>0 || index($0,"ly do")>0 || index($0,"lý do")>0)) web=1
-        if ((index($0,"Vùng")>0 || index($0,"Vung")>0 || index($0,"gate")>0) && length($0) > 18) gate=1
-        if (index($0,"Tier")>0 && ($0 ~ /(GREEN|YELLOW|RED)/)) tier=1
-      }
-      END { flush() }
-    ' "$f")
+  # v1.21.0 [ENFORCED] — PER-FINDING qua STATE MACHINE fence-aware (finding-parser.awk).
+  # Bản regex-nối-thêm bị audit bypass bằng 7 biến thể (tên vùng khác, heading trong fence, thụt lề,
+  # <h3>, bảng markdown, ID khác hoa/thường, placeholder {{...}}/TBD/_____). Nay quét CÓ TRẠNG THÁI
+  # và fail-CLOSED với dạng chưa hỗ trợ. Kích hoạt khi có BẤT KỲ heading (mọi cú pháp) trông như
+  # finding, hoặc có vùng Findings kèm heading con — review format cũ (list, không heading) KHÔNG
+  # kích hoạt ⇒ không chặn oan.
+  PARSER="$(dirname "$SELFV0")/finding-parser.awk"
+  if [ -f "$PARSER" ]; then
+    FOUT=$(awk -f "$PARSER" "$f")
     if [ -n "$FOUT" ]; then echo "$FOUT"; rc=1; fi
   fi
 
@@ -151,7 +106,7 @@ if [ "$MODE" = "--self-test" ]; then
   R=$(lint_one "$T/f1.md"); echo "$R" | grep -q BLOCK && { echo "FAIL: finding du truong bi BLOCK oan:"; echo "$R"; RC=1; } || echo "PASS: finding du 5 truong -> qua (chong-oan)"
   printf "# sec\n${FM}## 2. Findings\n${FGOOD}\n### F-2 — b\n- mo ta suong khong co truong nao\n\n> KHONG thay the pentest production.\n" > "$T/f2.md"
   R=$(lint_one "$T/f2.md")
-  echo "$R" | grep -q 'finding F-2' && echo "PASS: finding thu 2 RONG bi BLOCK (het false-PASS quet-toan-file)" || { echo "FAIL: finding rong LOT:"; echo "$R"; RC=1; }
+  echo "$R" | grep -q 'F-2' && echo "PASS: finding thu 2 RONG bi BLOCK (het false-PASS quet-toan-file)" || { echo "FAIL: finding rong LOT:"; echo "$R"; RC=1; }
   printf "# sec\n${FM}## 2. Findings\n${FGOOD}\n### F-1 — trung id\n- **Rủi ro**: x cu the nao do\n- **OWASP**: LLM01 · A01\n- **Vùng / gate**: A — gate\n- **Tier**: YELLOW\n\n> KHONG thay the pentest production.\n" > "$T/f3.md"
   R=$(lint_one "$T/f3.md"); echo "$R" | grep -q 'ID TRUNG' && echo "PASS: finding ID trung bi BLOCK" || { echo "FAIL: ID trung LOT"; RC=1; }
   printf "# sec\n${FM}## 2. Findings\n### F-1 — a\n- **Rủi ro**: prompt injection qua doc app-map\n- **OWASP**: LLM01 · A N/A vì đây là lỗ tầng agent, không map web\n- **Vùng / gate**: A — doc-injection lint\n- **Tier**: YELLOW\n\n> KHONG thay the pentest production.\n" > "$T/f4.md"
@@ -170,12 +125,23 @@ if [ "$MODE" = "--self-test" ]; then
   TPLF="$(dirname "$SELFV")/security-review.md.template"
   if [ -f "$TPLF" ]; then
     R=$(lint_one "$TPLF")
-    N1=$(echo "$R" | grep -c 'PLACEHOLDER')
-    [ "$N1" -ge 2 ] && echo "PASS: MAJOR-2 — template chua dien: MOI finding bao 'con placeholder' (nhat quan, dung ban chat)" || { echo "FAIL: MAJOR-2 template bao sai/khong nhat quan:"; echo "$R"; RC=1; }
-    echo "$R" | grep -q 'thieu \*\*Rui ro\*\* cu the' && { echo "FAIL: MAJOR-2 con thong diep 'thieu truong' sai ban chat"; RC=1; } || echo "PASS: MAJOR-2 — khong con thong diep 'thieu truong' sai ban chat"
+    N1=$(echo "$R" | grep -c 'chua dien')
+    [ "$N1" -ge 2 ] && echo "PASS: MAJOR-2 — template chua dien: MOI finding bao 'chua dien' (nhat quan, dung ban chat)" || { echo "FAIL: MAJOR-2 template bao sai/khong nhat quan:"; echo "$R"; RC=1; }
   fi
   printf "# sec\n${FM}## 2. Findings\n### F-1 — a\n- **Rủi ro**: dien that roi, khong con placeholder\n- **OWASP**: LLM01 · A03\n- **Vùng / gate**: A — lint\n- **Tier**: RED\n> KHONG thay the pentest.\n" > "$T/b5.md"
   R=$(lint_one "$T/b5.md"); echo "$R" | grep -q BLOCK && { echo "FAIL: MAJOR-2 chan oan review da dien:"; echo "$R"; RC=1; } || echo "PASS: MAJOR-2 — review DA DIEN qua sach (chong-oan)"
+  # v1.21.0 — 10 BIEN THE do auditor craft, TAT CA tung LOT parser regex cu (nay parser state-machine):
+  bp(){ printf "$2" > "$T/bp.md"; R=$(lint_one "$T/bp.md"); if echo "$R" | grep -q BLOCK; then [ "$3" = block ] && echo "PASS: parser — $1" || { echo "FAIL: parser CHAN OAN — $1"; echo "$R"; RC=1; }; else [ "$3" = pass ] && echo "PASS: parser — $1" || { echo "FAIL: parser LOT — $1"; RC=1; }; fi; }
+  bp "vung ten khac ('## Vulnerabilities') van bi kiem" "# s\n${FM}## Vulnerabilities\n### V-1 Lo token\n- mo ta suong\n> KHONG thay the pentest.\n" block
+  bp "heading trong code-fence KHONG dong vung Findings" "# s\n${FM}## 2. Findings\n${FGOOD}\n\`\`\`sh\n## chuan bi\n\`\`\`\n### 2.2 Lo quyen\n- mo ta suong\n> KHONG thay the pentest.\n" block
+  bp "heading THUT LE (CommonMark) van la heading" "# s\n${FM}## 2. Findings\n${FGOOD}  ### F-2 — b\n- mo ta suong\n> KHONG thay the pentest.\n" block
+  bp "heading HTML <h3> van la heading" "# s\n${FM}## 2. Findings\n<h3>F-9 lo token</h3>\n- mo ta suong\n> KHONG thay the pentest.\n" block
+  bp "finding trong BANG markdown -> fail-closed co huong dan" "# s\n${FM}## 2. Findings\n| ID | Mo ta |\n|---|---|\n| F-3 | trong |\n> KHONG thay the pentest.\n" block
+  bp "truong nam trong fence KHONG nuoi finding that" "# s\n${FM}## 2. Findings\n### F-1 — a\n- mo ta suong\n\`\`\`\n- **Rủi ro**: vi du mau\n- **OWASP**: LLM01 · A03\n- **Vùng / gate**: A — lint\n- **Tier**: RED\n\`\`\`\n> KHONG thay the pentest.\n" block
+  bp "ID trung khac HOA/THUONG van bi bat" "# s\n${FM}## 2. Findings\n${FGOOD}### f-1 — trung\n- **Rủi ro**: rui ro khac cu the\n- **OWASP**: LLM05 · A01\n- **Vùng / gate**: B — SCA\n- **Tier**: YELLOW\n> KHONG thay the pentest.\n" block
+  bp "placeholder {{...}} (quy uoc 'bat buoc dien') bi bat" "# s\n${FM}## 2. Findings\n### F-1 — a\n- **Rủi ro**: {{DIEN_SAU}}\n- **OWASP**: LLM01 · A03\n- **Vùng / gate**: A — lint\n- **Tier**: RED\n> KHONG thay the pentest.\n" block
+  bp "TBD / gach duoi / '(chua ro)' deu la CHUA DIEN" "# s\n${FM}## 2. Findings\n### F-1 — a\n- **Rủi ro**: TBD\n- **OWASP**: LLM01 · A03\n- **Vùng / gate**: _____\n- **Tier**: RED\n> KHONG thay the pentest.\n" block
+  bp "muc [non-finding] trong vung Findings -> KHONG chan oan" "# s\n${FM}## 2. Findings\n${FGOOD}\n### Khuon mau cho lan sau [non-finding]\n\`\`\`md\n### F-<n>\n\`\`\`\n> KHONG thay the pentest.\n" pass
   # Wave 2a: parse GIA TRI A=/B=/C= — prefix suong / thieu vung phai BLOCK; du 3 vung phai PASS (chong-oan o ok.md)
   printf "# sec\n> Load khi: t\ncovers: src/x\nlast_verified: 2026-01-01\nttl_days: 90\ndeclared-coverage: xyz khong co vung nao\n## Findings\n- F1 (LLM01): x. tier=RED\n> KHONG thay the pentest.\n" > "$T/dcval.md"
   R=$(lint_one "$T/dcval.md"); echo "$R" | grep -q 'thieu vung A=' && echo "PASS: declared-coverage 'xyz' (prefix suong) bi BLOCK" || { echo "FAIL: declared-coverage prefix suong LOT"; RC=1; }

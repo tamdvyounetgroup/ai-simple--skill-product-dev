@@ -1,0 +1,11 @@
+# agents/openai.yaml — metadata packaging cho runtime kieu Codex/OpenAI (chuan skill-creator).
+# KHONG phai file runtime cua Claude Code (no doc SKILL.md frontmatter). File nay cung cap display
+# name / mo ta ngan / default prompt NHAT QUAN cho runtime khac, de mot skill khong mang hai ten.
+# NGUON SU THAT ve hanh vi van la SKILL.md — sua description o SKILL.md thi cap nhat day CUNG COMMIT
+# (gate: skills-yaml trong npm test so 2 ben).
+schema_version: 1
+name: ui-design-logic
+display_name: "UI Design Logic"
+description: "Thiết kế UI/UX top-down hướng-người-dùng: sinh design-spec (thang người dùng, screen map, ma trận trạng thái) rồi build UI, kết bằng QA screenshot; luật anti-AI-slop ép ở pre-commit."
+entrypoint: SKILL.md
+default_prompt: "Doc SKILL.md cua skill nay truoc. Nhiem vu: sinh design-spec (thang nguoi dung, screen map, ma tran trang thai) roi build UI theo stack da khoa, ket bang vong QA screenshot. Luat anti-AI-slop la bat buoc."

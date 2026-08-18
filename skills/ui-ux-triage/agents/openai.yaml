@@ -1,0 +1,11 @@
+# agents/openai.yaml — metadata packaging cho runtime kieu Codex/OpenAI (chuan skill-creator).
+# KHONG phai file runtime cua Claude Code (no doc SKILL.md frontmatter). File nay cung cap display
+# name / mo ta ngan / default prompt NHAT QUAN cho runtime khac, de mot skill khong mang hai ten.
+# NGUON SU THAT ve hanh vi van la SKILL.md — sua description o SKILL.md thi cap nhat day CUNG COMMIT
+# (gate: skills-yaml trong npm test so 2 ben).
+schema_version: 1
+name: ui-ux-triage
+display_name: "UI/UX Triage"
+description: "Team-agent triage + fix loop cho app ĐANG CHẠY: đọc ba-spec + design-spec làm oracle để phân loại defect rồi sửa qua cổng ai-simple; repo-agnostic."
+entrypoint: SKILL.md
+default_prompt: "Doc SKILL.md cua skill nay truoc. Nhiem vu: triage + fix defect tren app DANG CHAY, doc ba-spec/design-spec lam oracle. Mo phien bang --session-audit va dong bang --close <id>. KHONG dung DB production, KHONG auto-commit, KHONG tu gui tin (consent NOTIFY thuoc user)."

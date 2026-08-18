@@ -1,6 +1,6 @@
 {
   "name": "ai-simple",
-  "version": "1.20.0",
+  "version": "1.21.0",
   "description": "AI-agent-friendly project methodology: hierarchical context, doc-code coupling map, write/read verification gates, enforcement hooks, doc-health CI. This CLI installs and maintains the deterministic layer (hooks, scripts, templates); the reasoning layer ships as a Claude Code skill in the same repo.",
   "bin": {
     "ai-simple": "bin/ai-simple.js"
@@ -28,9 +28,10 @@
     "dogfood-gate": "node scripts/dogfood-gate.js",
     "stranger-path": "node scripts/stranger-path.js",
     "rule-enforcer": "node scripts/rule-enforcer-gate.js",
-    "gates": "npm test && npm run ship-gate && npm run dogfood-gate && npm run rule-enforcer",
+    "gates": "npm test && npm run ship-gate && npm run dogfood-gate && npm run rule-enforcer && npm run perf-budget",
     "prepublishOnly": "npm run gates && npm run stranger-path",
-    "test:fast": "node bin/ai-simple.js self-test --fast"
+    "test:fast": "node bin/ai-simple.js self-test --fast",
+    "perf-budget": "node scripts/perf-budget.js"
   },
   "repository": {
     "type": "git",

@@ -627,6 +627,8 @@ async function cmdSelfTest(args = {}) { // dùng cho `npm test` của chính pac
     ['template report --self-test', () => shAsync([TPL('doc-health-report.sh.template'), '--self-test'], { cwd: PKG_ROOT })],
     ['template pretooluse-guard --self-test', () => shAsync([TPL('pretooluse-git-guard.sh'), '--self-test'], { cwd: PKG_ROOT })],
     ['script metadata-words --self-test', () => nodeAsync([path.join(PKG_ROOT, 'scripts', 'metadata-words.js'), '--self-test'], { cwd: PKG_ROOT }), path.join(PKG_ROOT, 'scripts', 'metadata-words.js')],
+    ['script perf-budget --self-test', () => nodeAsync([path.join(PKG_ROOT, 'scripts', 'perf-budget.js'), '--self-test'], { cwd: PKG_ROOT }), path.join(PKG_ROOT, 'scripts', 'perf-budget.js')],
+    ['script perf-budget (hook <=20s o quy mo 20 doc/80 path)', () => nodeAsync([path.join(PKG_ROOT, 'scripts', 'perf-budget.js')], { cwd: PKG_ROOT }), path.join(PKG_ROOT, 'scripts', 'perf-budget.js'), true],
     ['script eval-runner --self-test (schema evals + tách dữ liệu blind)', () => nodeAsync([path.join(PKG_ROOT, 'scripts', 'eval-runner.js'), '--self-test'], { cwd: PKG_ROOT }), path.join(PKG_ROOT, 'scripts', 'eval-runner.js')],
     ['script mutation-suite --self-test', () => shAsync([MUT, '--self-test'], { cwd: PKG_ROOT }), MUT],
     ['script mutation-suite (full: 0 false-pass/0 false-block)', () => shAsync([MUT], { cwd: PKG_ROOT }), MUT, true],
@@ -671,9 +673,44 @@ async function cmdSelfTest(args = {}) { // dùng cho `npm test` của chính pac
   // ca FAIL bắt buộc "14 composable principles" nằm trong fixture ranh giới của enforcer).
   // LIVE = surface tuyên bố hiện hành. v1.18.0: THÊM template ship xuống project tiêu thụ — audit
   // template từng ghi "14 nguyên tắc" và lọt guard vì scope cũ chỉ có docs của repo nguồn (audit 2026-08-16).
-  const LIVE = ['README.md', 'skills/ai-simple-product-dev/SKILL.md', 'methodology/README.md',
-    ...['ba-flow-logic', 'ui-design-logic', 'ui-ux-triage', 'security-logic'].map(s => `skills/${s}/SKILL.md`),
-    ...['audit.command.md.template', 'CLAUDE.md.template', 'CLAUDE.tiny.md.template', 'fl.command.md.template'].map(t => `templates/${t}`)];
+  // v1.21.0 (audit 2026-08-18) — HẾT WHITELIST TAY: quét MỌI file .md/.md.template SẼ ĐI THEO
+  // TARBALL (nguồn = package.json "files" — đúng thứ consumer nhận) + README/CLAUDE.md/scoring.md
+  // của repo nguồn. Whitelist cũ bỏ sót surface ĐANG SHIP: `docs/adr/001` ghi "Hiện hành: 14 nguyên
+  // tắc" nằm trong tarball ⇒ consumer npm đọc số sai mà không gate nào canh.
+  // MIỄN TRỪ phải TƯỜNG MINH bằng marker `identity-exempt` trong 30 dòng đầu — không miễn theo thư
+  // mục, vì "ADR là lịch sử" từng bị chính dòng tự nhận "Hiện hành" lợi dụng.
+  const pkgFiles = JSON.parse(fs.readFileSync(path.join(PKG_ROOT, 'package.json'), 'utf8')).files || [];
+  const walkMd = (rel, acc) => {
+    const abs = path.join(PKG_ROOT, rel);
+    if (!fs.existsSync(abs)) return acc;
+    if (fs.statSync(abs).isFile()) { if (/\.md(\.template)?$/.test(rel)) acc.push(rel); return acc; }
+    for (const e of fs.readdirSync(abs)) walkMd(rel.replace(/\\/g, '/') + '/' + e, acc);
+    return acc;
+  };
+  const LIVE = [...new Set([...pkgFiles, 'README.md', 'CLAUDE.md', 'docs/scoring.md'].flatMap((f) => walkMd(f, [])))]
+    .filter((f) => f !== 'CHANGELOG.md')   // nhật ký phát hành: số cũ là DỮ KIỆN lịch sử
+    .filter((f) => !/identity-exempt/.test(fs.readFileSync(path.join(PKG_ROOT, f), 'utf8').split('\n').slice(0, 30).join('\n')));
+  // skills-yaml (v1.21.0): agents/openai.yaml là metadata packaging cho runtime khác — nếu không có
+  // gate, nó sẽ lệch SKILL.md ngay lần sửa description đầu tiên (đúng lớp drift repo này hay mắc).
+  // Luật: mỗi skill phải có file; name khớp thư mục; description là TIỀN TỐ của description trong
+  // SKILL.md (cho phép bản yaml ngắn hơn, cấm bản yaml nói khác).
+  {
+    let yOk = true;
+    for (const s of fs.readdirSync(path.join(PKG_ROOT, 'skills')).filter((d) => fs.statSync(path.join(PKG_ROOT, 'skills', d)).isDirectory())) {
+      const yp = path.join(PKG_ROOT, 'skills', s, 'agents', 'openai.yaml');
+      if (!fs.existsSync(yp)) { failed = true; yOk = false; console.log(`FAIL skills-yaml: skills/${s}/agents/openai.yaml không tồn tại`); continue; }
+      const y = fs.readFileSync(yp, 'utf8');
+      const nm = (y.match(/^name:\s*(\S+)/m) || [])[1];
+      const dsc = (y.match(/^description:\s*"([\s\S]*?)"\s*$/m) || [])[1];
+      if (nm !== s) { failed = true; yOk = false; console.log(`FAIL skills-yaml: ${s}: name='${nm}' ≠ tên thư mục`); }
+      const skillDesc = ((fs.readFileSync(path.join(PKG_ROOT, 'skills', s, 'SKILL.md'), 'utf8').match(/^description:\s*(.*)$/m) || [])[1] || '').replace(/^"|"$/g, '');
+      if (!dsc || !skillDesc.startsWith(dsc.slice(0, Math.min(40, dsc.length)))) {
+        failed = true; yOk = false;
+        console.log(`FAIL skills-yaml: ${s}: description trong openai.yaml LỆCH SKILL.md (phải là tiền tố; sửa SKILL.md thì sync yaml cùng commit)`);
+      }
+    }
+    if (yOk) console.log('PASS skills-yaml (5/5 skill có agents/openai.yaml, name + description khớp SKILL.md)');
+  }
   // Cross-cut mktemp fail-fast (v1.11.0 — Lỗ an toàn số 1): tập quét ĐỘNG git ls-files '*.sh' '*.sh.template'
   // + template hook. Dòng chứa $(mktemp thiếu CẢ '|| exit' LẪN '|| return' cùng dòng → FAIL
   // (mktemp fail mà chạy tiếp = self-test ghi ~40 commit lạ + đổi branch NGAY TRONG repo thật — đã repro).

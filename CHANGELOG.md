@@ -4,6 +4,46 @@ Toàn bộ lịch sử tiến hóa của phương pháp. README/methodology dùn
 
 Convention từ v1.10.0: mỗi mục version có thể chứa dòng `**RE-APPLY**: <việc project tiêu thụ cần làm lại sau update>` — `ai-simple update` tự trích các dòng này trong khoảng (bản-cũ → bản-mới] in thành checklist. Không có dòng RE-APPLY = update xong là xong.
 
+## v1.21.0 — 2026-08-18 (5 việc theo audit 8.3/10: parser state-machine, perf budget có máy ép, identity quét tarball, packaging Codex)
+
+Làm đúng thứ tự audit đề xuất. Bốn mục code xong trong bản này; mục semantic A/B 34 case là việc ĐO,
+ghi trạng thái thật ở cuối mục thay vì tuyên bố.
+
+- **#1 · VIẾT LẠI security parser thành STATE MACHINE** (`skills/security-logic/finding-parser.awk`,
+  file riêng, đọc được): theo dõi fence-state, nhận heading ở MỌI cú pháp (ATX thụt 0-3 space theo
+  CommonMark, setext `===`/`---`, `<hN>` HTML), vùng Findings nhận cả `Vulnerabilities`/`Phát hiện`/
+  `Lỗ hổng`/`Issue`, ID so sánh KHÔNG phân biệt hoa-thường, giá trị trường phải qua `is_empty_value`
+  (bắt `{{…}}`, `<…>`, `TBD`, `TODO`, `N/A` trống, `_____`, `(chưa rõ)`, và chuỗi <3 ký tự có nghĩa).
+  Finding trong BẢNG markdown → fail-CLOSED kèm hướng dẫn (không cố parse). Đường thoát tường minh
+  `[non-finding]` cho ghi chú/khuôn mẫu nằm trong vùng Findings — nếu không có, review thật + mục
+  "Khuôn mẫu cho lần sau" bị chặn oan (audit đã craft ca này). **10 fixture = đúng 10 biến thể auditor
+  dùng để bypass**; mutation-suite giữ 0 false-pass / 0 false-block.
+  Bug tự bắt khi viết: `sub(/[—–-]/)` cắt luôn dấu gạch TRONG id ⇒ mọi finding thành id "F" ⇒ báo
+  ID-TRÙNG oan; đã sửa + ghi lại tại chỗ vì đây là lần TÁI PHÁT của cùng lỗi ở v1.18.0.
+- **#3 · PERFORMANCE BUDGET có máy ép** (`scripts/perf-budget.js`): dựng repo tạm ở QUY MÔ THẬT
+  (20 doc × 4 covers-path = 80 path) rồi chạy hook đúng đường commit thật, so ngân sách 20s.
+  Đây là thứ mà nếu có từ đầu thì regression 100× (hook 1m37s/commit trên ForFish) đã không lọt:
+  self-test cũ chạy repo 1-3 doc (~1.4s) nên hoàn toàn mù với quy mô. Đo hiện tại: **9.4s / 20s**.
+  Vào `npm test` (job nặng, `--fast` bỏ qua) và vào `npm run gates`.
+- **#4 · Identity: bỏ WHITELIST TAY, quét PACKAGED SURFACE**: nguồn quét = mọi `.md`/`.md.template`
+  đi theo `package.json files[]` (đúng thứ consumer npm nhận) + README/CLAUDE.md/scoring.md. Miễn trừ
+  phải TƯỜNG MINH bằng marker `identity-exempt` trong 30 dòng đầu — không miễn theo thư mục, vì
+  "ADR là lịch sử" từng bị chính dòng tự nhận "Hiện hành" lợi dụng. Gate mới lập tức bắt được
+  `docs/adr/001` đang ship dòng "Hiện hành: 14 nguyên tắc" (đã sửa thành 15 + gắn marker cho phần thân).
+- **#5 · Packaging Codex**: `agents/openai.yaml` cho cả 5 skill (schema_version, name, display_name,
+  description, entrypoint, default_prompt) + gate `skills-yaml` chống drift: name phải khớp thư mục và
+  description phải là TIỀN TỐ của description trong SKILL.md (sửa SKILL.md thì sync yaml cùng commit).
+- npm test **32 PASS / 0 FAIL**; dogfood + ship-gate xanh.
+
+**#2 · Semantic A/B 34 case — CHƯA XONG, trạng thái thật**: `eval-runner --report` vẫn 3/34 case,
+2 vòng nhưng KHÔNG cùng vòng cho baseline↔with_skill, judge = chính orchestrator (không độc lập).
+Hạ tầng đã đủ để chạy (`--emit-task` mù, `--emit-rubric` riêng, khoá duy nhất `run_id/variant/skill/case`);
+việc còn lại là ĐO: 34 case × 2 variant × ≥2 vòng × 2 judge độc lập. Không tuyên bố gì thêm cho tới khi
+số thật nằm trong `docs/baseline/semantic-baseline.jsonl`.
+
+- **RE-APPLY**: chạy `ai-simple update` để nhận hook v1.21.0. Repo dùng security-review: parser mới
+  chặt hơn — finding đặt trong bảng markdown hoặc dùng placeholder `{{…}}`/`TBD` sẽ bị BLOCK; mục ghi
+  chú trong vùng Findings cần gắn `[non-finding]`.
 ## v1.20.0 — 2026-08-17 (Vá theo 4 audit độc lập: cổng flagship fail-open, secret theo đuôi file, chặn oan fixture, hook 80% ở covers-sync)
 
 Bốn auditor context sạch (bypass-hunter · chấm điểm rubric · over-claim hunter · trải nghiệm dev) —

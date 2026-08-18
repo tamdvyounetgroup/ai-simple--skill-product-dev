@@ -1,0 +1,11 @@
+# agents/openai.yaml — metadata packaging cho runtime kieu Codex/OpenAI (chuan skill-creator).
+# KHONG phai file runtime cua Claude Code (no doc SKILL.md frontmatter). File nay cung cap display
+# name / mo ta ngan / default prompt NHAT QUAN cho runtime khac, de mot skill khong mang hai ten.
+# NGUON SU THAT ve hanh vi van la SKILL.md — sua description o SKILL.md thi cap nhat day CUNG COMMIT
+# (gate: skills-yaml trong npm test so 2 ben).
+schema_version: 1
+name: ai-simple-product-dev
+display_name: "AI Simple — Operating Layer"
+description: "Operating layer cho codebase làm việc với AI: 15 nguyên tắc/6 lớp (context phân tầng, app-map coupling doc↔code, risk tier, hook enforcement, parallel sessions), bật theo profile."
+entrypoint: SKILL.md
+default_prompt: "Doc SKILL.md cua skill nay truoc. Nhiem vu: dung/kiem tra LOP VAN HANH cho codebase lam viec voi AI (context phan tang, app-map coupling, risk tier, authority contract L0-L3, hook enforcement). KHONG tu phan tich nghiep vu / thiet ke UI / sua defect — dinh tuyen sang skill tuong ung."

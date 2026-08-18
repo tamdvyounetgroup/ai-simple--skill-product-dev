@@ -1,0 +1,11 @@
+# agents/openai.yaml — metadata packaging cho runtime kieu Codex/OpenAI (chuan skill-creator).
+# KHONG phai file runtime cua Claude Code (no doc SKILL.md frontmatter). File nay cung cap display
+# name / mo ta ngan / default prompt NHAT QUAN cho runtime khac, de mot skill khong mang hai ten.
+# NGUON SU THAT ve hanh vi van la SKILL.md — sua description o SKILL.md thi cap nhat day CUNG COMMIT
+# (gate: skills-yaml trong npm test so 2 ben).
+schema_version: 1
+name: ba-flow-logic
+display_name: "BA Flow Logic"
+description: "Phân tích nghiệp vụ hướng-người-dùng, pha đầu pipeline BA→design→build→triage: nhu cầu mơ hồ thành ba-spec (USER → nghiệp vụ → handoff → flow Input/Output → acceptance criteria làm oracle)."
+entrypoint: SKILL.md
+default_prompt: "Doc SKILL.md cua skill nay truoc. Nhiem vu: bien nhu cau mo ho thanh ba-spec (USER -> nghiep vu -> handoff -> flow Input/Output -> acceptance criteria lam oracle hanh vi). Dung o WHAT+WHY; KHONG dung man hinh, KHONG viet code."

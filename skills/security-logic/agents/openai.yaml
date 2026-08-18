@@ -1,0 +1,11 @@
+# agents/openai.yaml — metadata packaging cho runtime kieu Codex/OpenAI (chuan skill-creator).
+# KHONG phai file runtime cua Claude Code (no doc SKILL.md frontmatter). File nay cung cap display
+# name / mo ta ngan / default prompt NHAT QUAN cho runtime khac, de mot skill khong mang hai ten.
+# NGUON SU THAT ve hanh vi van la SKILL.md — sua description o SKILL.md thi cap nhat day CUNG COMMIT
+# (gate: skills-yaml trong npm test so 2 ben).
+schema_version: 1
+name: security-logic
+display_name: "Security Logic"
+description: "Security review hướng-khung-chuẩn: sinh security-review khai phủ sóng, mỗi finding gắn tier + gate + mã OWASP LLM và web Top-10."
+entrypoint: SKILL.md
+default_prompt: "Doc SKILL.md cua skill nay truoc. Nhiem vu: sinh security-review co KHAI BAO phu song — moi finding du ID/rui ro/tier/gate/ma OWASP LLM+web. TUYET DOI khong ket luan da-bao-mat; chi khai phu A/B, KHONG phu C. Pentest production ngoai scope: chi sinh runbook."
